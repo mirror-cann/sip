@@ -1,0 +1,127 @@
+/**
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
+ * This file is a part of the CANN Open Software.
+ * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+#include <securec.h>
+#include "mul_tiling_data.h"
+#include "mki/utils/platform/platform_info.h"
+#include "utils/assert.h"
+#include "log/log.h"
+#include "mul.h"
+#include "mul_tiling.h"
+
+namespace AsdSip {
+using namespace Mki;
+
+static constexpr int64_t COMPLEX64_PER_BLOCK = 4;  // one block = 32B
+static constexpr int64_t COMPLEX32_PER_BLOCK = 8;  // one block = 32B
+
+// Set tiling data value
+static void SetTilingData(CMulTilingData &tilingDataPtr, CMulTilingData tilingData, int64_t vecCoreNum)
+{
+    tilingDataPtr.n = tilingData.n;
+    tilingDataPtr.useCoreNum = tilingData.useCoreNum;
+
+    memcpy_s(tilingDataPtr.startOffset,
+        sizeof(tilingDataPtr.startOffset),
+        tilingData.startOffset,
+        vecCoreNum * sizeof(int64_t));
+    memcpy_s(tilingDataPtr.calNum, sizeof(tilingDataPtr.calNum), tilingData.calNum, vecCoreNum * sizeof(int64_t));
+}
+
+// Calculate tiling data value
+static CMulTilingData CalTilingData(int64_t totalEleNum, int64_t vecCoreNum, int64_t complexPerBlock)
+{
+    CMulTilingData tilingData;
+    tilingData.n = totalEleNum;
+    tilingData.useCoreNum = 0;
+    if (vecCoreNum == 0) {
+        ASDSIP_LOG(ERROR) << "vecCoreNum invalid: vecCoreNum = " << vecCoreNum;
+        vecCoreNum = 1;
+    }
+    // Set zero for startOffset and calNum
+    for (int64_t i = 0; i < vecCoreNum; i++) {
+        tilingData.startOffset[i] = 0;
+        tilingData.calNum[i] = 0;
+    }
+    // Num of blocks
+    int64_t totalBlockNum = totalEleNum / complexPerBlock;
+    // remain row num
+    int64_t remainNum = totalEleNum % complexPerBlock;
+
+    if (totalBlockNum == 0) {
+        // Use only 1 AIV core.
+        tilingData.calNum[0] = remainNum;
+    } else if (totalBlockNum < vecCoreNum) {
+        for (int64_t i = 0; i < totalBlockNum; i++) {
+            tilingData.startOffset[i] = complexPerBlock * i;
+            tilingData.calNum[i] = complexPerBlock;
+        }
+        tilingData.startOffset[totalBlockNum] = complexPerBlock * totalBlockNum;
+        tilingData.calNum[totalBlockNum] += remainNum;
+        tilingData.useCoreNum = totalBlockNum + 1;
+    } else {
+        int64_t procNumEachCore;
+        int64_t remainProc;
+
+        procNumEachCore = totalBlockNum / vecCoreNum;
+        remainProc = totalBlockNum % vecCoreNum;
+
+        int64_t currOffset = 0;
+        int64_t currCalNum = 0;
+
+        for (int64_t i = 0; i < vecCoreNum; i++) {
+            if (i < remainProc) {
+                currCalNum = (procNumEachCore + 1) * complexPerBlock;
+            } else {
+                currCalNum = procNumEachCore * complexPerBlock;
+            }
+            tilingData.startOffset[i] = currOffset;
+            tilingData.calNum[i] = currCalNum;
+            currOffset += currCalNum;
+        }
+        tilingData.calNum[vecCoreNum - 1] += remainNum;
+        tilingData.useCoreNum = vecCoreNum;
+    }
+    return tilingData;
+}
+
+static int64_t ConfigCMulTilingData(
+    CMulTilingData *tilingDataPtr, int64_t totalEleNum, int64_t vecCoreNum, int64_t complexPerBlock)
+{
+    CMulTilingData tilingData = CalTilingData(totalEleNum, vecCoreNum, complexPerBlock);
+    SetTilingData(*tilingDataPtr, tilingData, vecCoreNum);
+    return tilingData.useCoreNum;
+}
+
+AsdSip::AspbStatus CMulTiling(const LaunchParam &launchParam, KernelInfo &kernelInfo)
+{
+    void *tilingData = kernelInfo.GetTilingHostAddr();
+    CMulTilingData *tilingDataPtr = reinterpret_cast<AsdSip::CMulTilingData *>(tilingData);
+    ASDSIP_CHECK(
+        tilingData != nullptr, "tilingDataPtr should not be empty", return AsdSip::ErrorType::ACL_ERROR_INVALID_PARAM);
+
+    int64_t vecCoreNum = PlatformInfo::Instance().GetCoreNum(CoreType::CORE_TYPE_VECTOR);
+    if (vecCoreNum == 0) {
+        vecCoreNum = 1;
+    }
+    OpParam::CMul param = AnyCast<OpParam::CMul>(launchParam.GetParam());
+    int64_t complexPerBlock = (param.cMulType == OpParam::CMul::CMulType::MUL_C64) ? COMPLEX64_PER_BLOCK : COMPLEX32_PER_BLOCK;
+    int64_t useCoreNum = ConfigCMulTilingData(tilingDataPtr, param.n, vecCoreNum, complexPerBlock);
+    if (useCoreNum == 0) {
+        useCoreNum = 1;
+    }
+
+    uint64_t workspaceSize = 0;
+    kernelInfo.SetBlockDim(useCoreNum);
+    kernelInfo.GetScratchSizes() = {workspaceSize};
+    ASDSIP_LOG(DEBUG) << "KernelInfo:\n" << kernelInfo.ToString();
+
+    return AsdSip::ErrorType::ACL_SUCCESS;
+}
+}  // namespace AsdSip

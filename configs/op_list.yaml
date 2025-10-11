@@ -1,0 +1,187 @@
+AsumOperation:
+    SasumF32Kernel:
+        ascend910b: true
+CalOperation:
+    CscalC64Kernel:
+        ascend910b: true
+    SscalF32Kernel:
+        ascend910b: true
+CaxpyOperation:
+    CaxpyC64Kernel:
+        ascend910b: true
+CgemmOperation:
+    CgemmC64Kernel:
+        ascend910b: true
+CgemvOperation:
+    CgemvDoTransC64Kernel:
+        ascend910b: true
+    CgemvNoTransC64Kernel:
+        ascend910b: true
+CgercOperation:
+    CgercC64Kernel:
+        ascend910b: true
+ColwiseMulOperation:
+    ColwiseMulC64Kernel:
+        ascend910b: true
+ComplexMatDotOperation:
+    ComplexMatDotC64Kernel:
+        ascend910b: true
+CopyOperation:
+    CopyF32Kernel:
+        ascend910b: true
+RotOperation:
+    CsrotC64Kernel:
+        ascend910b: true
+CtrmvOperation:
+    CtrmvC64Kernel:
+        ascend910b: true
+DotOperation:
+    CdotC64Kernel:
+        ascend910b: true
+    SdotF32Kernel:
+        ascend910b: true
+IamaxOperation:
+    IamaxF32Kernel:
+        ascend910b: true
+Nrm2Operation:
+    Nrm2F32Kernel:
+        ascend910b: true
+Ssyr2Operation:
+    Ssyr2F32Kernel:
+        ascend910b: true
+SsyrOperation:
+    SsyrF32Kernel:
+        ascend910b: true
+StrmmOperation:
+    StrmmF32Kernel:
+        ascend910b: true
+StrmvOperation:
+    StrmvF32Kernel:
+        ascend910b: true
+SwapOperation:
+    CswapC64Kernel:
+        ascend910b: true
+    SswapF32Kernel:
+        ascend910b: true
+CgemvBatchedOperation:
+    CgemvBatchedC32C64Kernel:
+        ascend910b: true
+
+SwapLast2AxesOperation:
+    SwapLast2AxesC64Kernel:
+        ascend910b: true
+ConjOperation:
+    ConjC64Kernel:
+        ascend910b: true
+
+HCgemmBatchedOperation:
+    HCgemmBatchedC32Kernel:
+        ascend910b: true
+
+CgemmBatchedOperation:
+    CgemmBatchedC64Kernel:
+        ascend910b: true
+
+InterpolationOperation:
+    InterpolationC64Kernel:
+        ascend910b: true
+
+DftC2ROperation:
+    DftC2RC64Kernel:
+        ascend910b: true
+
+FftC2ROperation:
+    FftC2R1C64Kernel:
+        ascend910b: true
+    FftC2R2C64Kernel:
+        ascend910b: true
+    FftC2R3C64Kernel:
+        ascend910b: true
+    FftC2ROdd1C64Kernel:
+        ascend910b: true
+    FftC2ROdd2C64Kernel:
+        ascend910b: true
+    FftC2ROdd3C64Kernel:
+        ascend910b: true
+    FftC2REven1C64Kernel:
+        ascend910b: true
+    FftC2REven2C64Kernel:
+        ascend910b: true
+    FftC2REven3C64Kernel:
+        ascend910b: true
+
+DftOperation:
+    DftC64Kernel:
+        ascend910b: true
+
+DftR2COperation:
+    DftR2CC64Kernel:
+        ascend910b: true
+
+FftR2COperation:
+    FftR2C1C64Kernel:
+        ascend910b: true
+    FftR2C2C64Kernel:
+        ascend910b: true
+    FftR2C3C64Kernel:
+        ascend910b: true
+    FftR2COdd1C64Kernel:
+        ascend910b: true
+    FftR2COdd2C64Kernel:
+        ascend910b: true
+    FftR2COdd3C64Kernel:
+        ascend910b: true
+    FftR2CEven1C64Kernel:
+        ascend910b: true
+    FftR2CEven2C64Kernel:
+        ascend910b: true
+    FftR2CEven3C64Kernel:
+        ascend910b: true
+
+FftBOperation:
+    FftBC64Kernel:
+        ascend910b: true
+
+FftMixOperation:
+    FftMix1C64Kernel:
+        ascend910b: true
+    FftMix2C64Kernel:
+        ascend910b: true
+    FftMix3C64Kernel:
+        ascend910b: true
+    FftMix4C64Kernel:
+        ascend910b: true
+    FftMix5C64Kernel:
+        ascend910b: true
+    FftMix6C64Kernel:
+        ascend910b: true
+
+FftNOperation:
+    FftNC64Kernel:
+        ascend910b: true
+
+FftStrideOperation:
+    FftStrideKernel:
+        ascend910b: true
+
+DdOperation:
+    DdC64Kernel:
+        ascend910b: true
+
+FftStrideOperation:
+    FftStrideKernel:
+        ascend910b: true
+
+MulOperation:
+    MulC64Kernel:
+        ascend910b: true
+    MulC32Kernel:
+        ascend910b: true
+
+ConvolveOperation:
+    ConvolveKernel:
+        ascend910b: true
+
+InterpByCoeffOperation:
+    InterpByCoeffKernel:
+        ascend910b: true

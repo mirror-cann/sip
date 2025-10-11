@@ -1,0 +1,382 @@
+/**
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
+ * This file is a part of the CANN Open Software.
+ * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+#pragma once
+
+#include <cmath>
+#include "utils/dim_constants.h"
+#include "utils/the_view.h"
+
+namespace wten {
+
+template <typename T>
+void arange(int64_t start, int64_t end, int64_t step, TheTensor<T> &out)
+{
+    int64_t n;
+    if (step > 0) {
+        n = (end - 1 - start) / step + 1;
+    } else {
+        n = (-end - 1 + start) / -step + 1;
+    }
+
+    if (n != static_cast<int64_t>(out.size())) {
+        ASDSIP_LOG(ERROR) << "Output does not match size.";
+        return;
+    }
+
+    T *out_data = out.data();
+    int64_t item = start;
+    for (int64_t i = 0; i < n; i++, item += step) {
+        out_data[i] = item;
+    }
+}
+
+
+template <typename T>
+bool commonShapeCheck(TheTensor<T> &left, TheTensor<T> &right, TheTensor<T> &out)
+{
+    if (left.ndim() != SHAPE_TWO || right.ndim() != SHAPE_TWO) {
+        ASDSIP_LOG(ERROR) << "Inputs must be 2-dimension.";
+        return false;
+    }
+
+    if (out.ndim() != SHAPE_TWO) {
+        ASDSIP_LOG(ERROR) << "Output must be 2-dimension.";
+        return false;
+    }
+
+    if (left.shape()[DIM_ONE] != SHAPE_ONE) {
+        ASDSIP_LOG(ERROR) << "Left's second dimension must be 1.";
+        return false;
+    }
+
+    if (right.shape()[DIM_ZERO] != SHAPE_ONE) {
+        ASDSIP_LOG(ERROR) << "right's first dimension must be 1.";
+        return false;
+    }
+
+    if (out.shape()[DIM_ZERO] != left.shape()[DIM_ZERO] || out.shape()[DIM_ONE] != right.shape()[DIM_ONE] ||
+        out.shape()[DIM_ONE] == 0) {
+        ASDSIP_LOG(ERROR) << "Output's shape does not match inputs' shape, or out.shape()[DIM_ONE] == 0.";
+        return false;
+    }
+
+    return true;
+}
+
+
+template <typename T>
+void outerAdd(TheTensor<T> &left, TheTensor<T> &right, TheTensor<T> &out)
+{
+    bool checkStatus = commonShapeCheck(left, right, out);
+    if (!checkStatus) {
+        return;
+    }
+
+    size_t step = out.shape()[DIM_ONE];
+    for (size_t n = 0; n < out.size(); n++) {
+        size_t i = n / step;
+        size_t j = n % step;
+        out[n] = left[i] + right[j];
+    }
+}
+
+template <typename T>
+void outerMul(TheTensor<T> &left, TheTensor<T> &right, TheTensor<T> &out)
+{
+    bool checkStatus = commonShapeCheck(left, right, out);
+    if (!checkStatus) {
+        return;
+    }
+
+    size_t step = out.shape()[1];
+    for (size_t n = 0; n < out.size(); n++) {
+        size_t i = n / step;
+        size_t j = n % step;
+        out[n] = left[i] * right[j];
+    }
+}
+
+template <typename T>
+void mulScalar(TheTensor<T> &in, T scalar, TheTensor<T> &out)
+{
+    if (in.shape() != out.shape()) {
+        ASDSIP_LOG(ERROR) << "Output does not match Input.";
+        return;
+    }
+
+    for (size_t i = 0; i < out.size(); i++) {
+        out[i] = in[i] * scalar;
+    }
+}
+
+template <typename T>
+void modScalar(TheTensor<T> &src, T scalar, TheTensor<T> &dst)
+{
+    if (src.shape() != dst.shape()) {
+        ASDSIP_LOG(ERROR) << "Output does not match Input.";
+        return;
+    }
+
+    for (size_t index = 0; index < dst.size(); index++) {
+        dst[index] = src[index] % scalar;
+    }
+}
+
+template <typename T>
+void neg(TheTensor<T> &in, TheTensor<T> &out)
+{
+    if (in.shape() != out.shape()) {
+        ASDSIP_LOG(ERROR) << "Output does not match Input.";
+        return;
+    }
+
+    for (size_t i = 0; i < out.size(); i++) {
+        out[i] = 0 - in[i];
+    }
+}
+
+template <typename T>
+void sin(TheTensor<T> &in, TheTensor<T> &out)
+{
+    if (in.shape() != out.shape()) {
+        ASDSIP_LOG(ERROR) << "Output does not match Input.";
+        return;
+    }
+
+    for (size_t i = 0; i < out.size(); i++) {
+        out[i] = std::sin(in[i]);
+    }
+}
+
+template <typename T>
+void cos(TheTensor<T> &in, TheTensor<T> &out)
+{
+    if (in.shape() != out.shape()) {
+        ASDSIP_LOG(ERROR) << "Output does not match Input.";
+        return;
+    }
+
+    for (size_t i = 0; i < out.size(); i++) {
+        out[i] = std::cos(in[i]);
+    }
+}
+
+template <typename T>
+void transpose(TheTensor<T> &in, const std::vector<int64_t> &permute_dims, TheTensor<T> &out)
+{
+    if (in.ndim() != permute_dims.size()) {
+        ASDSIP_LOG(ERROR) << "permute_dims does not match input's shape.";
+        return;
+    }
+
+    if (in.ndim() != out.ndim()) {
+        ASDSIP_LOG(ERROR) << "Output's ndim does not match input's ndim.";
+        return;
+    }
+
+    for (int64_t i = 0; i < static_cast<int64_t>(permute_dims.size()); i++) {
+        if (in.shape()[permute_dims[i]] != out.shape()[i]) {
+            ASDSIP_LOG(ERROR) << "Output's permute dim does not match input's permute dim.";
+            return;
+        }
+    }
+
+    std::vector<int64_t> reversed_dims(permute_dims.size());
+    for (int64_t i = 0; i < static_cast<int64_t>(permute_dims.size()); i++) {
+        reversed_dims[permute_dims[i]] = i;
+    }
+
+    const std::vector<int64_t> &in_shape = in.shape();
+    const std::vector<int64_t> &out_strides = out.strides();
+
+    for (int64_t index = 0; index < static_cast<int64_t>(out.size()); index++) {
+        int64_t remain = index;
+        int64_t permute_index = 0;
+        for (int64_t j = static_cast<int64_t>(in.ndim()) - 1; j >= 0; j--) {
+            if (in_shape[j] == 0) {
+                continue;
+            }
+            permute_index += (remain % in_shape[j]) * out_strides[reversed_dims[j]];
+            remain /= in_shape[j];
+
+            if (remain == 0) {
+                break;
+            }
+        }
+        out[permute_index] = in[index];
+    }
+}
+
+template <typename T>
+void copy(TheTensor<T> &src, TheView<T> &dst)
+{
+    if (src.shape() != dst.shape()) {
+        ASDSIP_LOG(ERROR) << "Output does not match Input.";
+        return;
+    }
+
+    for (int64_t index = 0; index < dst.size(); index++) {
+        dst[index] = src[index];
+    }
+}
+
+template <typename T>
+void copy(TheView<T> &src, TheView<T> &dst)
+{
+    if (src.shape() != dst.shape()) {
+        ASDSIP_LOG(ERROR) << "Output does not match Input.";
+        return;
+    }
+
+    for (int64_t index = 0; index < dst.size(); index++) {
+        dst[index] = src[index];
+    }
+}
+
+template <typename T, typename E>
+void cast(TheTensor<T> &src, TheTensor<E> &dst)
+{
+    if (src.shape() != dst.shape()) {
+        ASDSIP_LOG(ERROR) << "Output does not match Input.";
+        return;
+    }
+
+    for (size_t index = 0; index < dst.size(); index++) {
+        dst[index] = static_cast<E>(src[index]);
+    }
+}
+
+template <typename T>
+TheTensor<T> arange(int64_t start, int64_t end, int64_t step)
+{
+    int64_t n;
+    if (step > 0) {
+        n = (end - 1 - start) / step + 1;
+    } else {
+        n = (-end - 1 + start) / -step + 1;
+    }
+
+    if (n <= 0) {
+        ASDSIP_LOG(ERROR) << "Infered size must be greater than 0.";
+        throw std::runtime_error("Infered size must be greater than 0.");
+    }
+
+    TheTensor<T> out{{n}};
+
+    arange(start, end, step, out);
+
+    return out;
+}
+
+template <typename T>
+TheTensor<T> outerAdd(TheTensor<T> &left, TheTensor<T> &right)
+{
+    if (left.ndim() != SHAPE_TWO || right.ndim() != SHAPE_TWO) {
+        ASDSIP_LOG(ERROR) << "Inputs must be 2-dimension.";
+        throw std::runtime_error("Inputs must be 2-dimension.");
+    }
+
+    TheTensor<T> out{{left.shape()[0], right.shape()[1]}};
+
+    outerAdd(left, right, out);
+
+    return out;
+}
+
+template <typename T>
+TheTensor<T> outerMul(TheTensor<T> &left, TheTensor<T> &right)
+{
+    if (left.ndim() != SHAPE_TWO || right.ndim() != SHAPE_TWO) {
+        ASDSIP_LOG(ERROR) << "Inputs must be 2-dimension.";
+        throw std::runtime_error("Inputs must be 2-dimension.");
+    }
+
+    TheTensor<T> out{{left.shape()[0], right.shape()[1]}};
+
+    outerMul(left, right, out);
+
+    return out;
+}
+
+template <typename T>
+TheTensor<T> mulScalar(TheTensor<T> &in, T scalar)
+{
+    TheTensor<T> out{in.shape()};
+
+    mulScalar(in, scalar, out);
+
+    return out;
+}
+
+template <typename T>
+TheTensor<T> modScalar(TheTensor<T> &in, T scalar)
+{
+    TheTensor<T> out{in.shape()};
+
+    modScalar(in, scalar, out);
+
+    return out;
+}
+
+template <typename T>
+TheTensor<T> neg(TheTensor<T> &in)
+{
+    TheTensor<T> out{in.shape()};
+
+    neg(in, out);
+
+    return out;
+}
+
+template <typename T>
+TheTensor<T> sin(TheTensor<T> &in)
+{
+    TheTensor<T> out{in.shape()};
+
+    sin(in, out);
+
+    return out;
+}
+
+template <typename T>
+TheTensor<T> cos(TheTensor<T> &in)
+{
+    TheTensor<T> out{in.shape()};
+
+    cos(in, out);
+
+    return out;
+}
+
+template <typename T>
+TheTensor<T> transpose(TheTensor<T> &in, const std::vector<int64_t> &permute_dims)
+{
+    std::vector<int64_t> out_shape(in.shape());
+    for (size_t i = 0; i < out_shape.size(); i++) {
+        out_shape[i] = in.shape()[permute_dims[i]];
+    }
+    TheTensor<T> out{out_shape};
+
+    transpose(in, permute_dims, out);
+
+    return out;
+}
+
+template <typename T, typename E>
+TheTensor<E> cast(TheTensor<T> &src)
+{
+    TheTensor<E> dst{src.shape()};
+
+    cast(src, dst);
+
+    return dst;
+}
+
+}

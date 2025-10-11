@@ -1,0 +1,47 @@
+#ifdef __CCE_KT_TEST__
+#define __aicore__
+#else
+#define __aicore__ [aicore]
+#endif
+
+#if (__CCE_AICORE__ == 220)
+
+#include "kernel_operator.h"
+#include "./swaplast2axes_aiv.h"
+
+using namespace AscendC;
+
+inline __aicore__ void InitTilingData(const __gm__ uint8_t *p_tilingdata, AsdSip::SwapLast2AxesTilingData *tilingData)
+{
+    tilingData->batch = (*(const __gm__ uint32_t *)(p_tilingdata + 0));
+    tilingData->row = (*(const __gm__ uint32_t *)(p_tilingdata + 4));
+    tilingData->col = (*(const __gm__ uint32_t *)(p_tilingdata + 8));
+}
+
+#ifdef __DAV_C220_VEC__
+
+extern "C" __global__ __aicore__ void swapLast2AxesComplex(GM_ADDR inTensor, GM_ADDR outTensor, GM_ADDR workspace,
+                                                           GM_ADDR tilingGm)
+{
+    set_atomic_none();
+
+    AsdSip::SwapLast2AxesTilingData tilingData;
+    InitTilingData(tilingGm, &tilingData);
+
+    TPipe pipe;
+
+    SwapLast2Axes::SwapLast2AxesAIV<float> op;
+    op.Init(inTensor, outTensor, &tilingData, &pipe);
+    op.Process();
+}
+
+#elif __DAV_C220_CUBE__
+
+extern "C" __global__ __aicore__ void swapLast2AxesComplex(GM_ADDR inTensor, GM_ADDR outTensor, GM_ADDR workspace,
+                                                           GM_ADDR tilingGm)
+{
+}
+
+#endif
+
+#endif

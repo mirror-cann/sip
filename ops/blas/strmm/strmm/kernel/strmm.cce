@@ -1,0 +1,572 @@
+#ifdef __CCE_KT_TEST__
+#define __aicore__
+#else
+#define __aicore__ [aicore]
+#endif
+
+#include "kernel_operator.h"
+#include "./kernel_utils.cceh"
+#include "./matmul_utils.cceh"
+#include "./type_def.h"
+
+using namespace fp32;
+
+#if __DAV_C220_CUBE__
+
+__aicore__ __inline__ void load_matrix_zN(__cbuf__ float *dst, __gm__ float *src, int32_t R, int32_t C,
+                                          int32_t valid_row, int32_t valid_col, size_t stride)
+{
+    constexpr int C0 = 32 / sizeof(float);
+    constexpr int STRIDE_LIMIT = 65536;
+
+    if (stride < STRIDE_LIMIT) {
+        copy_gm_to_cbuf_multi_nd2nz_b32s(dst, src,
+                                         static_cast<uint8_t>(0),           // sid
+                                         static_cast<uint16_t>(1),          // ndNum
+                                         static_cast<uint16_t>(valid_row),  // nValue
+                                         static_cast<uint16_t>(valid_col),  // dValue
+                                         static_cast<uint16_t>(0),          // srcNdMatrixStride
+                                         static_cast<uint16_t>(stride),     // srcDValue
+                                         static_cast<uint16_t>(R),          // dstNzC0Stride
+                                         static_cast<uint16_t>(1),          // dstNzNStride
+                                         static_cast<uint16_t>(0)           // dstNzMatrixStride
+        );
+    } else {
+        for (int i = 0; i < valid_row; i++) {
+            copy_gm_to_cbuf_multi_nd2nz_b32s(dst + i * C0, src + i * stride,
+                                             static_cast<uint8_t>(0),           // sid
+                                             static_cast<uint16_t>(1),          // ndNum
+                                             static_cast<uint16_t>(1),          // nValue
+                                             static_cast<uint16_t>(valid_col),  // dValue
+                                             static_cast<uint16_t>(0),          // srcNdMatrixStride, unused
+                                             static_cast<uint16_t>(0),          // srcDValue, unused
+                                             static_cast<uint16_t>(R),          // dstNzC0Stride
+                                             static_cast<uint16_t>(0),          // dstNzNStride, unused
+                                             static_cast<uint16_t>(0)           // dstNzMatrixStride, unused
+            );
+        }
+    }
+}
+
+__aicore__ __inline__ void load_matrix_zZ(__cbuf__ float *dst, __gm__ float *src, int32_t R, int32_t C,
+                                          int32_t valid_row, int32_t valid_col, size_t stride)
+{
+    constexpr int32_t R0 = 16;
+    constexpr int32_t C0 = 32 / sizeof(float);
+    constexpr int STRIDE_LIMIT = 65536;
+
+    int64_t srcNdStride = R0 * stride;
+    int64_t srcNStride = stride;
+    if (srcNdStride < STRIDE_LIMIT) {
+        int32_t ndNum = valid_row / R0;
+        int32_t remains = valid_row % R0;
+        if (ndNum > 0) {
+            copy_gm_to_cbuf_multi_nd2nz_b32s(dst, src,
+                                             static_cast<uint8_t>(0),             // sid
+                                             static_cast<uint16_t>(ndNum),        // ndNum
+                                             static_cast<uint16_t>(R0),           // nValue
+                                             static_cast<uint16_t>(valid_col),    // dValue
+                                             static_cast<uint16_t>(R0 * stride),  // srcNdMatrixStride
+                                             static_cast<uint16_t>(srcNStride),   // srcDValue
+                                             static_cast<uint16_t>(R0),           // dstNzC0Stride
+                                             static_cast<uint16_t>(1),            // dstNzNStride
+                                             static_cast<uint16_t>(R0 * C)        // dstNzMatrixStride
+            );
+        }
+        if (remains > 0) {
+            copy_gm_to_cbuf_multi_nd2nz_b32s(dst + ndNum * R0 * C, src + ndNum * R0 * stride,
+                                             static_cast<uint8_t>(0),            // sid
+                                             static_cast<uint16_t>(1),           // ndNum
+                                             static_cast<uint16_t>(remains),     // nValue
+                                             static_cast<uint16_t>(valid_col),   // dValue
+                                             static_cast<uint16_t>(0),           // srcNdMatrixStride
+                                             static_cast<uint16_t>(srcNStride),  // srcDValue
+                                             static_cast<uint16_t>(R0),          // dstNzC0Stride
+                                             static_cast<uint16_t>(1),           // dstNzNStride
+                                             static_cast<uint16_t>(0)            // dstNzMatrixStride
+            );
+        }
+    } else if (srcNStride < STRIDE_LIMIT) {
+        int32_t ndNum = valid_row / R0;
+        int32_t remains = valid_row % R0;
+        for (int32_t i = 0; i < ndNum; i++) {
+            copy_gm_to_cbuf_multi_nd2nz_b32s(dst + i * R0 * C, src + i * R0 * stride,
+                                             static_cast<uint8_t>(0),            // sid
+                                             static_cast<uint16_t>(1),           // ndNum
+                                             static_cast<uint16_t>(R0),          // nValue
+                                             static_cast<uint16_t>(valid_col),   // dValue
+                                             static_cast<uint16_t>(0),           // srcNdMatrixStride
+                                             static_cast<uint16_t>(srcNStride),  // srcDValue
+                                             static_cast<uint16_t>(R0),          // dstNzC0Stride
+                                             static_cast<uint16_t>(1),           // dstNzNStride
+                                             static_cast<uint16_t>(0)            // dstNzMatrixStride
+            );
+        }
+        if (remains > 0) {
+            copy_gm_to_cbuf_multi_nd2nz_b32s(dst + ndNum * R0 * C, src + ndNum * R0 * stride,
+                                             static_cast<uint8_t>(0),            // sid
+                                             static_cast<uint16_t>(1),           // ndNum
+                                             static_cast<uint16_t>(remains),     // nValue
+                                             static_cast<uint16_t>(valid_col),   // dValue
+                                             static_cast<uint16_t>(0),           // srcNdMatrixStride
+                                             static_cast<uint16_t>(srcNStride),  // srcDValue
+                                             static_cast<uint16_t>(R0),          // dstNzC0Stride
+                                             static_cast<uint16_t>(1),           // dstNzNStride
+                                             static_cast<uint16_t>(0)            // dstNzMatrixStride
+            );
+        }
+    } else {
+        for (int32_t i = 0; i < valid_row; i++) {
+            int32_t idxR0 = i / R0;
+            int32_t idxInR0 = i % R0;
+            copy_gm_to_cbuf_multi_nd2nz_b32s(dst + idxR0 * R0 * C + idxInR0 * C0, src + i * stride,
+                                             static_cast<uint8_t>(0),           // sid
+                                             static_cast<uint16_t>(1),          // ndNum
+                                             static_cast<uint16_t>(1),          // nValue
+                                             static_cast<uint16_t>(valid_col),  // dValue
+                                             static_cast<uint16_t>(0),          // srcNdMatrixStride, unused
+                                             static_cast<uint16_t>(0),          // srcDValue, unused
+                                             static_cast<uint16_t>(R0),         // dstNzC0Stride
+                                             static_cast<uint16_t>(0),          // dstNzNStride, unused
+                                             static_cast<uint16_t>(0)           // dstNzMatrixStride, unused
+            );
+        }
+    }
+}
+
+__aicore__ __inline__ void strmm_mix_aic(__gm__ float *__restrict__ gm_a, __gm__ float *__restrict__ gm_b,
+                                         __gm__ float *__restrict__ gm_c, uint32_t M, uint32_t N, uint32_t K,
+                                         uint32_t trans_a, uint32_t trans_b, uint32_t lessFlag,
+                                         __gm__ float *__restrict__ AIV_AIC_workspace)
+{
+    set_padding(0);
+    set_atomic_none();
+    uint64_t config = 0x1;
+    set_nd_para(config);
+
+    auto l1_base_a = reinterpret_cast<__cbuf__ float *>((uintptr_t)0);             // 128 KB
+    auto l1_base_b = reinterpret_cast<__cbuf__ float *>((uintptr_t)(128 * 1024));  // 128 KB
+
+    auto l0a_base = reinterpret_cast<__ca__ float *>((uintptr_t)0);
+    auto l0b_base = reinterpret_cast<__cb__ float *>((uintptr_t)0);
+    auto l0c_buf = reinterpret_cast<__cc__ float *>((uintptr_t)0);
+
+    int32_t batchSize, M0, N0, K0;
+
+    batchSize = 1;
+
+    M0 = 128;
+    N0 = 128;
+    K0 = 128;
+
+    int64_t lda = M;
+    int64_t ldb = K;
+    int64_t ldc = M;
+
+    int32_t m_loop = (M + M0 - 1) / M0;
+    int32_t n_loop = (N + N0 - 1) / N0;
+    int32_t k_loop = (K + K0 - 1) / K0;
+    int32_t loop = batchSize * m_loop * n_loop;
+
+    int32_t ping_flag = 1;
+    int32_t loop_ping_flag = 1;
+
+    set_flag(PIPE_MTE1, PIPE_MTE2, EVENT_ID0);
+    set_flag(PIPE_MTE1, PIPE_MTE2, EVENT_ID1);
+    set_flag(PIPE_MTE1, PIPE_MTE2, EVENT_ID2);
+    set_flag(PIPE_MTE1, PIPE_MTE2, EVENT_ID3);
+
+    set_flag(PIPE_FIX, PIPE_M, EVENT_ID0);
+    int32_t blockNum = get_block_num();
+    for (int32_t loop_idx = 0; loop_idx < loop; loop_idx++) {
+        if (loop_idx % blockNum != get_block_idx()) {
+            continue;
+        }
+
+        int64_t batch_idx = loop_idx / (m_loop * n_loop);
+        int64_t in_batch_idx = loop_idx % (m_loop * n_loop);  // 分块的id
+        int64_t m_idx;
+        int64_t n_idx;
+
+        m_idx = loop_idx / n_loop;
+        n_idx = loop_idx % n_loop;
+
+        int64_t offset_a, offset_b;
+        int64_t offset_c = batch_idx * (int64_t)M * (int64_t)N + m_idx * (int64_t)M0 * (int64_t)N + n_idx * (int64_t)N0;
+        int32_t m_actual = (m_idx == (m_loop - 1)) ? (M - (int32_t)m_idx * M0) : M0;
+        int32_t n_actual = (n_idx == (n_loop - 1)) ? (N - (int32_t)n_idx * N0) : N0;
+        int32_t m_round = (m_actual + 15) / 16 * 16;
+        int32_t n_round = (n_actual + 15) / 16 * 16;
+
+        int32_t mn_max = m_round > n_round ? m_round : n_round;
+        int32_t k_part_len = L0AB_PINGPONG_BUFFER_LEN / mn_max / 16 * 16;
+
+        for (int32_t k_idx = 0; k_idx < k_loop; k_idx++) {
+            if (trans_a) {
+                offset_a = batch_idx * M * K + k_idx * K0 * M + m_idx * M0;
+            } else {
+                offset_a = batch_idx * M * K + m_idx * M0 * K + k_idx * K0;
+            }
+
+            if (trans_b) {
+                offset_b = batch_idx * K * N + n_idx * N0 * K + k_idx * K0;
+            } else {
+                offset_b = batch_idx * K * N + k_idx * K0 * N + n_idx * N0;
+            }
+
+            int32_t k_actual = (k_idx == (k_loop - 1)) ? (K - k_idx * K0) : K0;
+            int32_t k_round = (k_actual + 15) / 16 * 16;
+            int32_t k_part_loop = (k_actual + k_part_len - 1) / k_part_len;
+
+            auto l1_buf_a = ping_flag ? l1_base_a : l1_base_a + L1_PINGPONG_BUFFER_LEN;
+            auto l1_buf_b = ping_flag ? l1_base_b : l1_base_b + L1_PINGPONG_BUFFER_LEN;
+            auto event_id = ping_flag ? EVENT_ID0 : EVENT_ID1;
+
+            // *** load matrix A to L1
+            wait_flag(PIPE_MTE1, PIPE_MTE2, event_id);
+            if (trans_a) {
+                if (M == 1) {
+                    copy_gm_to_cbuf(l1_buf_a, gm_a + offset_a,
+                                    0,                                   // sid
+                                    1,                                   // nBurst
+                                    (k_actual + C0_SIZE - 1) / C0_SIZE,  // lenBurst
+                                    0,                                   // srcGap
+                                    0,                                   // dstGap
+                                    PAD_NONE                             // padMode
+                    );
+                } else {
+                    load_matrix_zZ(l1_buf_a, gm_a + offset_a, K0, M0, k_actual, m_actual, M);
+                }
+            } else {
+                if (m_actual == 1) {
+                    copy_gm_to_cbuf(l1_buf_a, gm_a + offset_a,
+                                    0,                                   // sid
+                                    1,                                   // nBurst
+                                    (k_actual + C0_SIZE - 1) / C0_SIZE,  // lenBurst
+                                    0,                                   // srcGap
+                                    0,                                   // dstGap
+                                    PAD_NONE                             // padMode
+                    );
+                } else {
+                    load_matrix_zZ(l1_buf_a, gm_a + offset_a, M0, K0, m_actual, k_actual, K);
+                }
+            }
+            set_flag(PIPE_MTE2, PIPE_MTE1, event_id);
+
+            // *** load matrix B to L1
+            wait_flag(PIPE_MTE1, PIPE_MTE2, event_id + 2);
+            if (trans_b) {
+                load_matrix_zZ(l1_buf_b, gm_b + offset_b, N0, K0, n_actual, k_actual, K);
+            } else {
+                load_matrix_zZ(l1_buf_b, gm_b + offset_b, K0, N0, k_actual, n_actual, N);
+            }
+
+            set_flag(PIPE_MTE2, PIPE_MTE1, event_id + 2);
+
+            set_flag(PIPE_M, PIPE_MTE1, EVENT_ID0);
+            set_flag(PIPE_M, PIPE_MTE1, EVENT_ID1);
+            for (int32_t k_part_idx = 0; k_part_idx < k_part_loop; k_part_idx++) {
+                int32_t k0_round = (k_part_idx < k_part_loop - 1) ? k_part_len : k_round - k_part_idx * k_part_len;
+                int32_t k0_actual = (k_part_idx < k_part_loop - 1) ? k_part_len : k_actual - k_part_idx * k_part_len;
+
+                auto mte1_mad_ping_flag = 1 - k_part_idx % 2;
+                auto mte1_mad_event_id = mte1_mad_ping_flag ? EVENT_ID0 : EVENT_ID1;
+                auto l0a_buf = l0a_base + (k_part_idx % 2) * L0AB_PINGPONG_BUFFER_LEN;
+                auto l0b_buf = l0b_base + (k_part_idx % 2) * L0AB_PINGPONG_BUFFER_LEN;
+
+                // *** load matrix A from L1 to L0A
+                if (k_part_idx == 0) {
+                    wait_flag(PIPE_MTE2, PIPE_MTE1, event_id);
+                }
+                wait_flag(PIPE_M, PIPE_MTE1, mte1_mad_event_id);
+                if (M == 1 || m_actual == 1 && !trans_a) {
+                    load_cbuf_to_ca(l0a_buf, l1_buf_a + k_part_idx * k_part_len,
+                                    0,                                                     // baseIdx
+                                    (k0_round + CUBE_MATRIX_SIZE - 1) / CUBE_MATRIX_SIZE,  // repeat
+                                    1,                                                     // srcStride
+                                    0,                                                     // dstStride
+                                    0,                                                     // sid
+                                    false,                                                 // transpose
+                                    inc                                                    // addr_cal_mode_t
+                    );
+
+                } else {
+                    if (trans_a) {
+                        auto l1_src_a = l1_buf_a + k_part_idx * k_part_len * M0;
+                        for (int i = 0; i < m_round / BLOCK_SIZE; i++) {
+                            load_cbuf_to_ca_transpose(l0a_buf + i * k0_round * BLOCK_SIZE,
+                                                      l1_src_a + i * 2 * CUBE_MATRIX_SIZE,
+                                                      0,                      // indexID
+                                                      k0_round / BLOCK_SIZE,  // repeat
+                                                      M0 / BLOCK_SIZE,        // srcStride
+                                                      1,                      // dstStride
+                                                      inc,                    // addrmode
+                                                      0                       // dstFracStride
+                            );
+                        }
+                    } else {
+                        auto l1_src_a = l1_buf_a + k_part_idx * k_part_len * BLOCK_SIZE;
+                        for (int i = 0; i < m_round / BLOCK_SIZE; i++) {
+                            load_cbuf_to_ca(l0a_buf + i * k0_round * BLOCK_SIZE, l1_src_a + i * BLOCK_SIZE * K0,
+                                            0,                   // baseIdx
+                                            k0_round / C0_SIZE,  // repeat
+                                            1,                   // srcStride
+                                            0,                   // dstStride
+                                            0,                   // sid
+                                            false,               // transpose
+                                            inc                  // addr_cal_mode_t
+                            );
+                        }
+                    }
+                }
+                if (k_part_idx == k_part_loop - 1) {
+                    set_flag(PIPE_MTE1, PIPE_MTE2, event_id);
+                }
+
+                // *** load matrix B from L1 to L0B
+                if (k_part_idx == 0) {
+                    wait_flag(PIPE_MTE2, PIPE_MTE1, event_id + 2);
+                }
+                if (trans_b) {
+                    auto l1_src_b = l1_buf_b + k_part_idx * k_part_len * BLOCK_SIZE;
+                    for (int i = 0; i < k0_round / C0_SIZE; i++) {
+                        load_cbuf_to_cb(l0b_buf + i * n_round * C0_SIZE, l1_src_b + i * CUBE_MATRIX_SIZE,
+                                        0,                     // indexID
+                                        n_round / BLOCK_SIZE,  // repeat
+                                        K0 / C0_SIZE,          // srcStride
+                                        0,                     // dstStride
+                                        0,                     // sid
+                                        false,                 // transpose
+                                        inc                    // addrmode
+                        );
+                    }
+                } else {
+                    auto l1_src_b = l1_buf_b + k_part_idx * k_part_len * N0;
+                    for (int i = 0; i < n_round / BLOCK_SIZE; i++) {
+                        load_cbuf_to_cb_transpose(l0b_buf + i * CUBE_MATRIX_SIZE, l1_src_b + i * 2 * CUBE_MATRIX_SIZE,
+                                                  0,                             // indexID
+                                                  k0_round / BLOCK_SIZE,         // repeat
+                                                  N0 / BLOCK_SIZE,               // srcStride
+                                                  2 * n_round / BLOCK_SIZE - 1,  // dstStride
+                                                  inc,                           // addrmode
+                                                  n_round / BLOCK_SIZE - 1       // dstFracStride
+                        );
+                    }
+                }
+                if (k_part_idx == k_part_loop - 1) {
+                    set_flag(PIPE_MTE1, PIPE_MTE2, event_id + 2);
+                }
+
+                set_flag(PIPE_MTE1, PIPE_M, mte1_mad_event_id);
+                wait_flag(PIPE_MTE1, PIPE_M, mte1_mad_event_id);
+
+                bool init_c = (k_idx == 0 && k_part_idx == 0);
+                if (init_c) {
+                    wait_flag(PIPE_FIX, PIPE_M, EVENT_ID0);
+                }
+
+                if (M != 1 && m_actual == 1 && trans_a) {
+                    mad(l0c_buf, l0a_buf, l0b_buf,
+                        16,         // m
+                        k0_actual,  // k
+                        n_actual,   // n
+                        0,          // unitFlag
+                        1,          // kDirectionAlign
+                        0,          // cmatrixSource
+                        init_c      // cmatrixInitVal
+                    );
+                } else {
+                    mad(l0c_buf, l0a_buf, l0b_buf,
+                        m_actual,   // m
+                        k0_actual,  // k
+                        n_actual,   // n
+                        0,          // unitFlag
+                        1,          // kDirectionAlign
+                        0,          // cmatrixSource
+                        init_c      // cmatrixInitVal
+                    );
+                }
+
+                pipe_barrier(PIPE_M);
+                set_flag(PIPE_M, PIPE_MTE1, mte1_mad_event_id);
+            }
+
+            wait_flag(PIPE_M, PIPE_MTE1, EVENT_ID0);
+            wait_flag(PIPE_M, PIPE_MTE1, EVENT_ID1);
+            ping_flag = 1 - ping_flag;
+        }
+
+        set_flag(PIPE_M, PIPE_FIX, EVENT_ID0);
+        wait_flag(PIPE_M, PIPE_FIX, EVENT_ID0);
+
+        // copy from L0C to gm
+        copy_matrix_cc_to_gm(gm_c + offset_c, l0c_buf,
+                             0,         // sid
+                             n_actual,  // NSize
+                             m_actual,  // MSize
+                             N,         // dstStride_dst_D
+                             m_round,   // srcStride
+                             0,         // UnitFlagMode
+                             NoQuant,   // QuantPRE
+                             0,         // ReLUPRE
+                             false,     // channelSplit
+                             true       // NZ2ND_EN
+        );
+        ffts_cross_core_sync(PIPE_FIX, GET_FFST_MSG(2, loop_ping_flag));
+
+        loop_ping_flag = 1 - loop_ping_flag;
+
+        set_flag(PIPE_FIX, PIPE_M, EVENT_ID0);
+    }
+
+    wait_flag(PIPE_MTE1, PIPE_MTE2, EVENT_ID0);
+    wait_flag(PIPE_MTE1, PIPE_MTE2, EVENT_ID1);
+    wait_flag(PIPE_MTE1, PIPE_MTE2, EVENT_ID2);
+    wait_flag(PIPE_MTE1, PIPE_MTE2, EVENT_ID3);
+
+    wait_flag(PIPE_FIX, PIPE_M, EVENT_ID0);
+
+    pipe_barrier(PIPE_ALL);
+}
+
+#endif
+
+#if __DAV_C220_VEC__
+
+__aicore__ __inline__ void strmm_mix_aiv(__gm__ float *__restrict__ gm_a, __gm__ float *__restrict__ gm_b,
+                                         __gm__ float *__restrict__ gm_C, uint32_t M, uint32_t N, uint32_t K,
+                                         float alpha, uint32_t lessFlag, __gm__ float *__restrict__ AIV_AIC_workspace)
+{
+    int64_t ldc = M;
+    int64_t batchSize, trans_a, trans_b, M0, N0, K0;
+
+    batchSize = 1;
+
+    trans_a = 0;
+    trans_b = 0;
+    M0 = 128;
+    N0 = 128;
+    K0 = 128;
+
+    auto ubufC1 = reinterpret_cast<__ubuf__ float *>((uintptr_t)0);             // 32 KB
+    auto ubufC2 = reinterpret_cast<__ubuf__ float *>((uintptr_t)(32 * 1024));   // 32 KB
+    auto ubufAB1 = reinterpret_cast<__ubuf__ float *>((uintptr_t)(64 * 1024));  // 32 KB
+    auto ubufAB2 = reinterpret_cast<__ubuf__ float *>((uintptr_t)(96 * 1024));  // 32 KB
+    auto ubufD1 = reinterpret_cast<__ubuf__ float *>((uintptr_t)(128 * 1024));  // 32 KB
+    auto ubufD2 = reinterpret_cast<__ubuf__ float *>((uintptr_t)(160 * 1024));  // 32 KB
+
+    int64_t m_loop = (M + M0 - 1) / M0;          // 在 M 方向分的核数
+    int64_t n_loop = (N + N0 - 1) / N0;          // 在 N 方向分的核数
+    int64_t k_loop = (K + K0 - 1) / K0;          // K 方向循环的次数
+    int64_t loop = batchSize * m_loop * n_loop;  // 总的核数
+
+    int64_t loop_ping_flag = 1;
+    int64_t k_loop_ping_flag = 1;
+
+    set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);  // 同步ubufC的使用
+    set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID1);  // 同步ubufC的使用
+
+    // 循环遍历每个分块
+    int64_t blockNum = get_block_num();
+    for (int64_t loop_idx = 0; loop_idx < loop; loop_idx++) {
+        // 平均分配给物理核心，不是自己的任务就略过到下一项
+        if (loop_idx % blockNum != get_block_idx()) {
+            continue;
+        }
+
+        // 定义变量全部使用双缓冲
+        auto ubufC = loop_ping_flag ? ubufC1 : ubufC2;
+        auto C_EVENT_ID = loop_ping_flag ? EVENT_ID0 : EVENT_ID1;
+
+        int64_t batch_idx = loop_idx / (m_loop * n_loop);
+        int64_t in_batch_idx = loop_idx % (m_loop * n_loop);
+        int64_t m_idx;
+        int64_t n_idx;
+
+        m_idx = loop_idx / n_loop;
+        n_idx = loop_idx % n_loop;
+
+        int64_t offset_a, offset_b;
+        int64_t offset_c =
+            batch_idx * M * N + m_idx * M0 * N + n_idx * N0;  // // 修改代码，将矩阵乘结果的dst stride修改为K，之前是N。
+        int32_t m_actual = (m_idx == (m_loop - 1)) ? (M - (int32_t)m_idx * M0) : M0;
+        int32_t n_actual = (n_idx == (n_loop - 1)) ? (N - (int32_t)n_idx * N0) : N0;
+        int32_t m_round = (m_actual + 15) / 16 * 16;
+        int32_t n_round = (n_actual + 15) / 16 * 16;
+
+        wait_flag(PIPE_MTE3, PIPE_MTE2, C_EVENT_ID);  // 等待上次循环的ubufC用完后才能开始使用
+
+        wait_flag_dev(loop_ping_flag);
+
+        // 读取C分块 gm -> ub 同一 group 的 AIV 平均读取AIC写入一半的数据
+        if (get_subblockid() == 0) {
+            ascblas_matrix_gm2ubuf(ubufC, gm_C + offset_c, M0 / 2 < m_actual ? M0 / 2 : m_actual, n_actual, N, N0);
+        } else if (get_subblockid() == 1 && M0 / 2 < m_actual) {
+            ascblas_matrix_gm2ubuf(ubufC, gm_C + offset_c + get_subblockid() * N * M0 / 2, m_actual - M0 / 2,
+                                   n_actual, N, N0);
+        }
+
+        // 数据读取到UB后才能开始vector计算
+        set_flag(PIPE_MTE2, PIPE_V, C_EVENT_ID);
+        wait_flag(PIPE_MTE2, PIPE_V, C_EVENT_ID);
+
+        // ubufC * alpha
+        vmuls(ubufC, ubufC, alpha, M0 * N0 / 2 / (NUM_ELE_PERBLOCK * 8), 1, 1, 8, 8);
+
+        // 等待vector 计算完毕再存回到GM中
+        set_flag(PIPE_V, PIPE_MTE3, C_EVENT_ID);
+        wait_flag(PIPE_V, PIPE_MTE3, C_EVENT_ID);
+
+        // ubufD存回到GM中
+        if (get_subblockid() == 0) {
+            ascblas_matrix_ubuf2gm(gm_C + offset_c, ubufC, M0 / 2 < m_actual ? M0 / 2 : m_actual, n_actual, N0, N);
+        } else if (get_subblockid() == 1 && M0 / 2 < m_actual) {
+            ascblas_matrix_ubuf2gm(gm_C + offset_c + get_subblockid() * N * M0 / 2, ubufC, m_actual - M0 / 2,
+                                   n_actual, N0, N);
+        }
+
+        set_flag(PIPE_MTE3, PIPE_MTE2, C_EVENT_ID);
+
+        loop_ping_flag = 1 - loop_ping_flag;  // 更换flag让下一次循环使用另外一片空间
+    }
+
+    // 最后一次循环的set 需要wait来接收
+    wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
+    wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID1);
+}
+#endif
+
+extern "C" __global__ __aicore__ void strmm(__gm__ uint8_t *__restrict__ ffts_addr, __gm__ float *__restrict__ d_A,
+                                            __gm__ float *__restrict__ d_B, __gm__ float *__restrict__ d_C,
+                                            __gm__ float *__restrict__ workspace,
+                                            __gm__ uint32_t *__restrict__ tiling_gm)
+{
+    set_ffts_base_addr((uint64_t)ffts_addr);
+
+    auto tiling_buf = reinterpret_cast<__gm__ uint8_t *>(tiling_gm);
+
+    uint32_t side = (*(__gm__ uint32_t *)((__gm__ uint8_t *)tiling_buf));
+    uint32_t uplo = (*(__gm__ uint32_t *)((__gm__ uint8_t *)tiling_buf + 4));
+    uint32_t transa = (*(__gm__ uint32_t *)((__gm__ uint8_t *)tiling_buf + 8));
+    uint32_t transb = (*(__gm__ uint32_t *)((__gm__ uint8_t *)tiling_buf + 12));
+    uint32_t diag = (*(__gm__ uint32_t *)((__gm__ uint8_t *)tiling_buf + 16));
+    uint32_t M = (*(__gm__ uint32_t *)((__gm__ uint8_t *)tiling_buf + 20));
+    uint32_t N = (*(__gm__ uint32_t *)((__gm__ uint8_t *)tiling_buf + 24));
+    uint32_t K = (*(__gm__ uint32_t *)((__gm__ uint8_t *)tiling_buf + 28));
+    uint32_t lessFlag = (*(__gm__ uint32_t *)((__gm__ uint8_t *)tiling_buf + 32));
+    float alpha = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 36));
+
+#if __DAV_C220_CUBE__
+    set_padding(0);
+    set_atomic_none();
+    set_nd_para(0x1);
+    strmm_mix_aic(d_A, d_B, d_C, M, N, K, transa, transb, lessFlag, workspace);
+#endif
+
+#if __DAV_C220_VEC__
+    set_atomic_none();
+    set_mask_norm();
+    set_vector_mask((uint64_t)-1, (uint64_t)-1);
+    strmm_mix_aiv(d_A, d_B, d_C, M, N, K, alpha, lessFlag, workspace);
+#endif
+}

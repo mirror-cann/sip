@@ -1,0 +1,48 @@
+/**
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
+ * This file is a part of the CANN Open Software.
+ * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+#include "conj_tiling.h"
+#include "tiling_data.h"
+#include "mki/utils/platform/platform_info.h"
+#include "utils/assert.h"
+#include "log/log.h"
+
+namespace AsdSip {
+using namespace Mki;
+AsdSip::AspbStatus ConjTiling(const LaunchParam &launchParam, KernelInfo &kernelInfo)
+{
+    uint32_t maxCore = static_cast<uint32_t>(PlatformInfo::Instance().GetCoreNum(CoreType::CORE_TYPE_VECTOR));
+    if (maxCore == 0) {
+        maxCore = 1;
+    }
+    uint32_t size = static_cast<uint32_t>(launchParam.GetInTensor(0).Numel()) * 2;
+    uint32_t len = (size / maxCore + 7) / 8 * 8;
+    uint32_t seqLenLowerBound = 64;
+    if (len < seqLenLowerBound) {
+        len = seqLenLowerBound;
+    }
+    uint32_t needCoreNum = (size + len - 1) / len;
+    uint32_t tail = size - len * (needCoreNum - 1);
+
+    ConjTilingData *tilingDataPtr = reinterpret_cast<AsdSip::ConjTilingData *>(kernelInfo.GetTilingHostAddr());
+    ASDSIP_CHECK(tilingDataPtr != nullptr, "tilingDataPtr should not be empty",
+              return AsdSip::ErrorType::ACL_ERROR_INVALID_PARAM);
+
+    tilingDataPtr->coreNum = needCoreNum;
+    tilingDataPtr->dataNum = size;
+    tilingDataPtr->len = len;
+    tilingDataPtr->tail = tail;
+
+    kernelInfo.SetBlockDim(needCoreNum);
+    kernelInfo.GetScratchSizes().push_back(0);
+    ASDSIP_LOG(DEBUG) << "KernelInfo:\n" << kernelInfo.ToString();
+
+    return AsdSip::ErrorType::ACL_SUCCESS;
+}
+}  // namespace AsdSip

@@ -1,0 +1,54 @@
+# ----------------------------------------------------------------------------
+# Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
+# This file is a part of the CANN Open Software.
+# Licensed under CANN Open Software License Agreement Version 1.0 (the "License").
+# Please refer to the License for details. You may not use this file except in compliance with the License.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# See LICENSE in the root of the software repository for the full text of the License.
+# ----------------------------------------------------------------------------
+
+set(fft_c2r_src
+    ${CMAKE_CURRENT_LIST_DIR}/fft_c2r_operation.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/fft/fft_c2r_kernel.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/fft/tiling/fft_c2r_tiling.cpp
+)
+ 
+add_operation(FftC2ROperation "${fft_c2r_src}")
+
+
+add_kernel(fft_c2r_1 ascend910b mix
+    fft/kernel/fft_c2r_1.cce
+    FftC2R1C64Kernel)
+
+add_kernel(fft_c2r_2 ascend910b mix
+    fft/kernel/fft_c2r_2.cce
+    FftC2R2C64Kernel)
+
+add_kernel(fft_c2r_3 ascend910b mix
+    fft/kernel/fft_c2r_3.cce
+    FftC2R3C64Kernel)
+
+add_kernel(fft_c2r_1_odd ascend910b mix
+    fft/kernel/fft_c2r_1_odd.cce
+    FftC2ROdd1C64Kernel)
+
+add_kernel(fft_c2r_2_odd ascend910b mix
+    fft/kernel/fft_c2r_2_odd.cce
+    FftC2ROdd2C64Kernel)
+
+add_kernel(fft_c2r_3_odd ascend910b mix
+    fft/kernel/fft_c2r_3_odd.cce
+    FftC2ROdd3C64Kernel)
+
+add_kernel(fft_c2r_1_even ascend910b mix
+    fft/kernel/fft_c2r_1_even.cce
+    FftC2REven1C64Kernel)
+
+add_kernel(fft_c2r_2_even ascend910b mix
+    fft/kernel/fft_c2r_2_even.cce
+    FftC2REven2C64Kernel)
+
+add_kernel(fft_c2r_3_even ascend910b mix
+    fft/kernel/fft_c2r_3_even.cce
+    FftC2REven3C64Kernel)

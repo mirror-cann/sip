@@ -1,0 +1,35 @@
+#ifdef __CCE_KT_TEST__
+#define __aicore__
+#else
+#define __aicore__ [aicore]
+#endif
+
+#include "../../../../common/include/kernel/fft_c2r_common.cceh"
+
+
+
+#if __DAV_C220_CUBE__
+
+extern "C" __global__ __aicore__ void fft_c2r_1_even(
+    __gm__ uint8_t * __restrict__ ffts_addr, __gm__ float * __restrict__ gm_input, __gm__ uint32_t * __restrict__ gm_input_index, 
+    __gm__ float * __restrict__ gm_a, __gm__ float * __restrict__ gm_b, __gm__ uint32_t * __restrict__ gm_output_index, 
+    __gm__ float * __restrict__ gm_dft_matrix_array, __gm__ float * __restrict__ gm_tw_matrix_array, __gm__ int32_t * __restrict__ gm_radix_list, 
+    __gm__ float * __restrict__ gm_output, __gm__ float * __restrict__ gm_workspace, __gm__ uint8_t * __restrict__ gm_tiling_para
+)
+{
+    common_fft_c2r_mix_cube_by_batch(ffts_addr, gm_input, gm_dft_matrix_array, gm_tw_matrix_array, gm_radix_list, gm_output, gm_workspace, gm_tiling_para, 0, 1 << 22);
+}
+
+#elif __DAV_C220_VEC__
+
+extern "C" __global__ __aicore__ void fft_c2r_1_even(
+    __gm__ uint8_t * __restrict__ ffts_addr, __gm__ float * __restrict__ gm_input, __gm__ uint32_t * __restrict__ gm_input_index, 
+    __gm__ float * __restrict__ gm_a, __gm__ float * __restrict__ gm_b, __gm__ uint32_t * __restrict__ gm_output_index, 
+    __gm__ float * __restrict__ gm_dft_matrix_array, __gm__ float * __restrict__ gm_tw_matrix_array, __gm__ int32_t * __restrict__ gm_radix_list, 
+    __gm__ float * __restrict__ gm_output, __gm__ float * __restrict__ gm_workspace, __gm__ uint8_t * __restrict__ gm_tiling_para
+)
+{
+    common_fft_c2r_mix_even_vector_by_batch<1>(ffts_addr, gm_input, gm_input_index, gm_a, gm_b, gm_output_index, gm_dft_matrix_array, gm_tw_matrix_array, gm_radix_list, gm_output, gm_workspace, gm_tiling_para, 1 << 22);
+}
+
+#endif

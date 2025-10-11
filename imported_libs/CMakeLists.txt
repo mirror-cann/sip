@@ -1,0 +1,38 @@
+# ----------------------------------------------------------------------------
+# Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
+# This file is a part of the CANN Open Software.
+# Licensed under CANN Open Software License Agreement Version 1.0 (the "License").
+# Please refer to the License for details. You may not use this file except in compliance with the License.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# See LICENSE in the root of the software repository for the full text of the License.
+# ----------------------------------------------------------------------------
+
+# mki: an existing shared target
+file(GLOB_RECURSE MKI_LIBS "${MKI_PACKAGE_DIR}/lib**/libmki.so")
+list(GET MKI_LIBS 0 MKI_LIB)
+
+add_library(mki SHARED IMPORTED GLOBAL)
+set_property(TARGET mki PROPERTY IMPORTED_LOCATION ${MKI_LIB})
+
+target_include_directories(mki INTERFACE ${MKI_PACKAGE_DIR}/include)
+
+# mki_static: an existing shared target
+file(GLOB_RECURSE MKI_STATIC_LIBS "${MKI_PACKAGE_DIR}/lib**/libmki_static.a")
+list(GET MKI_STATIC_LIBS 0 MKI_STATIC_LIB)
+
+add_library(mki_static STATIC IMPORTED GLOBAL)
+set_property(TARGET mki_static PROPERTY IMPORTED_LOCATION ${MKI_STATIC_LIB})
+
+target_include_directories(mki_static INTERFACE ${MKI_PACKAGE_DIR}/include)
+
+if("$ENV{TEST_TYPE}" STREQUAL "UT")
+    # asdops: an existing shared target
+    file(GLOB_RECURSE ASDOPS_LIBS "$ENV{ATB_HOME_PATH}/lib**/libasdops.so")
+    list(GET ASDOPS_LIBS 0 ASDOPS_LIB)
+
+    add_library(asdops SHARED IMPORTED GLOBAL)
+    set_property(TARGET asdops PROPERTY IMPORTED_LOCATION ${ASDOPS_LIB})
+
+    target_include_directories(asdops INTERFACE $ENV{ATB_HOME_PATH}/include)
+endif()

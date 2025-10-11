@@ -1,0 +1,56 @@
+
+/**
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
+ * This file is a part of the CANN Open Software.
+ * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+#include "convolve_tiling.h"
+#include "utils/assert.h"
+#include "log/log.h"
+#include "mki/utils/platform/platform_info.h"
+#include "convolve.h"
+#include "convolve_tiling_data.h"
+#include "convolve_tiling.h"
+
+namespace AsdSip {
+using namespace Mki;
+
+constexpr uint32_t BASE_COL_BLOCK = 128;
+constexpr uint32_t NUM_TWO = 2;
+
+AsdSip::AspbStatus ConvolveTiling(const LaunchParam &launchParam, KernelInfo &kernelInfo)
+{
+    void *tilingData = kernelInfo.GetTilingHostAddr();
+
+    ConvolveTilingData *tilingDataPtr = reinterpret_cast<ConvolveTilingData *>(tilingData);
+
+    ASDSIP_CHECK(tilingData != nullptr, "tilingDataPtr should not be empty",
+              return AsdSip::ErrorType::ACL_ERROR_INVALID_PARAM);
+
+    uint32_t cubeCoreNum = PlatformInfo::Instance().GetCoreNum(CoreType::CORE_TYPE_CUBE);
+    if (cubeCoreNum == 0) {
+        cubeCoreNum = 1;
+    }
+
+    OpParam::Convolve param = AnyCast<OpParam::Convolve>(launchParam.GetParam());
+
+    uint64_t workspaceColNum = static_cast<uint64_t>(BASE_COL_BLOCK + param.kernelLen * NUM_TWO - NUM_TWO);
+    uint64_t workspaceRowNum = static_cast<uint64_t>(workspaceColNum + param.kernelLen * NUM_TWO - NUM_TWO);
+
+    tilingDataPtr->signalLen = param.signalLen;
+    tilingDataPtr->kernelLen = param.kernelLen;
+    tilingDataPtr->batchCount = param.batchCount;
+    tilingDataPtr->dataType = param.dataType;
+
+    uint64_t workspaceSize = workspaceColNum * workspaceRowNum;
+    kernelInfo.SetBlockDim(cubeCoreNum);
+    kernelInfo.GetScratchSizes() = {workspaceSize};
+    ASDSIP_LOG(DEBUG) << "KernelInfo:\n" << kernelInfo.ToString();
+
+    return AsdSip::ErrorType::ACL_SUCCESS;
+}
+}

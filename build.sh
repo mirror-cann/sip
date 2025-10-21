@@ -34,10 +34,10 @@ function fn_init_use_cxx11_abi()
 function fn_build_mki()
 {
     cd $MKI_ROOT
-    [[ -d "$CODE_ROOT"/../Mind-KernelInfra/build ]] && rm -rf $CODE_ROOT/../Mind-KernelInfra/build
-    [[ -d "$CODE_ROOT"/../Mind-KernelInfra/output ]] && rm -rf $CODE_ROOT/../Mind-KernelInfra/output
+    [[ -d "$MKI_ROOT"/build ]] && rm -rf $MKI_ROOT/build
+    [[ -d "$MKI_ROOT"/output ]] && rm -rf $MKI_ROOT/output
 
-    echo  "current commid id of Mind-KernelInfra: $(git rev-parse HEAD)"
+    echo  "current commid id of ascend-boost-comm: $(git rev-parse HEAD)"
 
     build_options="--use_cxx11_abi=0"
     bash scripts/build.sh $build_options
@@ -118,17 +118,18 @@ function fn_build()
     MKI_PATH="${THIRD_PARTY_DIR}/mki"
     COMPILER_PATH="${THIRD_PARTY_DIR}/compiler"
     if [ ! -d "${MKI_PATH}" ] || [ ! -d "${COMPILER_PATH}" ]; then
+        mkdir -p 3rdparty
         if [ ! -d "${MKI_ROOT}" ]; then
-            echo "Third_party dir does not complete and Mind-KernelInfra does not exit!"
-            return 0
+            echo "Third_party dir does not complete and ascend-boost-comm does not exit!"
+            cd ${THIRD_PARTY_DIR}/
+            git clone https://gitcode.com/cann/ascend-boost-comm.git -b br_release_cann_8.3.RC1_20260322
         fi
         cd $CODE_ROOT/
-        mkdir -p 3rdparty
         rm -rf MKI_PATH
         rm -rf COMPILER_PATH
         fn_build_mki
-        cp -r $CODE_ROOT/../Mind-KernelInfra/output/mki ${THIRD_PARTY_DIR}/
-        cp -r $CODE_ROOT/../Mind-KernelInfra/3rdparty/compiler ${THIRD_PARTY_DIR}/
+        cp -r ${THIRD_PARTY_DIR}/ascend-boost-comm/output/mki ${THIRD_PARTY_DIR}/
+        cp -r ${THIRD_PARTY_DIR}/ascend-boost-comm/3rdparty/compiler ${THIRD_PARTY_DIR}/
     fi
 
     cd $CODE_ROOT/
@@ -243,12 +244,12 @@ cd $(dirname $0)
 
 CURRENT_DIR=$(pwd)
 export CODE_ROOT=${CURRENT_DIR}
-MKI_ROOT=$CODE_ROOT/../Mind-KernelInfra
 export CACHE_DIR=$CODE_ROOT/build
 export OUTPUT_DIR=$CODE_ROOT/output
 THIRD_PARTY_DIR=$CODE_ROOT/3rdparty
 ASDSIP_DIR=$CODE_ROOT
 RELEASE_DIR=$CODE_ROOT/ci/release
+MKI_ROOT=$THIRD_PARTY_DIR/ascend-boost-comm
 VERSION="8.2.RC1"
 VERSION_B="8.2.RC1"
 LOG_PATH="/var/log/cann_asdsip_log/"

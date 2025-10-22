@@ -250,8 +250,8 @@ THIRD_PARTY_DIR=$CODE_ROOT/3rdparty
 ASDSIP_DIR=$CODE_ROOT
 RELEASE_DIR=$CODE_ROOT/ci/release
 MKI_ROOT=$THIRD_PARTY_DIR/ascend-boost-comm
-VERSION="8.2.RC1"
-VERSION_B="8.2.RC1"
+VERSION="1.0.0"
+VERSION_B="1.0.0"
 LOG_PATH="/var/log/cann_asdsip_log/"
 LOG_NAME="cann_asdsip_install.log"
 

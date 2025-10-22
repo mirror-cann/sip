@@ -121,7 +121,7 @@ pip3 install attrs cython 'numpy>=1.19.2,<=1.24.0' decorator sympy cffi pyyaml p
 
 #### C++
 
-在SIP仓库的`example`目录下，存放了多个不依赖测试框架、即编可用的算子调用Demo示例。进入对应目录执行如下命令就可完成一个算子的调用执行。代码完整内容可参考`example\example.cpp`，下面仅展示其核心内容：
+在SIP仓库的`example`目录下，存放了多个不依赖测试框架、即编可用的算子调用Demo示例。本节示例代码展示通过C++调用SIP asdBlasSdot算子实现向量点乘（内积）功能，代码完整内容可参考`example\example.cpp`，下面仅展示其核心内容：
 ```c++
 #include <iostream>
 #include <vector>

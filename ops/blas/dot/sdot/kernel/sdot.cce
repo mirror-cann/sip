@@ -1,0 +1,239 @@
+#ifdef __CCE_KT_TEST__
+#define __aicore__
+#else
+#define __aicore__ [aicore]
+#endif
+
+#ifdef __DAV_C220_VEC__
+__aicore__ __inline__ __attribute__((always_inline)) void copy_vec_gm2ub(__ubuf__ float *dst, __gm__ float *src,
+                                                                         uint32_t len)
+{
+    uint16_t nBurst = 1;
+    uint32_t lenBurst = len * sizeof(float);
+    uint8_t leftPaddingNum = 0;
+    uint8_t rightPaddingNum = 8 - len % 8;
+    uint32_t srcGap = 0;
+    uint32_t dstGap = 0;
+    copy_gm_to_ubuf_align_b32(dst, src,
+                              0,  // sid
+                              nBurst, lenBurst, leftPaddingNum, rightPaddingNum, srcGap, dstGap);
+}
+
+__aicore__ __inline__ __attribute__((always_inline)) void copy_vec_ub2gm(__gm__ float *dst, __ubuf__ float *src,
+                                                                         uint32_t len)
+{
+    uint16_t nBurst = 1;
+    uint32_t lenBurst = len * sizeof(float);
+    uint8_t leftPaddingNum = 0;
+    uint8_t rightPaddingNum = 0;
+    uint32_t srcGap = 0;
+    uint32_t dstGap = 0;
+    copy_ubuf_to_gm_align_b32(dst, src,
+                              0,  // sid
+                              nBurst, lenBurst, leftPaddingNum, rightPaddingNum, srcGap, dstGap);
+}
+
+__aicore__ __inline__ __attribute__((always_inline)) void sdot_single_iteration_aiv(
+    __gm__ float *gm_x, __gm__ float *gm_y, __gm__ float *gm_result, __ubuf__ float *ub_x, __ubuf__ float *ub_y,
+    __ubuf__ float *ub_aug, __ubuf__ float *ub_aug_sec, __ubuf__ float *ub_acc, uint32_t len, uint32_t event_id)
+{
+    uint32_t repeatTime = (len + 63) / 64;           // 2
+    uint32_t reduceRepeat = (repeatTime + 63) / 64;  // 1
+
+    vector_dup(ub_x, (float)0.0, repeatTime, 1, 1, 8, 8);
+    vector_dup(ub_y, (float)0.0, repeatTime, 1, 1, 8, 8);
+
+    set_flag(PIPE_V, PIPE_MTE2, event_id);
+    wait_flag(PIPE_V, PIPE_MTE2, event_id);
+
+    copy_vec_gm2ub(ub_x, gm_x, len);
+    copy_vec_gm2ub(ub_y, gm_y, len);
+
+    set_flag(PIPE_MTE2, PIPE_V, event_id);
+    wait_flag(PIPE_MTE2, PIPE_V, event_id);
+
+    vmul(ub_x, ub_x, ub_y, repeatTime, 1, 1, 1, 8, 8, 8);
+
+    vector_dup(ub_aug, (float)0.0, reduceRepeat, 1, 1, 8, 8);
+    pipe_barrier(PIPE_V);
+    vcadd(ub_aug, ub_x, repeatTime, 1, 1, 8, false);
+    pipe_barrier(PIPE_V);
+
+    if (repeatTime > 1) {
+        vector_dup(ub_aug_sec, (float)0.0, reduceRepeat, 1, 1, 8, 8);
+        pipe_barrier(PIPE_V);
+        vcadd(ub_aug_sec, ub_aug, reduceRepeat, 1, 1, 8, false);
+        pipe_barrier(PIPE_V);
+        if (reduceRepeat > 0) {
+            vcadd(ub_aug_sec, ub_aug_sec, 1, 1, 1, 8, false);
+            pipe_barrier(PIPE_V);
+        }
+        vadd(ub_acc, ub_acc, ub_aug_sec, 1, 1, 1, 1, 8, 8, 8);
+    } else {
+        vadd(ub_acc, ub_acc, ub_aug, 1, 1, 1, 1, 8, 8, 8);
+    }
+}
+
+__aicore__ __inline__ __attribute__((always_inline)) void sdot_process_aiv(__gm__ float *gm_x, __gm__ float *gm_y,
+                                                                           __gm__ float *gm_result,
+                                                                           __gm__ float *gm_workpsace, uint32_t offset,
+                                                                           uint32_t compute_num, uint32_t vec_core_num)
+{
+    auto core_idx = get_block_idx() * get_subblockdim() + get_subblockid();
+
+    uint32_t maxDataCount = 46 * 1024 / 4;
+
+    auto ub_x_ping = reinterpret_cast<__ubuf__ float *>((uintptr_t)0);
+    auto ub_x_pong = reinterpret_cast<__ubuf__ float *>((uintptr_t)46 * 1024);
+    auto ub_y_ping = reinterpret_cast<__ubuf__ float *>((uintptr_t)46 * 2 * 1024);
+    auto ub_y_pong = reinterpret_cast<__ubuf__ float *>((uintptr_t)46 * 3 * 1024);
+
+    auto ub_aug_ping = reinterpret_cast<__ubuf__ float *>((uintptr_t)46 * 4 * 1024);
+    auto ub_aug_sec_ping = reinterpret_cast<__ubuf__ float *>((uintptr_t)(46 * 4 + 1) * 1024);
+    auto ub_aug_pong = reinterpret_cast<__ubuf__ float *>((uintptr_t)(46 * 4 + 2) * 1024);
+    auto ub_aug_sec_pong = reinterpret_cast<__ubuf__ float *>((uintptr_t)(46 * 4 + 3) * 1024);
+
+    auto ub_acc_ping = reinterpret_cast<__ubuf__ float *>((uintptr_t)(46 * 4 + 4) * 1024);
+    auto ub_acc_pong = reinterpret_cast<__ubuf__ float *>((uintptr_t)(46 * 4 + 6) * 1024);
+
+    vector_dup(ub_acc_ping, (float)0.0, 1, 1, 1, 8, 8);
+    vector_dup(ub_acc_pong, (float)0.0, 1, 1, 1, 8, 8);
+
+    pipe_barrier(PIPE_V);
+
+    uint32_t repeatTimes = compute_num / maxDataCount;
+    uint32_t remainNum = compute_num % maxDataCount;
+
+    uint32_t ping_flag = 1;
+
+    uint32_t curr_offset = offset;
+
+    if (repeatTimes > 0) {
+        set_flag(PIPE_V, PIPE_MTE2, EVENT_ID0);
+        set_flag(PIPE_V, PIPE_MTE2, EVENT_ID1);
+
+        for (uint32_t i = 0; i < repeatTimes; i++) {
+            auto ub_x = ping_flag ? ub_x_ping : ub_x_pong;
+            auto ub_y = ping_flag ? ub_y_ping : ub_y_pong;
+            auto ub_aug = ping_flag ? ub_aug_ping : ub_aug_pong;
+            auto ub_aug_sec = ping_flag ? ub_aug_sec_ping : ub_aug_sec_pong;
+            auto ub_acc = ping_flag ? ub_acc_ping : ub_acc_pong;
+
+            auto event_id = ping_flag ? EVENT_ID0 : EVENT_ID1;
+
+            wait_flag(PIPE_V, PIPE_MTE2, event_id);
+
+            sdot_single_iteration_aiv(gm_x + curr_offset, gm_y + curr_offset, gm_result, ub_x, ub_y, ub_aug, ub_aug_sec,
+                                      ub_acc, maxDataCount, event_id);
+
+            curr_offset += maxDataCount;
+
+            set_flag(PIPE_V, PIPE_MTE2, event_id);
+            ping_flag = 1 - ping_flag;
+        }
+        wait_flag(PIPE_V, PIPE_MTE2, EVENT_ID0);
+        wait_flag(PIPE_V, PIPE_MTE2, EVENT_ID1);
+    }
+
+    if (remainNum > 0) {
+        auto ub_x = ping_flag ? ub_x_ping : ub_x_pong;
+        auto ub_y = ping_flag ? ub_y_ping : ub_y_pong;
+        auto ub_aug = ping_flag ? ub_aug_ping : ub_aug_pong;
+        auto ub_aug_sec = ping_flag ? ub_aug_sec_ping : ub_aug_sec_pong;
+        auto ub_acc = ping_flag ? ub_acc_ping : ub_acc_pong;
+        auto event_id = ping_flag ? EVENT_ID0 : EVENT_ID1;
+
+        sdot_single_iteration_aiv(gm_x + curr_offset, gm_y + curr_offset, gm_result, ub_x, ub_y, ub_aug, ub_aug_sec,
+                                  ub_acc, remainNum, event_id);
+    }
+    pipe_barrier(PIPE_ALL);
+
+    if (repeatTimes > 0) {
+        vadd(ub_acc_ping, ub_acc_ping, ub_acc_pong, 1, 1, 1, 1, 8, 8, 8);
+        set_flag(PIPE_V, PIPE_MTE3, EVENT_ID0);
+        wait_flag(PIPE_V, PIPE_MTE3, EVENT_ID0);
+    }
+
+    copy_vec_ub2gm(gm_workpsace + core_idx, ub_acc_ping, 1);
+    pipe_barrier(PIPE_ALL);
+
+    // sync all cores
+    int flag_id = 0;
+    int mode = 0;
+    uint64_t config = 1 | (mode << 4) | (flag_id << 8);
+    ffts_cross_core_sync(PIPE_MTE3, config);
+    wait_flag_dev(flag_id);
+
+    if (core_idx == 0) {
+        // sum all results
+        auto ub_sum = reinterpret_cast<__ubuf__ float *>((uintptr_t)0);
+        auto ub_result = reinterpret_cast<__ubuf__ float *>((uintptr_t)64 * 4);
+        vector_dup(ub_sum, (float)0.0, 2, 1, 1, 8, 8);
+
+        set_flag(PIPE_V, PIPE_MTE2, EVENT_ID0);
+        wait_flag(PIPE_V, PIPE_MTE2, EVENT_ID0);
+
+        copy_vec_gm2ub(ub_result, gm_workpsace, vec_core_num);
+
+        set_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
+        wait_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
+
+        vcadd(ub_sum, ub_result, 1, 1, 1, 8, false);
+
+        set_flag(PIPE_V, PIPE_MTE3, EVENT_ID0);
+        wait_flag(PIPE_V, PIPE_MTE3, EVENT_ID0);
+
+        copy_vec_ub2gm(gm_result, ub_sum, 1);
+    }
+
+    pipe_barrier(PIPE_ALL);
+
+    set_atomic_none();
+}
+
+extern "C" __global__ __aicore__ void sdot(__gm__ uint8_t *__restrict__ ffts_addr, __gm__ float *__restrict__ x,
+                                           __gm__ float *__restrict__ y, __gm__ float *__restrict__ result,
+                                           __gm__ float *__restrict__ workspace, __gm__ float *__restrict__ tiling_gm)
+{
+    set_ffts_base_addr((uint64_t)ffts_addr);
+    set_atomic_none();
+
+    set_mask_norm();
+    set_vector_mask((uint64_t)-1, (uint64_t)-1);
+
+    auto core_idx = get_block_idx() * get_subblockdim() + get_subblockid();
+
+    auto tiling_buf = reinterpret_cast<__gm__ uint8_t *>(tiling_gm);
+
+    uint32_t n = (*(__gm__ uint32_t *)((__gm__ uint8_t *)tiling_buf));  // num of float elements
+    uint32_t coreNum = (*(__gm__ uint32_t *)((__gm__ uint8_t *)tiling_buf + 4));
+    uint32_t isConj = (*(__gm__ uint32_t *)((__gm__ uint8_t *)tiling_buf + 8));
+    uint32_t offset = (*(__gm__ uint32_t *)((__gm__ uint8_t *)tiling_buf + 12 + 4 * core_idx));
+    uint32_t cal_num = (*(__gm__ uint32_t *)((__gm__ uint8_t *)tiling_buf + 12 + 40 * 4 + 4 * core_idx));
+
+    auto ub_clear = reinterpret_cast<__ubuf__ float *>((uintptr_t)0);
+    vector_dup(ub_clear, (float)0.0, 1, 1, 1, 8, 8);
+
+    set_flag(PIPE_V, PIPE_MTE3, EVENT_ID0);
+    wait_flag(PIPE_V, PIPE_MTE3, EVENT_ID0);
+
+    // set workspace to 0
+    copy_vec_ub2gm(workspace, ub_clear, coreNum);
+
+    int flag_id = 0;
+    int mode = 0;
+    uint64_t config = 1 | (mode << 4) | (flag_id << 8);
+    ffts_cross_core_sync(PIPE_MTE3, config);
+    wait_flag_dev(flag_id);
+
+    sdot_process_aiv(x, y, result, workspace, offset, cal_num, coreNum);
+}
+#endif
+
+#ifdef __DAV_C220_CUBE__
+extern "C" __global__ __aicore__ void sdot(__gm__ uint8_t *__restrict__ ffts_addr, __gm__ float *__restrict__ x,
+                                           __gm__ float *__restrict__ y, __gm__ float *__restrict__ result,
+                                           __gm__ float *__restrict__ workspace, __gm__ float *__restrict__ tiling_gm)
+{
+}
+#endif

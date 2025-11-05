@@ -1,0 +1,248 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and contiditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+#include "kernel_operator.h"
+#include <type_traits>
+
+#if __DAV_C220_VEC__
+__aicore__ __inline__ __attribute__((always_inline)) void copy_vec_gm2ub_float(__ubuf__ float *dst, __gm__ float *src,
+                                                                               uint32_t len)
+{
+    uint16_t nBurst = 1;
+    uint32_t lenBurst = len * sizeof(float);
+    uint8_t leftPaddingNum = 0;
+    uint8_t rightPaddingNum = 0;
+    uint32_t srcGap = 0;
+    uint32_t dstGap = 0;
+    copy_gm_to_ubuf_align_b32(dst, src,
+                              0,  // sid
+                              nBurst, lenBurst, leftPaddingNum, rightPaddingNum, srcGap, dstGap);
+}
+
+__aicore__ __inline__ __attribute__((always_inline)) void copy_vec_gm2ub_int(__ubuf__ uint32_t *dst,
+                                                                             __gm__ uint32_t *src, uint32_t len)
+{
+    uint16_t nBurst = 1;
+    uint32_t lenBurst = len * sizeof(uint32_t);
+    uint8_t leftPaddingNum = 0;
+    uint8_t rightPaddingNum = 0;
+    uint32_t srcGap = 0;
+    uint32_t dstGap = 0;
+    copy_gm_to_ubuf_align_b32(dst, src,
+                              0,  // sid
+                              nBurst, lenBurst, leftPaddingNum, rightPaddingNum, srcGap, dstGap);
+}
+
+__aicore__ __inline__ __attribute__((always_inline)) void copy_vec_ub2gm(__gm__ float *dst, __ubuf__ float *src,
+                                                                         uint32_t len)
+{
+    uint16_t nBurst = 1;
+    uint32_t lenBurst = len * sizeof(float);
+    uint8_t leftPaddingNum = 0;
+    uint8_t rightPaddingNum = 0;
+    uint32_t srcGap = 0;
+    uint32_t dstGap = 0;
+    copy_ubuf_to_gm_align_b32(dst, src,
+                              0,  // sid
+                              nBurst, lenBurst, leftPaddingNum, rightPaddingNum, srcGap, dstGap);
+}
+
+__aicore__ __inline__ __attribute__((always_inline)) void copy_seperate_c64(__ubuf__ float *ub_in,
+                                                                            __ubuf__ float *ub_sep, __gm__ float *x,
+                                                                            uint32_t len)
+{
+    uint32_t repeatTime = (len + 63) / 64;  // 3
+    uint32_t real_offset = 0;
+    uint32_t imag_offset = 32 * 1024 / sizeof(float) / 2;
+
+    auto ub_out_real = ub_sep;
+    auto ub_out_imag = ub_sep + imag_offset;
+
+    copy_vec_gm2ub_float(ub_in, x, len);
+
+    pipe_barrier(PIPE_ALL);
+
+    vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(ub_out_real),  // dst in UB
+              reinterpret_cast<__ubuf__ uint32_t *>(ub_in),        // src in UB
+              nullptr, repeatTime,
+              1,      // src0BlockStride
+              1,      // patternMode, 101010…10
+              8, 8);  // src0RepeatStride, src1RepeatStride
+
+    vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(ub_out_imag),  // dst in UB
+              reinterpret_cast<__ubuf__ uint32_t *>(ub_in),        // src in UB
+              nullptr, repeatTime,
+              1,      // src0BlockStride
+              2,      // patternMode, 010101…01
+              8, 8);  // src0RepeatStride, src1RepeatStride
+}
+
+__aicore__ __inline__ __attribute__((always_inline)) void compute(__gm__ float *gm_x, __gm__ float *gm_y,
+                                                                  __ubuf__ float *ub_y, __ubuf__ uint32_t *gatherOffset,
+                                                                  __ubuf__ float *ub_calc, __ubuf__ float *ub_out,
+                                                                  __gm__ float *A, float alphaReal, float alphaImag,
+                                                                  int32_t x_id,
+                                                                  int64_t calNum,  // 复数个数
+                                                                  int64_t offset, uint32_t event_id)
+{
+    uint32_t real_offset = 0;
+    uint32_t imag_offset = 32 * 1024 / sizeof(float) / 2;
+    auto ub_in_real = ub_y;
+    auto ub_in_imag = ub_y + imag_offset;
+
+    float calc_x_imag = gm_x[x_id * 2] * alphaImag + gm_x[x_id * 2 + 1] * alphaReal;
+    float calc_x_real = gm_x[x_id * 2] * alphaReal - gm_x[x_id * 2 + 1] * alphaImag;
+
+    uint64_t repeatTimes = (calNum * 2 + 63) / 64;
+    uint64_t computeRepeat = (calNum + 63) / 64;
+
+    // R * R
+    vmuls(ub_calc, ub_in_real, calc_x_real, computeRepeat, 1, 1, 8, 8);
+
+    // R * I
+    vmuls(ub_calc + imag_offset, ub_in_real, calc_x_imag, computeRepeat, 1, 1, 8, 8);
+
+    // I * I
+    vmuls(ub_out, ub_in_imag, calc_x_imag, computeRepeat, 1, 1, 8, 8);
+
+    pipe_barrier(PIPE_V);
+    // R * R + I * I
+    vadd(ub_calc, ub_calc, ub_out, computeRepeat, 1, 1, 1, 8, 8, 8);
+
+    // I * R
+    vmuls(ub_out + imag_offset, ub_in_imag, calc_x_real, computeRepeat, 1, 1, 8, 8);
+
+    pipe_barrier(PIPE_V);
+    // R * I - I * R
+    vsub(ub_calc + imag_offset, ub_calc + imag_offset, ub_out + imag_offset, computeRepeat, 1, 1, 1, 8, 8, 8);
+
+    pipe_barrier(PIPE_V);
+
+    vgather(reinterpret_cast<__ubuf__ uint32_t *>(ub_out), reinterpret_cast<__ubuf__ uint32_t *>(gatherOffset),
+            (uintptr_t)(ub_calc),  // offsetAddr
+            8,                     // dstRepeatStride，以32Byte为单位，1个block
+            repeatTimes            // repeat,以256Byte为单位，8个block
+    );
+
+    set_flag(PIPE_V, PIPE_MTE3, event_id);
+    wait_flag(PIPE_V, PIPE_MTE3, event_id);
+
+    copy_vec_ub2gm(A + offset, ub_out, calNum * 2);
+}
+
+__aicore__ __inline__ __attribute__((always_inline)) void process(__gm__ float *x, __gm__ float *y,
+                                                                  __gm__ uint32_t *gatherOffset, __gm__ float *A,
+                                                                  float alphaReal, float alphaImag, uint32_t m,
+                                                                  uint32_t n, uint64_t x_offset, uint64_t x_count_num)
+{
+    // ub 192kb
+    auto ub_in = reinterpret_cast<__ubuf__ float *>((uintptr_t)0);
+    auto ub_gather_offset = reinterpret_cast<__ubuf__ uint32_t *>((uintptr_t)32 * 1024);
+    auto ub_out_ping = reinterpret_cast<__ubuf__ float *>((uintptr_t)64 * 1024);
+    auto ub_out_pong = reinterpret_cast<__ubuf__ float *>((uintptr_t)96 * 1024);
+    auto ub_calc_ping = reinterpret_cast<__ubuf__ float *>((uintptr_t)128 * 1024);
+    auto ub_calc_pong = reinterpret_cast<__ubuf__ float *>((uintptr_t)160 * 1024);
+
+    uint32_t max_data_count = 4 * 1024;
+
+    // copyIn gather offset
+    copy_vec_gm2ub_int(ub_gather_offset, gatherOffset, max_data_count * 2);
+    pipe_barrier(PIPE_ALL);
+
+    // tiling
+    uint64_t row_block_num;
+    uint64_t row_remain_num;
+
+    uint32_t ping_flag = 1;
+
+    row_block_num = n / max_data_count;
+    row_remain_num = n % max_data_count;
+
+    if (row_remain_num > 0)
+        row_block_num++;
+
+    uint64_t curr_compute_row_num = max_data_count;
+
+    // compute
+    for (uint64_t row_block_idx = 0; row_block_idx < row_block_num; row_block_idx++) {
+        if (row_block_idx == row_block_num - 1 && row_remain_num > 0)
+            curr_compute_row_num = row_remain_num;
+        else
+            curr_compute_row_num = max_data_count;
+
+        pipe_barrier(PIPE_ALL);
+        copy_seperate_c64(ub_out_ping, ub_in, y + row_block_idx * max_data_count * 2, curr_compute_row_num * 2);
+        pipe_barrier(PIPE_ALL);
+
+        uint64_t calNum = curr_compute_row_num;
+        uint64_t offset = row_block_idx * max_data_count;
+
+        set_flag(PIPE_MTE3, PIPE_V, EVENT_ID0);
+        set_flag(PIPE_MTE3, PIPE_V, EVENT_ID2);
+
+        for (uint64_t i = x_offset; i < x_offset + x_count_num; i++) {
+            auto ub_out = ping_flag ? ub_out_ping : ub_out_pong;
+            auto ub_calc = ping_flag ? ub_calc_ping : ub_calc_pong;
+            auto event_id = ping_flag ? EVENT_ID0 : EVENT_ID2;
+
+            wait_flag(PIPE_MTE3, PIPE_V, event_id);
+
+            compute(x, y, ub_in, ub_gather_offset, ub_calc, ub_out, A, alphaReal, alphaImag, i, calNum,
+                    i * n * 2 + offset * 2, event_id);
+
+            set_flag(PIPE_MTE3, PIPE_V, event_id);
+
+            ping_flag = 1 - ping_flag;
+        }
+
+        wait_flag(PIPE_MTE3, PIPE_V, EVENT_ID0);
+        wait_flag(PIPE_MTE3, PIPE_V, EVENT_ID2);
+    }
+
+    pipe_barrier(PIPE_ALL);
+}
+
+extern "C" __global__ __aicore__ void cgerc(__gm__ float *__restrict__ d_x, __gm__ float *__restrict__ d_y,
+                                            __gm__ uint32_t *__restrict__ d_offset, __gm__ float *__restrict__ d_A,
+                                            __gm__ float *__restrict__ tiling_gm)
+{
+    uint32_t vec_idx = get_block_idx() * get_subblockdim() + get_subblockid();
+
+    auto tiling_buf = reinterpret_cast<__gm__ uint8_t *>(tiling_gm);
+    uint32_t m = (*(__gm__ uint32_t *)((__gm__ uint8_t *)tiling_buf));
+    uint32_t n = (*(__gm__ uint32_t *)((__gm__ uint8_t *)tiling_buf + 4));
+    float alphaReal = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 8));
+    float alphaImag = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 12));
+
+    uint64_t offset = (*(__gm__ uint64_t *)((__gm__ uint8_t *)tiling_buf + 16 + 8 * vec_idx));
+    uint64_t calNum = (*(__gm__ uint64_t *)((__gm__ uint8_t *)tiling_buf + 16 + 40 * 8 + 8 * vec_idx));
+
+    set_atomic_add();
+    set_atomic_f32();
+
+    set_mask_norm();
+    set_vector_mask((uint64_t)-1, (uint64_t)-1);
+    
+    if (calNum > 0) {
+        process(d_x, d_y, d_offset, d_A, alphaReal, alphaImag, m, n, offset, calNum);
+    }
+
+    pipe_barrier(PIPE_ALL);
+    set_atomic_none();
+}
+#endif
+
+#if __DAV_C220_CUBE__
+extern "C" __global__ __aicore__ void cgerc(__gm__ float *__restrict__ d_x, __gm__ float *__restrict__ d_y,
+                                            __gm__ uint32_t *__restrict__ d_offset, __gm__ float *__restrict__ d_A,
+                                            __gm__ float *__restrict__ tiling_gm)
+{
+}
+#endif

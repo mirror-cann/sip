@@ -1,0 +1,226 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and contiditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+#ifndef ASCBLAS_FP32_UTILS_H
+#define ASCBLAS_FP32_UTILS_H
+
+namespace fp32 {
+constexpr int64_t L0AB_PINGPONG_BUFFER_LEN = 32 * 1024 / sizeof(float);  // 32KB
+constexpr int64_t L0C_PINGPONG_BUFFER_LEN = 64 * 1024 / sizeof(float);   // 64KB
+constexpr int64_t NUM_ELE_PERBLOCK = 32 / sizeof(float);                 // 每个block能放多少个float
+// CUBE的最小基块 （M，N，K）= 16 * 16 * 8
+constexpr int64_t CUBE_M0 = 16;
+constexpr int64_t CUBE_N0 = 16;
+constexpr int64_t CUBE_K0 = 32 / sizeof(float);
+constexpr int64_t CUBE_MATRIX_SIZE = CUBE_K0 * CUBE_N0;                 // 16 * 8
+constexpr int64_t L1_PINGPONG_BUFFER_LEN = 256 * 1024 / sizeof(float);  // 256KB
+constexpr int64_t UINT16_STRIDE_LIMIT = 65536;
+
+/**
+     * @brief AIC函数：将列优先的nD矩阵转换为nZ格式
+     * @param [in] __cbuf__ float *dst：L1 目的地址
+     * @param [in] __gm__ float *src: GM 源地址
+     * @param [in] int64_t CBUF_M0：在L1中矩阵的行数（至少要32B对齐）
+     * @param [in] int64_t CBUF_N0：在L1中矩阵的列数（至少要32B对齐）
+     * @param [in] int64_t mActual：在GM中矩阵的行数（不需要对齐）
+     * @param [in] int64_t nActual：在GM中矩阵的列数（不需要对齐）
+     * @param [in] int64_t stride：在GM中矩阵中两列之间的距离（不需要对齐）
+     */
+__aicore__ __inline__ void ascblas_matrix_gm2cbuf_ND2nZ(__cbuf__ float *dst, __gm__ float *src, int64_t CBUF_M0,
+                                                        int64_t CBUF_N0, int64_t mActual, int64_t nActual,
+                                                        size_t stride)
+{
+    if (stride < UINT16_STRIDE_LIMIT) {
+        copy_gm_to_cbuf_multi_nd2nz_b32s(
+            dst, src, static_cast<uint8_t>(0), static_cast<uint16_t>(1), static_cast<uint16_t>(nActual),
+            static_cast<uint16_t>(mActual), static_cast<uint16_t>(0), static_cast<uint16_t>(stride),
+            static_cast<uint16_t>(CBUF_N0), static_cast<uint16_t>(1), static_cast<uint16_t>(0));
+    } else {
+        for (int i = 0; i < nActual; i++) {
+            copy_gm_to_cbuf_multi_nd2nz_b32s(dst + i * CUBE_K0, src + i * stride, static_cast<uint8_t>(0),
+                                             static_cast<uint16_t>(1), static_cast<uint16_t>(1),
+                                             static_cast<uint16_t>(mActual), static_cast<uint16_t>(0),
+                                             static_cast<uint16_t>(0), static_cast<uint16_t>(CBUF_N0),
+                                             static_cast<uint16_t>(0), static_cast<uint16_t>(0));
+        }
+    }
+}
+
+/**
+     * @brief AIC函数：将列优先的nD矩阵转换为nN格式
+     * @param [in] __cbuf__ float *dst：L1 目的地址
+     * @param [in] __gm__ float *src: GM 源地址
+     * @param [in] int64_t CBUF_M0：在L1中矩阵的行数（至少要32B对齐）
+     * @param [in] int64_t CBUF_N0：在L1中矩阵的列数（至少要32B对齐）
+     * @param [in] int64_t mActual：在GM中矩阵的行数（不需要对齐）
+     * @param [in] int64_t nActual：在GM中矩阵的列数（不需要对齐）
+     * @param [in] int64_t stride：在GM中矩阵两列之间的距离（不需要对齐）
+     */
+__aicore__ __inline__ void ascblas_matrix_gm2cbuf_ND2nN(__cbuf__ float *dst, __gm__ float *src, int64_t CBUF_M0,
+                                                        int64_t CBUF_N0, int64_t mActual, int64_t nActual,
+                                                        size_t stride)
+{
+    int64_t srcNdStride = CUBE_N0 * stride;
+    int64_t srcNStride = stride;
+    if (srcNdStride < UINT16_STRIDE_LIMIT) {
+        int ndNum = nActual / CUBE_N0;
+        int remains = nActual % CUBE_N0;
+        if (ndNum > 0) {
+            copy_gm_to_cbuf_multi_nd2nz_b32s(dst, src,
+                                             static_cast<uint8_t>(0),                  // sid
+                                             static_cast<uint16_t>(ndNum),             // ndNum
+                                             static_cast<uint16_t>(CUBE_N0),           // nValue
+                                             static_cast<uint16_t>(mActual),          // dValue
+                                             static_cast<uint16_t>(srcNdStride),       // srcNdMatrixStride
+                                             static_cast<uint16_t>(srcNStride),        // srcDValue
+                                             static_cast<uint16_t>(CUBE_N0),           // dstNzC0Stride
+                                             static_cast<uint16_t>(1),                 // dstNzNStride
+                                             static_cast<uint16_t>(CUBE_N0 * CBUF_M0)  // dstNzMatrixStride
+            );
+        }
+        if (remains > 0) {
+            copy_gm_to_cbuf_multi_nd2nz_b32s(dst + ndNum * CUBE_N0 * CBUF_M0, src + ndNum * CUBE_N0 * stride,
+                                             static_cast<uint8_t>(0),            // sid
+                                             static_cast<uint16_t>(1),           // ndNum
+                                             static_cast<uint16_t>(remains),     // nValue
+                                             static_cast<uint16_t>(mActual),    // dValue
+                                             static_cast<uint16_t>(0),           // srcNdMatrixStride
+                                             static_cast<uint16_t>(srcNStride),  // srcDValue
+                                             static_cast<uint16_t>(CUBE_N0),     // dstNzC0Stride
+                                             static_cast<uint16_t>(1),           // dstNzNStride
+                                             static_cast<uint16_t>(0)            // dstNzMatrixStride
+            );
+        }
+    } else if (srcNStride < UINT16_STRIDE_LIMIT) {
+        int ndNum = nActual / CUBE_N0;
+        int remains = nActual % CUBE_N0;
+        for (int i = 0; i < ndNum; i++) {
+            copy_gm_to_cbuf_multi_nd2nz_b32s(dst + i * CUBE_N0 * CBUF_M0, src + i * CUBE_N0 * stride,
+                                             static_cast<uint8_t>(0),            // sid
+                                             static_cast<uint16_t>(1),           // ndNum
+                                             static_cast<uint16_t>(CUBE_N0),     // nValue
+                                             static_cast<uint16_t>(mActual),    // dValue
+                                             static_cast<uint16_t>(0),           // srcNdMatrixStride
+                                             static_cast<uint16_t>(srcNStride),  // srcDValue
+                                             static_cast<uint16_t>(CUBE_N0),     // dstNzC0Stride
+                                             static_cast<uint16_t>(1),           // dstNzNStride
+                                             static_cast<uint16_t>(0)            // dstNzMatrixStride
+            );
+        }
+        if (remains > 0) {
+            copy_gm_to_cbuf_multi_nd2nz_b32s(dst + ndNum * CUBE_N0 * CBUF_M0, src + ndNum * CUBE_N0 * stride,
+                                             static_cast<uint8_t>(0),            // sid
+                                             static_cast<uint16_t>(1),           // ndNum
+                                             static_cast<uint16_t>(remains),     // nValue
+                                             static_cast<uint16_t>(mActual),    // dValue
+                                             static_cast<uint16_t>(0),           // srcNdMatrixStride
+                                             static_cast<uint16_t>(srcNStride),  // srcDValue
+                                             static_cast<uint16_t>(CUBE_N0),     // dstNzC0Stride
+                                             static_cast<uint16_t>(1),           // dstNzNStride
+                                             static_cast<uint16_t>(0)            // dstNzMatrixStride
+            );
+        }
+    } else {
+        for (int i = 0; i < nActual; i++) {
+            int idxR0 = i / CUBE_N0;
+            int idxInR0 = i % CUBE_N0;
+            copy_gm_to_cbuf_multi_nd2nz_b32s(dst + idxR0 * CUBE_N0 * CBUF_M0 + idxInR0 * CUBE_K0, src + i * stride,
+                                             static_cast<uint8_t>(0),          // sid
+                                             static_cast<uint16_t>(1),         // ndNum
+                                             static_cast<uint16_t>(1),         // nValue
+                                             static_cast<uint16_t>(mActual),  // dValue
+                                             static_cast<uint16_t>(0),         // srcNdMatrixStride, unused
+                                             static_cast<uint16_t>(0),         // srcDValue, unused
+                                             static_cast<uint16_t>(CUBE_N0),   // dstNzC0Stride
+                                             static_cast<uint16_t>(0),         // dstNzNStride, unused
+                                             static_cast<uint16_t>(0)          // dstNzMatrixStride, unused
+            );
+        }
+    }
+}
+
+/**
+     * @brief AIV函数：将列优先的nD矩阵GM读取到UB
+     * @param [in] __cbuf__ float *dst：UB 目的地址
+     * @param [in] __gm__ float *src: GM 源地址
+     * @param [in] int64_t mActual：在GM中矩阵的行数（不需要对齐）
+     * @param [in] int64_t nActual：在GM中矩阵的列数（不需要对齐）
+     * @param [in] int64_t srcStride：在GM中矩阵两列之间的距离（不需要对齐）
+     * @param [in] int64_t dstStride：在UB中矩阵两列之间的距离（需要32B对齐）
+     */
+__aicore__ __inline__ void ascblas_matrix_gm2ubuf(__ubuf__ float *dst, __gm__ float *src, int64_t mActual,
+                                                  int64_t nActual, size_t srcStride, size_t dstStride)
+{
+    int64_t mEound = ROUND(mActual, NUM_ELE_PERBLOCK);
+    if (mActual % NUM_ELE_PERBLOCK == 0 && srcStride % NUM_ELE_PERBLOCK == 0 && srcStride < UINT16_STRIDE_LIMIT) {
+        copy_gm_to_ubuf(dst, src, 0, nActual, mEound / NUM_ELE_PERBLOCK, (srcStride - mEound) / NUM_ELE_PERBLOCK,
+                        (dstStride - mEound) / NUM_ELE_PERBLOCK);
+    } else if (mActual % NUM_ELE_PERBLOCK == 0 && srcStride * NUM_ELE_PERBLOCK < UINT16_STRIDE_LIMIT) {
+        int C0_SIZE_loop = nActual / NUM_ELE_PERBLOCK;
+        int C0_SIZE_remain = nActual % NUM_ELE_PERBLOCK;
+        if (C0_SIZE_loop > 0) {
+            for (int i = 0; i < NUM_ELE_PERBLOCK; i++) {
+                copy_gm_to_ubuf(dst + i * dstStride, src + i * srcStride, 0, C0_SIZE_loop, mEound / NUM_ELE_PERBLOCK,
+                                (srcStride * NUM_ELE_PERBLOCK - mEound) / NUM_ELE_PERBLOCK,
+                                (dstStride * NUM_ELE_PERBLOCK - mEound) / NUM_ELE_PERBLOCK);
+            }
+        }
+        for (int i = 0; i < C0_SIZE_remain; i++) {
+            copy_gm_to_ubuf(dst + C0_SIZE_loop * NUM_ELE_PERBLOCK * dstStride + i * dstStride,
+                            src + C0_SIZE_loop * NUM_ELE_PERBLOCK * srcStride + i * srcStride, 0, 1,
+                            mEound / NUM_ELE_PERBLOCK, 0, 0);
+        }
+    } else {
+        for (int i = 0; i < nActual; i++) {
+            copy_gm_to_ubuf_align_b32(dst + i * dstStride, src + i * srcStride, 0, 1, mActual * sizeof(float), 0, 0, 0,
+                                      0);
+        }
+    }
+}
+
+/**
+     * @brief AIV函数：将列优先的nD矩阵从UB读取到GM
+     * @param [in] __cbuf__ float *dst：GM 目的地址
+     * @param [in] __gm__ float *src: UB 源地址
+     * @param [in] int64_t mActual：在UB中矩阵的行数（不需要对齐）
+     * @param [in] int64_t nActual：在UB中矩阵的列数（不需要对齐）
+     * @param [in] int64_t srcStride：在UB中矩阵两列之间的距离（需要32B对齐）
+     * @param [in] int64_t dstStride：在GM中矩阵两列之间的距离（不需要对齐）
+     */
+__aicore__ __inline__ void ascblas_matrix_ubuf2gm(__gm__ float *dst, __ubuf__ float *src, int64_t mActual,
+                                                  int64_t nActual, size_t srcStride, size_t dstStride)
+{
+    int64_t mEound = ROUND(mActual, NUM_ELE_PERBLOCK);
+    if (mActual % NUM_ELE_PERBLOCK == 0 && dstStride % NUM_ELE_PERBLOCK == 0 && dstStride < UINT16_STRIDE_LIMIT) {
+        copy_ubuf_to_gm(dst, src, 0, nActual, mEound / NUM_ELE_PERBLOCK, (srcStride - mEound) / NUM_ELE_PERBLOCK,
+                        (dstStride - mEound) / NUM_ELE_PERBLOCK);
+    } else if (mActual % NUM_ELE_PERBLOCK == 0 && dstStride * NUM_ELE_PERBLOCK < UINT16_STRIDE_LIMIT) {
+        int C0_SIZE_loop = nActual / NUM_ELE_PERBLOCK;
+        int C0_SIZE_remain = nActual % NUM_ELE_PERBLOCK;
+        if (C0_SIZE_loop > 0) {
+            for (int i = 0; i < NUM_ELE_PERBLOCK; i++) {
+                copy_ubuf_to_gm(dst + i * dstStride, src + i * srcStride, 0, C0_SIZE_loop, mActual / NUM_ELE_PERBLOCK,
+                                (srcStride * NUM_ELE_PERBLOCK - mActual) / NUM_ELE_PERBLOCK,
+                                (dstStride * NUM_ELE_PERBLOCK - mActual) / NUM_ELE_PERBLOCK);
+            }
+        }
+        for (int i = 0; i < C0_SIZE_remain; i++) {
+            copy_ubuf_to_gm(dst + C0_SIZE_loop * NUM_ELE_PERBLOCK * dstStride + i * dstStride,
+                            src + C0_SIZE_loop * NUM_ELE_PERBLOCK * srcStride + i * srcStride, 0, 1,
+                            mActual / NUM_ELE_PERBLOCK, 0, 0);
+        }
+    } else {
+        for (int i = 0; i < nActual; i++) {
+            copy_ubuf_to_gm_align_b32(dst + i * dstStride, src + i * srcStride, 0, 1, mActual * sizeof(float), 0, 0, 0,
+                                      0);
+        }
+    }
+}
+}
+#endif

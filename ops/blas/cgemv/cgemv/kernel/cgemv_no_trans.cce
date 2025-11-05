@@ -1,0 +1,394 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and contiditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+#include "ascblasCgemv_utils.cceh"
+
+#define MAXALIGN_WITH(a, b) (((a) + (b)-1) / (b)) * (b)
+
+#if __DAV_C220_VEC__
+extern "C" __global__ __aicore__ void cgemv_no_trans(
+    __gm__ uint8_t *__restrict__ ffts_addr, __gm__ float *__restrict__ d_A, __gm__ float *__restrict__ d_x,
+    __gm__ float *__restrict__ d_y_in, __gm__ float *__restrict__ maskBuf_device, __gm__ float *__restrict__ d_y,
+    __gm__ float *__restrict__ workspace, __gm__ uint32_t *__restrict__ tiling_para_gm)
+{
+    set_atomic_none();
+    set_mask_norm();
+    set_ffts_base_addr((uint64_t)ffts_addr);
+    set_vector_mask((uint64_t)-1, (uint64_t)-1);  // 恢复正常vector运算
+
+    // get tiling value
+    auto tiling_buf = reinterpret_cast<__gm__ uint8_t *>(tiling_para_gm);
+
+    int64_t _transA = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf));
+    int64_t M = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 8));
+    int64_t N = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 16));
+    int64_t lda = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 24));
+    int64_t incx = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 32));
+    int64_t incy = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 40));
+    int64_t sectionDim = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 48));
+    if (sectionDim == 0) {
+        sectionDim = 1;
+    }
+    float alpha_r = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 56));
+    float alpha_i = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 60));
+    float beta_r = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 64));
+    float beta_i = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 68));
+
+    pipe_barrier(PIPE_ALL);
+
+    ascComplex alpha{alpha_r, alpha_i};
+    ascComplex beta{beta_r, beta_i};
+
+    ascblasOperation_t transA = _transA == 0 ? ASCBLAS_OP_N : (_transA == 1 ? ASCBLAS_OP_T : ASCBLAS_OP_C);
+
+    constexpr int64_t SZ_UBUF = 192 * 1024;
+    constexpr int64_t SZ_PINGPONG = SZ_UBUF / 2;
+
+    constexpr int64_t SZ_A = 64 * 1024;
+    constexpr int64_t SZ_X = 1024;
+    constexpr int64_t SZ_Y = 1024;
+
+    constexpr int64_t OFFSET_RIGHT = SZ_PINGPONG / 2;  // 48 * 1024 B
+
+    constexpr int64_t POS_PING_BUFFER = 0;
+    constexpr int64_t POS_POGN_BUFFER = 0 + SZ_PINGPONG;
+
+    constexpr int64_t OFFSET_A = 0;
+    constexpr int64_t OFFSET_X = OFFSET_A + SZ_A;
+    constexpr int64_t OFFSET_Y = OFFSET_X + SZ_X;
+
+    uint64_t UB_NOW = 0;
+
+    // For convinient `vgather`, we arrange the output at head of ubuf.
+    auto Ybase_r = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 4kb
+    UB_NOW += 4 * 1024;
+    auto Ybase_i = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 4kb
+    UB_NOW += 4 * 1024;
+    auto Ytemp = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 4kb
+    UB_NOW += 8 * 1024;
+
+    auto Abase_r = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 32kb = 32 * 256 * 4 Bytes
+    UB_NOW += 32 * 1024;
+    auto Abase_i = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 32kb
+    UB_NOW += 32 * 1024;
+
+    auto Xbase_r = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 4kb
+    UB_NOW += 4 * 1024;
+    auto Xbase_i = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 4kb
+    UB_NOW += 4 * 1024;
+    auto Xtemp = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 8kb
+    UB_NOW += 8 * 1024;
+
+    auto tmpbuf_r = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 8kb
+    UB_NOW += 8 * 1024;
+    auto tmpbuf_i = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 8kb
+    UB_NOW += 8 * 1024;
+
+    auto maskbuf = reinterpret_cast<__ubuf__ uint32_t *>((uintptr_t)UB_NOW);  // same with tmpbuf_r
+    UB_NOW += 8 * 1024;
+
+    auto tmpbuf = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 64kb total 184kb
+    UB_NOW += 64 * 1024;
+
+    /* 算子需要使用的变量 */
+    constexpr int64_t szVert = 512; /* 垂直方向上，小矩阵的元素个数 */
+    constexpr int64_t szHorz = 16;  /* 水平方向上，小矩阵的元素个数 */
+
+    // block的序号 * 每个block的AIV个数 + 当前AIV在本block内的编号（每个block有2个AIV）
+    int64_t aiv_id = get_block_idx() * get_subblockdim() + get_subblockid();
+    // 计算一共启用了多少个AIV单元，用于将每个loop平摊到每个AIV中
+    int64_t aiv_num = get_block_num() * get_subblockdim();
+
+    int64_t numVert = (M + szVert - 1) / szVert;
+    if (numVert == 0) {
+        numVert = 1;
+    }
+    int64_t numHorz = (N + szHorz - 1) / szHorz;
+    int64_t numSection = (numHorz + sectionDim - 1) / sectionDim;
+    int64_t numLoops = numVert * numSection;
+
+    int64_t idxLoop, idxVert, idxSection, idxHorz_base, idxHorz;
+    int64_t szHorz_real, szVert_real, szVert_real_pad;
+    int64_t n_blocks, actual_repeats;  // temporary variables.
+    int64_t szHorz_real_next;
+
+    bool maskbuf_loaded = false;
+
+    auto y_gmptr_in = d_y_in;
+    auto y_gmptr = d_y;
+    auto A_gmptr = d_A;
+    auto x_gmptr = d_x;
+
+    /* Data of next cycle. */
+    auto A_gmptr_next = d_A;
+    auto x_gmptr_next = d_x;
+
+    int64_t idxPixel = 0;
+    int64_t offset_a = 0;
+    __ubuf__ float *A_r = nullptr;
+    __ubuf__ float *A_i = nullptr;
+    float pixel_r = 0.0f;
+    float pixel_i = 0.0f;
+
+    set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID1);
+    for (idxLoop = 0; idxLoop < numLoops; idxLoop++) {
+        idxVert = idxLoop % numVert;
+        idxSection = idxLoop / numVert;
+
+        if (idxLoop % aiv_num != aiv_id)
+            continue;
+
+        y_gmptr_in = d_y_in + idxVert * szVert * 2 * incy;
+        y_gmptr = d_y + idxVert * szVert * 2 * incy;
+        szVert_real = (idxVert == numVert - 1) ? (M - idxVert * szVert) : szVert;
+        szVert_real_pad = (szVert_real + 63) / 64 * 64;
+
+        /* Each kernel only need to load this once. */
+        if (maskbuf_loaded == false) {
+            copy_gm_to_ubuf_align_b32(maskbuf, maskBuf_device, 0, 1, MAXALIGN_WITH((szVert * sizeof(float) * 2), 256),
+                                      0, 0, 0, 0);
+            maskbuf_loaded = true;
+        }
+
+        /* We write this part here instead of "normal" plase, is because PIPE_S introduced by no_transpose algorithm
+         * will internally block other pipes launch (include PIPE_MTE2). Which makes our pipeline strategy doesn't work
+         * as we expected.
+         *
+         * Pseudo code as follow, we from
+         * ```
+         * for (i = 0; i != sectionDim; i++)
+         * {
+         *     load(a, x);
+         *     prepare(a, x);
+         *     mul(a, x) -> y; // for loop internal, which stuck next load(a, x)
+         *     store(y);
+         * }
+         * ```
+         *
+         * to
+         *
+         * ```
+         * load(a, x);
+         * for (i = 0; i != sectionDim; i++)
+         * {
+         *     prepare(a, x);
+         *     if (not last section)
+         *     {
+         *         load(a_next, x_next);
+         *     }
+         *     mul(a, x) -> y;             // for loop internal
+         *     store(y);
+         * }
+         * ```
+         * */
+
+        idxHorz_base = idxSection * sectionDim;
+        szHorz_real_next = (idxHorz_base == numHorz - 1) ? (N - idxHorz_base * szHorz) : szHorz;
+        A_gmptr_next = d_A + idxHorz_base * szHorz * 2 * lda + idxVert * szVert * 2;
+        x_gmptr_next = d_x + idxHorz_base * szHorz * 2 * incx;
+
+        ascblas_matrix_gm2ubuf(tmpbuf, A_gmptr_next, szVert_real * 2, szHorz_real_next, lda * 2, szVert_real_pad * 2);
+
+        if (incx == 1) {
+            copy_gm_to_ubuf_align_b32(Xtemp,                                 // 目的地址（ubuf中的地址）dst
+                                      x_gmptr_next,                          // 源地址src
+                                      0,                                     // 默认0
+                                      1,                                     // 传送次数
+                                      szHorz_real_next * 2 * sizeof(float),  // 数据大小 8 bytes
+                                      0, 0, 0, 0);
+        } else {
+            int64_t temp_size = MIN(BLOCK_SIZE, incx * 2);
+            ascblas_matrix_gm2ubuf(Xtemp,             // 目的地址（ubuf中的地址）dst
+                                   x_gmptr_next,      // 源地址src
+                                   temp_size,         // 需要传输矩阵的行数
+                                   szHorz_real_next,  // 需要传输矩阵的列数
+                                   incx * 2,          // 源地址矩阵同一行两元素间距离（列优先时）
+                                   BLOCK_SIZE);       // 传入ub后的矩阵尺寸
+        }
+
+        // load y in first turn.
+        wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID1);
+        if (idxSection == 0) {
+            ascblas_cvec_gm2ubuf(Ybase_r, Ybase_i, Ytemp, y_gmptr_in, szVert_real, incy);
+
+            if (incy == 1) {
+                pipe_barrier(PIPE_V);
+            } else {
+                set_flag(PIPE_S, PIPE_V, EVENT_ID1);
+                wait_flag(PIPE_S, PIPE_V, EVENT_ID1);
+            }
+
+            // 计算 (beta - 1) * y
+            n_blocks = (szVert + BLOCK_SIZE - 1) / BLOCK_SIZE;
+            mulSComplex(Ybase_r, Ybase_i, tmpbuf_r, tmpbuf_i, n_blocks, ascComplex{beta.real - 1, beta.imag});
+        }
+
+        set_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
+        for (int64_t i = 0; i < sectionDim; i++) {
+            idxHorz = idxHorz_base + i;
+            if (!(idxHorz < numHorz))
+                break;
+
+            szHorz_real = szHorz_real_next;
+            A_gmptr = A_gmptr_next;
+            x_gmptr = x_gmptr_next;
+
+            // Split A this turn
+            wait_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
+            split_CVector(Abase_r, Abase_i, tmpbuf, szVert_real_pad * szHorz_real);
+
+            // split x this turn
+            if (incx == 1) {
+                split_CVector(Xbase_r, Xbase_i, Xtemp, szHorz_real);
+                pipe_barrier(PIPE_V);
+            } else {
+                for (int64_t i = 0; i < szHorz_real; i++) {
+                    Xbase_r[i] = Xtemp[i * BLOCK_SIZE];
+                    Xbase_i[i] = Xtemp[i * BLOCK_SIZE + 1];
+                }
+
+                set_flag(PIPE_S, PIPE_V, EVENT_ID0);
+                wait_flag(PIPE_S, PIPE_V, EVENT_ID0);
+            }
+
+            // calculate alpha * x this turn.
+            n_blocks = (szHorz + BLOCK_SIZE - 1) / BLOCK_SIZE;
+            mulSComplex(Xbase_r, Xbase_i, tmpbuf_r, tmpbuf_i, n_blocks, alpha);
+
+            set_flag(PIPE_V, PIPE_MTE2, EVENT_ID0);
+            wait_flag(PIPE_V, PIPE_MTE2, EVENT_ID0);
+
+            /* --------- Get next A and x, when it is not the last split or last block. -------- */
+            if ((i + 1) < sectionDim && (idxHorz + 1) < numHorz) {
+                // Calculate argument here.
+                szHorz_real_next = ((idxHorz + 1) == numHorz - 1) ? (N - (idxHorz + 1) * szHorz) : szHorz;
+                A_gmptr_next = d_A + (idxHorz + 1) * szHorz * 2 * lda + idxVert * szVert * 2;
+                x_gmptr_next = d_x + (idxHorz + 1) * szHorz * 2 * incx;
+
+                // Load next A
+                ascblas_matrix_gm2ubuf(tmpbuf, A_gmptr_next, szVert_real * 2, szHorz_real_next, lda * 2,
+                                       szVert_real_pad * 2);
+
+                // Load next x
+                if (incx == 1) {
+                    copy_gm_to_ubuf_align_b32(Xtemp,         // 目的地址（ubuf中的地址）dst
+                                              x_gmptr_next,  // 源地址src
+                                              0,             // 默认0
+                                              1,             // 传送次数
+                                              szHorz_real_next * 2 * sizeof(float),  // 数据大小 8 bytes
+                                              0, 0, 0, 0);
+                } else {
+                    int64_t temp_size = MIN(BLOCK_SIZE, incx * 2);
+                    ascblas_matrix_gm2ubuf(Xtemp,             // 目的地址（ubuf中的地址）dst
+                                           x_gmptr_next,      // 源地址src
+                                           temp_size,         // 需要传输矩阵的行数
+                                           szHorz_real_next,  // 需要传输矩阵的列数
+                                           incx * 2,     // 源地址矩阵同一行两元素间距离（列优先时）
+                                           BLOCK_SIZE);  // 传入ub后的矩阵尺寸
+                }
+            }
+            set_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
+
+            set_flag(PIPE_V, PIPE_S, EVENT_ID0);
+            actual_repeats = szVert_real_pad / 64;
+            // 计算 A @ (alpha * x), 加到 Ybase_r, Ybase_i 上面
+            for (idxPixel = 0; idxPixel < szHorz_real; idxPixel++) {
+                offset_a = szVert_real_pad * idxPixel;
+
+                wait_flag(PIPE_V, PIPE_S, EVENT_ID0);
+                A_r = Abase_r + offset_a;
+                A_i = Abase_i + offset_a;
+                pixel_r = Xbase_r[idxPixel];
+                pixel_i = Xbase_i[idxPixel];
+
+                set_flag(PIPE_S, PIPE_V, EVENT_ID0);
+                wait_flag(PIPE_S, PIPE_V, EVENT_ID0);
+
+                // only override when:
+                //    is first pixel on base AND is first base on split AND is not first base on total.
+                if (idxPixel == 0 && idxHorz == idxHorz_base && idxHorz != 0) {
+                    vmuls(Ybase_r, A_r, pixel_r, actual_repeats, 1, 1, 8, 8);
+                    vmuls(Ybase_i, A_r, pixel_i, actual_repeats, 1, 1, 8, 8);
+                    pipe_barrier(PIPE_V);
+
+                    vmuls(tmpbuf_i, A_i, pixel_r, actual_repeats, 1, 1, 8, 8);
+                    vmuls(tmpbuf_r, A_i, -pixel_i, actual_repeats, 1, 1, 8, 8);
+                    pipe_barrier(PIPE_V);
+
+                    vadd(Ybase_r, Ybase_r, tmpbuf_r, actual_repeats, 1, 1, 1, 8, 8, 8);
+                    vadd(Ybase_i, Ybase_i, tmpbuf_i, actual_repeats, 1, 1, 1, 8, 8, 8);
+                    pipe_barrier(PIPE_V);
+                } else {
+                    // rr
+                    vaxpy(Ybase_r, A_r, pixel_r, actual_repeats, 1, 1, 8, 8);
+                    // ir
+                    vaxpy(Ybase_i, A_r, pixel_i, actual_repeats, 1, 1, 8, 8);
+                    pipe_barrier(PIPE_V);
+
+                    // ri
+                    vaxpy(Ybase_i, A_i, pixel_r, actual_repeats, 1, 1, 8, 8);
+                    // rr - ii
+                    vaxpy(Ybase_r, A_i, -pixel_i, actual_repeats, 1, 1, 8, 8);
+                    pipe_barrier(PIPE_V);
+                }
+                set_flag(PIPE_V, PIPE_S, EVENT_ID0);
+            }
+            wait_flag(PIPE_V, PIPE_S, EVENT_ID0);
+        }
+        wait_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
+
+        if (incy == 1) {
+            pipe_barrier(PIPE_V);
+        } else {
+            set_flag(PIPE_V, PIPE_S, EVENT_ID0);
+            wait_flag(PIPE_V, PIPE_S, EVENT_ID0);
+        }
+
+        ascblas_cvec_ubuf2gm(Ybase_r, Ybase_i, maskbuf, Ytemp, y_gmptr, szVert_real, incy, true);
+        set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID1);  // Only after vgather can we overwrite `Ytemp`.
+    }
+    wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID1);
+}
+#endif  // __DAV_C220_VEC__
+
+#if __DAV_C220_CUBE__
+extern "C" __global__ __aicore__ void cgemv_no_trans(
+    __gm__ uint8_t *__restrict__ ffts_addr, __gm__ float *__restrict__ d_A, __gm__ float *__restrict__ d_x,
+    __gm__ float *__restrict__ d_y_in, __gm__ float *__restrict__ maskBuf_device, __gm__ float *__restrict__ d_y,
+    __gm__ float *__restrict__ workspace, __gm__ uint32_t *__restrict__ tiling_para_gm)
+{
+    set_ffts_base_addr((uint64_t)ffts_addr);
+    set_padding(0);
+    set_atomic_none();
+    set_nd_para(0x1);
+
+    // get tiling value
+    auto tiling_buf = reinterpret_cast<__gm__ uint8_t *>(tiling_para_gm);
+
+    int64_t _transA = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf));
+    int64_t M = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 8));
+    int64_t N = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 16));
+    int64_t lda = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 24));
+    int64_t incx = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 32));
+    int64_t incy = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 40));
+    int64_t sectionDim = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 48));
+    float alpha_r = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 56));
+    float alpha_i = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 60));
+    float beta_r = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 64));
+    float beta_i = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 68));
+
+    pipe_barrier(PIPE_ALL);
+
+    ascComplex alpha{alpha_r, alpha_i};
+    ascComplex beta{beta_r, beta_i};
+
+    ascblasOperation_t transA = _transA == 0 ? ASCBLAS_OP_N : (_transA == 1 ? ASCBLAS_OP_T : ASCBLAS_OP_C);
+}
+#endif  // __DAV_C220_CUBE__
+// vim:tabstop=4:expandtab:shiftwidth=4

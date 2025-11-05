@@ -1,0 +1,29 @@
+# binary files
+*.so
+*.a
+
+# distribution and packaging
+
+# vim cache
+*.swp
+
+# python cache
+*.pyc
+__pycache__
+MANIFEST.in
+
+# Jetbrain
+.idea
+cmake-build-debug*/
+cmake-build-release*/
+
+# Visual Studio
+.vs
+
+# Visual Studio Code
+.vscode
+build/
+coverage_result/
+
+output/
+3rdparty/

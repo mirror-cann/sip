@@ -1,0 +1,40 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and contiditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+
+#ifndef __DFT_C2R_CORE__
+#define __DFT_C2R_CORE__
+
+#include "ops.h"
+#include "fftcore/fft_core_h_base.h"
+#include "utils/aspb_status.h"
+
+using namespace AsdSip;
+
+class DftC2RCore : public FftCoreHBase {
+public:
+    DftC2RCore(unsigned N_doing,
+        unsigned batch, AsdSip::asdFftType fft_type, bool forward)
+        : FftCoreHBase(FFTCoreType::kDftC2R, N_doing, batch, fft_type, forward) {}
+    ~DftC2RCore() override { DestroyInDevice();}
+    size_t EstimateWorkspaceSize() override;
+    void Run(Tensor& input, Tensor& output, void *stream, workspace::Workspace& workspace) override;
+private:
+    void InitRadix() override;
+    bool PreAllocateInDevice() override;
+    void DestroyInDevice() const;
+    AspbStatus InitRotationMatrix();
+    AspbStatus InitTactic();
+ 
+    std::string opName{"DftC2ROperation"};
+    std::shared_ptr<AsdSip::FFTensor> rotationMatrix;
+};
+
+#endif

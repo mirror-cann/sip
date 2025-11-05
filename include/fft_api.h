@@ -1,0 +1,88 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and contiditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+#ifndef ASDSIP_FFT_API_H
+#define ASDSIP_FFT_API_H
+
+#include "utils/aspb_status.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct aclTensor aclTensor;
+
+namespace AsdSip {
+
+
+typedef void *asdFftHandle;
+
+enum asdFftStatus { SUCCESS = 0, FAILED = 1 };
+
+enum asdFftType {
+    ASCEND_FFT_C2C = 0x10,
+    ASCEND_FFT_C2R = 0x11,
+    ASCEND_FFT_R2C = 0x12,
+    ASCEND_STFT_C2C = 0x20,
+    ASCEND_STFT_C2R = 0x21,
+    ASCEND_STFT_R2C = 0x22
+};
+
+enum asdFftDirection {
+    ASCEND_FFT_FORWARD = 0x10,
+    ASCEND_FFT_INVERSE = 0x11,
+};
+
+enum asdFft1dDimType {
+    ASCEND_FFT_HORIZONTAL = 0x10,
+    ASCEND_FFT_VERTICAL = 0x11,
+};
+
+// Creates only an opaque handle, and only allocates space basic data structures for it.
+// This function does not initialize handle.
+AsdSip::AspbStatus asdFftCreate(asdFftHandle &handle);
+
+// Binds a stream to handle.
+AsdSip::AspbStatus asdFftSetStream(asdFftHandle handle, void *stream);
+
+// Initializes handle with 1D setting.
+// Any given handle can only be initialized once.
+AsdSip::AspbStatus asdFftMakePlan1D(asdFftHandle handle, int64_t fftSize, asdFftType fftType,
+                                    asdFftDirection direction, int64_t batchSize,
+                                    asdFft1dDimType dimType = asdFft1dDimType::ASCEND_FFT_HORIZONTAL);
+
+// Executes a c2c fft transform.
+AsdSip::AspbStatus asdFftExecC2C(asdFftHandle handle, const aclTensor *input, const aclTensor *output);
+
+// Executes a c2r fft transform.
+AsdSip::AspbStatus asdFftExecC2R(asdFftHandle handle, const aclTensor *input, const aclTensor *output);
+
+// Executes a r2c fft transform.
+AsdSip::AspbStatus asdFftExecR2C(asdFftHandle handle, const aclTensor *input, const aclTensor *output);
+
+// Destroy a handle, free all spaces allocated for it.
+AsdSip::AspbStatus asdFftDestroy(asdFftHandle handle);
+
+AsdSip::AspbStatus asdFftMakePlan2D(asdFftHandle handle, int64_t fftSizeX, int64_t fftSizeY, asdFftType fftType,
+                                    asdFftDirection direction, int32_t batchSize);
+
+AsdSip::AspbStatus asdFftGetWorkspaceSize(asdFftHandle handle, size_t &workspaceSize);
+
+AsdSip::AspbStatus asdFftSetWorkspace(asdFftHandle handle, void *workspace);
+
+AsdSip::AspbStatus asdFftSynchronize(asdFftHandle handle);
+
+AsdSip::AspbStatus asdFftGetType(asdFftHandle handle, asdFftType &fftType);
+}
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

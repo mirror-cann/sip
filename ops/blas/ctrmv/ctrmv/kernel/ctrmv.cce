@@ -1,0 +1,603 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and contiditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+#include "kernel_operator.h"
+#include "../../../ascblas/ascblas_kernel_utils.h"
+
+using namespace fp32;
+
+constexpr int BLOCK_DIM = 64;
+constexpr int UB_MATRIX_SIZE = BLOCK_DIM * BLOCK_DIM;
+constexpr int UB_VECTOR_SIZE = BLOCK_DIM;
+constexpr int ELE_SIZE = sizeof(float);
+
+__aicore__ __inline__ __attribute__((always_inline)) void store_vector_ub2gm(__gm__ float *dst, __ubuf__ float *src,
+                                                                             uint64_t len)
+{
+    uint16_t nBurst = 1;
+    uint32_t lenBurst = len * sizeof(float) * 2;
+    uint8_t leftPaddingNum = 0;
+    uint8_t rightPaddingNum = 0;
+    uint32_t srcGap = 0;
+    uint32_t dstGap = 0;
+    copy_ubuf_to_gm_align_b32(dst, src,
+                              0,  // sid
+                              nBurst, lenBurst, leftPaddingNum, rightPaddingNum, srcGap, dstGap);
+}
+
+__aicore__ __inline__ __attribute__((always_inline)) void loda_matrix_gm2ub(__ubuf__ float *dst, __gm__ float *src,
+                                                                            int64_t m_real, int64_t n_real,
+                                                                            int64_t m_real_pad, int64_t n_real_pad,
+                                                                            int64_t stride)
+{
+    m_real_pad = (m_real * 2 + 7) / 8 * 8;
+    uint16_t nBurst = n_real;
+    uint32_t lenBurst = (uint32_t)m_real * sizeof(float) * 2;
+    uint8_t leftPaddingNum = 0;
+    uint8_t rightPaddingNum = 0;
+    uint32_t srcGap = (uint32_t)(stride - m_real) * sizeof(float) * 2;
+    uint32_t dstGap =
+        (uint32_t)(BLOCK_DIM * 2 - m_real_pad) / 8;  // (64 * 2 - 8) / 8 * 2 = 14    14 * 8 = 120 128 - 8 /8
+    copy_gm_to_ubuf_align_b32(dst, src,
+                              0,  // sid
+                              nBurst, lenBurst, leftPaddingNum, rightPaddingNum, srcGap, dstGap);
+}
+__aicore__ __inline__ __attribute__((always_inline)) void loda_vector_gm2ub(__ubuf__ float *dst, __gm__ float *src,
+                                                                            __ubuf__ float *wksp, int64_t len,
+                                                                            int64_t inc)
+{
+    if (inc == 1) {
+        uint16_t nBurst = 1;
+        uint32_t lenBurst = len * sizeof(float) * 2;
+        uint8_t leftPaddingNum = 0;
+        uint8_t rightPaddingNum = 0;
+        uint32_t srcGap = 0;
+        uint32_t dstGap = 0;
+        copy_gm_to_ubuf_align_b32(dst, src,
+                                  0,  // sid
+                                  nBurst, lenBurst, leftPaddingNum, rightPaddingNum, srcGap, dstGap);
+    } else {
+        int32_t content = UB_MATRIX_SIZE;
+        int32_t loop = len * inc * 2 / content;
+        int32_t remain = len * inc * 2 % content;
+        int32_t start_posi = 0;
+        int32_t iub = 0;
+        for (int i = 0; i < loop; ++i) {
+            pipe_barrier(PIPE_ALL);
+            copy_gm_to_ubuf_align_b32(wksp, src + i * content,
+                                      0,  // sid
+                                      1, content * sizeof(float), 0, 0, 0, 0);
+            pipe_barrier(PIPE_ALL);
+            int iwhile = start_posi;
+            while (iwhile < content) {
+                *(dst + iub) = *(wksp + iwhile);
+                *(dst + iub + 1) = *(wksp + iwhile + 1);
+                iwhile = iwhile + inc * 2;
+                iub = iub + 2;
+            }
+            pipe_barrier(PIPE_ALL);
+            start_posi = iwhile - content;
+        }
+        if (remain) {
+            pipe_barrier(PIPE_ALL);
+            copy_gm_to_ubuf_align_b32(wksp, src + loop * content,
+                                      0,  // sid
+                                      1, remain * sizeof(float), 0, 0, 0, 0);
+            pipe_barrier(PIPE_ALL);
+            int iwhile = start_posi;
+            while (iub < len * 2 && iwhile < content) {
+                *(dst + iub) = *(wksp + iwhile);
+                *(dst + iub + 1) = *(wksp + iwhile + 1);
+                iwhile = iwhile + inc * 2;
+                iub = iub + 2;
+            }
+            pipe_barrier(PIPE_ALL);
+        }
+    }
+}
+
+__aicore__ __inline__ __attribute__((always_inline)) void complex_to_real_imag(__ubuf__ float *dst_real,
+                                                                               __ubuf__ float *dst_imag,
+                                                                               __ubuf__ float *src, uint32_t block_len)
+{
+    vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(dst_real), reinterpret_cast<__ubuf__ uint32_t *>(src), nullptr,
+              block_len * 2 / 64, 1, 1, 8, 8);
+    vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(dst_imag), reinterpret_cast<__ubuf__ uint32_t *>(src), nullptr,
+              block_len * 2 / 64, 1, 2, 8, 8);
+}
+
+/*
+* @brief 固定基块为64x64 
+*/
+__aicore__ __inline__ __attribute__((always_inline)) void mask_invalid(__ubuf__ float *matrix, __ubuf__ float *uplo,
+                                                                       uint64_t row_num, uint64_t is_real,
+                                                                       ascblasDiagType_t diag)
+{
+    vmul(matrix,   // dst,
+         matrix,   // src0,
+         uplo,     // src1,
+         row_num,  // repeat,
+         1,        // dstBlockStride,
+         1,        // src0BlockStride,
+         1,        // src1BlockStride,
+         8,        // dstRepeatStride,
+         8,        // src0RepeatStride,
+         8);       // src1RepeatStride
+    pipe_barrier(PIPE_ALL);
+
+    pipe_barrier(PIPE_ALL);
+    if (diag == ASCBLAS_DIAG_UNIT) {
+        if (is_real) {
+            for (uint32_t i = 0; i < row_num; ++i) {
+                *(matrix + 64 * i + i) = 1;
+            }
+        } else {
+            for (uint32_t i = 0; i < row_num; ++i) {
+                *(matrix + 64 * i + i) = 0;
+            }
+        }
+    }
+    pipe_barrier(PIPE_ALL);
+}
+
+__aicore__ __inline__ __attribute__((always_inline)) void matrix_vector_muls_notrans(
+    __ubuf__ float *dst, __ubuf__ float *src0, __ubuf__ float *src1, int64_t m_real, int64_t n_real, int64_t m_real_pad,
+    int64_t n_real_pad, int64_t flag)
+{
+    for (int64_t n_idx = 0; n_idx < n_real; ++n_idx) {
+        float t = *(src1 + n_idx);
+        pipe_barrier(PIPE_ALL);
+        if (flag)
+            t = -t;
+        pipe_barrier(PIPE_ALL);
+        vaxpy(dst, src0 + n_idx * BLOCK_DIM, t, 1, 1, 1, 0, 8);
+    }
+}
+
+__aicore__ __inline__ __attribute__((always_inline)) void complex_vmul_notrans(
+    __ubuf__ float *real_dst, __ubuf__ float *imag_dst, __ubuf__ float *real_src0, __ubuf__ float *imag_src0,
+    __ubuf__ float *real_src1, __ubuf__ float *imag_src1, int64_t m_real, int64_t n_real, int64_t m_real_pad,
+    int64_t n_real_pad)
+{
+    matrix_vector_muls_notrans(real_dst, real_src0, real_src1, m_real, n_real, m_real_pad, n_real_pad, 0);
+    matrix_vector_muls_notrans(real_dst, imag_src0, imag_src1, m_real, n_real, m_real_pad, n_real_pad, 1);
+    matrix_vector_muls_notrans(imag_dst, real_src0, imag_src1, m_real, n_real, m_real_pad, n_real_pad, 0);
+    matrix_vector_muls_notrans(imag_dst, imag_src0, real_src1, m_real, n_real, m_real_pad, n_real_pad, 0);
+}
+
+__aicore__ __inline__ __attribute__((always_inline)) void matrix_vector_muls_trans(
+    __ubuf__ float *dst, __ubuf__ float *src0, __ubuf__ float *src1, __ubuf__ float *wksp, int64_t m_real,
+    int64_t n_real, int64_t m_real_pad, int64_t n_real_pad, int64_t flag)
+{
+    vector_dup(wksp, (float)0, m_real, 1, 1, 8, 8);
+    pipe_barrier(PIPE_ALL);
+    vmul(wksp, src0, src1,
+         m_real,  //repeat times
+         1,       // dst block stride
+         1,       // src0 block stride
+         1,       // src1 block stride
+         8,       // dst repeat stride
+         8,       // src0 repeat stride
+         0        // src1 repeat stride
+    );
+
+    pipe_barrier(PIPE_ALL);
+
+    if (n_real % 64) {
+        set_mask_norm();
+        set_vector_mask((uint64_t)0, ((uint64_t)1 << n_real) - 1);
+    }
+    pipe_barrier(PIPE_ALL);
+    vcadd(wksp, wksp, m_real, 1, 1, 8, false);  // 对64个数进行归约
+    pipe_barrier(PIPE_ALL);
+    if (n_real % 64) {
+        set_mask_norm();
+        set_vector_mask((uint64_t)-1, (uint64_t)-1);
+    }
+    pipe_barrier(PIPE_ALL);
+    if (flag) {
+        vsub(dst, dst, wksp, 1, 1, 1, 1, 8, 8, 8);
+    } else {
+        vadd(dst, dst, wksp, 1, 1, 1, 1, 8, 8, 8);
+    }
+
+    pipe_barrier(PIPE_ALL);
+}
+
+__aicore__ __inline__ __attribute__((always_inline)) void complex_vmul_trans(
+    __ubuf__ float *real_dst, __ubuf__ float *imag_dst, __ubuf__ float *real_src0, __ubuf__ float *imag_src0,
+    __ubuf__ float *real_src1, __ubuf__ float *imag_src1, __ubuf__ float *wksp, int64_t m_real, int64_t n_real,
+    int64_t m_real_pad, int64_t n_real_pad)
+{
+    matrix_vector_muls_trans(real_dst, real_src0, real_src1, wksp, m_real, n_real, m_real_pad, n_real_pad, 0);
+    matrix_vector_muls_trans(real_dst, imag_src0, imag_src1, wksp, m_real, n_real, m_real_pad, n_real_pad, 1);
+    matrix_vector_muls_trans(imag_dst, real_src0, imag_src1, wksp, m_real, n_real, m_real_pad, n_real_pad, 0);
+    matrix_vector_muls_trans(imag_dst, imag_src0, real_src1, wksp, m_real, n_real, m_real_pad, n_real_pad, 0);
+}
+
+__aicore__ __inline__ __attribute__((always_inline)) void copy_wksp_to_x(__gm__ float *__restrict__ gm_X,
+                                                                         __gm__ float *__restrict__ gm_wksp,
+                                                                         uint64_t len, uint64_t inc)
+{
+    if (get_block_idx() == 0 && get_subblockid() == 0) {
+        auto ub_tmpw = reinterpret_cast<__ubuf__ float *>((uintptr_t)0);
+        auto ub_tmpx = reinterpret_cast<__ubuf__ float *>((uintptr_t)128 * 128 * 4);
+        int32_t cont_tmpw = 128 * 128;
+        int32_t cont_tmpx = 128 * 128;
+
+        int32_t loop_tmpw = len * 2 / cont_tmpw;
+        int32_t remain_tmpw = len * 2 % cont_tmpw;
+
+        if (inc == 1) {
+            pipe_barrier(PIPE_ALL);
+            for (int32_t w_idx = 0; w_idx < loop_tmpw; ++w_idx) {
+                copy_gm_to_ubuf_align_b32(ub_tmpw, gm_wksp + w_idx * cont_tmpw,
+                                          0,  // sid
+                                          1, cont_tmpw * sizeof(float), 0, 0, 0, 0);
+                pipe_barrier(PIPE_ALL);
+                copy_ubuf_to_gm_align_b32(gm_X + w_idx * cont_tmpw, ub_tmpw,
+                                          0,  // sid
+                                          1, cont_tmpw * sizeof(float), 0, 0, 0, 0);
+            }
+            if (remain_tmpw) {
+                copy_gm_to_ubuf_align_b32(ub_tmpw, gm_wksp + loop_tmpw * cont_tmpw,
+                                          0,  // sid
+                                          1, remain_tmpw * sizeof(float), 0, 0, 0, 0);
+                pipe_barrier(PIPE_ALL);
+                copy_ubuf_to_gm_align_b32(gm_X + loop_tmpw * cont_tmpw, ub_tmpw,
+                                          0,  // sid
+                                          1, remain_tmpw * sizeof(float), 0, 0, 0, 0);
+                pipe_barrier(PIPE_ALL);
+            }
+        } else {
+            for (int32_t w_idx = 0; w_idx < loop_tmpw; ++w_idx) {
+                pipe_barrier(PIPE_ALL);
+                copy_gm_to_ubuf_align_b32(ub_tmpw, gm_wksp + w_idx * cont_tmpw,
+                                          0,  // sid
+                                          1, cont_tmpw * sizeof(float), 0, 0, 0, 0);
+
+                pipe_barrier(PIPE_ALL);
+                int32_t loop_tmpx = (cont_tmpw / 2 * (int32_t)inc * 2) / cont_tmpx;
+                int32_t remain_tmpx = (cont_tmpw / 2 * (int32_t)inc * 2) % cont_tmpx;
+                int32_t start_posi = 0;  // 起始写入位置
+                int32_t iub_tmpw = 0;    // 起始写入位置
+                for (int32_t x_idx = 0; x_idx < loop_tmpx; ++x_idx) {
+                    pipe_barrier(PIPE_ALL);
+                    copy_gm_to_ubuf_align_b32(ub_tmpx, gm_X + w_idx * cont_tmpw * (int32_t)inc + x_idx * cont_tmpx,
+                                              0,  // sid
+                                              1, cont_tmpx * sizeof(float), 0, 0, 0, 0);
+                    pipe_barrier(PIPE_ALL);
+                    int iwhile = start_posi;
+                    while (iwhile < cont_tmpx) {
+                        *(ub_tmpx + iwhile) = *(ub_tmpw + iub_tmpw);
+                        *(ub_tmpx + iwhile + 1) = *(ub_tmpw + iub_tmpw + 1);
+                        iwhile = iwhile + inc * 2;
+                        iub_tmpw = iub_tmpw + 2;
+                    }
+                    start_posi = iwhile - cont_tmpx;
+                    pipe_barrier(PIPE_ALL);
+                    copy_ubuf_to_gm_align_b32(gm_X + w_idx * cont_tmpw * inc + x_idx * cont_tmpx, ub_tmpx,
+                                              0,  // sid
+                                              1, cont_tmpx * sizeof(float), 0, 0, 0, 0);
+                }
+                if (remain_tmpx) {
+                    pipe_barrier(PIPE_ALL);
+                    copy_gm_to_ubuf_align_b32(ub_tmpx, gm_X + w_idx * cont_tmpw * inc + loop_tmpx * cont_tmpx,
+                                              0,  // sid
+                                              1, remain_tmpx * sizeof(float), 0, 0, 0, 0);
+                    pipe_barrier(PIPE_ALL);
+                    int iwhile = start_posi;
+                    while (iub_tmpw < cont_tmpw && iwhile < cont_tmpx) {
+                        *(ub_tmpx + iwhile) = *(ub_tmpw + iub_tmpw);
+                        *(ub_tmpx + iwhile + 1) = *(ub_tmpw + iub_tmpw + 1);
+                        iwhile = iwhile + inc * 2;
+                        iub_tmpw = iub_tmpw + 2;
+                    }
+                    pipe_barrier(PIPE_ALL);
+                    copy_ubuf_to_gm_align_b32(gm_X + w_idx * cont_tmpw * inc + loop_tmpx * cont_tmpx, ub_tmpx,
+                                              0,  // sid
+                                              1, remain_tmpx * sizeof(float), 0, 0, 0, 0);
+                    pipe_barrier(PIPE_ALL);
+                }
+            }
+
+            if (remain_tmpw) {
+                pipe_barrier(PIPE_ALL);
+                copy_gm_to_ubuf_align_b32(ub_tmpw, gm_wksp + loop_tmpw * cont_tmpw,
+                                          0,  // sid
+                                          1, remain_tmpw * sizeof(float), 0, 0, 0, 0);
+                pipe_barrier(PIPE_ALL);
+                int32_t loop_tmpx = (remain_tmpw * (int32_t)inc) / cont_tmpx;
+                int32_t remain_tmpx = (remain_tmpw * (int32_t)inc) % cont_tmpx;
+                int32_t start_posi = 0;  // 起始写入位置
+                int32_t iub_tmpw = 0;
+                for (int32_t x_idx = 0; x_idx < loop_tmpx; ++x_idx) {
+                    pipe_barrier(PIPE_ALL);
+                    copy_gm_to_ubuf_align_b32(ub_tmpx, gm_X + loop_tmpw * cont_tmpw * inc + x_idx * cont_tmpx,
+                                              0,  // sid
+                                              1, cont_tmpx * sizeof(float), 0, 0, 0, 0);
+                    pipe_barrier(PIPE_ALL);
+                    int iwhile = start_posi;
+                    while (iwhile < cont_tmpx) {
+                        *(ub_tmpx + iwhile) = *(ub_tmpw + iub_tmpw);
+                        *(ub_tmpx + iwhile + 1) = *(ub_tmpw + iub_tmpw + 1);
+                        iwhile = iwhile + inc * 2;
+                        iub_tmpw = iub_tmpw + 2;
+                    }
+                    start_posi = iwhile - cont_tmpx;
+
+                    pipe_barrier(PIPE_ALL);
+                    copy_ubuf_to_gm_align_b32(gm_X + loop_tmpw * cont_tmpw * inc + x_idx * cont_tmpx, ub_tmpx,
+                                              0,  // sid
+                                              1, cont_tmpx * sizeof(float), 0, 0, 0, 0);
+                }
+                if (remain_tmpx) {
+                    pipe_barrier(PIPE_ALL);
+                    copy_gm_to_ubuf_align_b32(ub_tmpx, gm_X + loop_tmpw * cont_tmpw * inc + loop_tmpx * cont_tmpx,
+                                              0,  // sid
+                                              1, remain_tmpx * sizeof(float), 0, 0, 0, 0);
+                    pipe_barrier(PIPE_ALL);
+                    int iwhile = start_posi;
+                    while (iub_tmpw < remain_tmpw && iwhile < cont_tmpx) {
+                        *(ub_tmpx + iwhile) = *(ub_tmpw + iub_tmpw);
+                        *(ub_tmpx + iwhile + 1) = *(ub_tmpw + iub_tmpw + 1);
+                        iwhile = iwhile + inc * 2;
+                        iub_tmpw = iub_tmpw + 2;
+                    }
+                    pipe_barrier(PIPE_ALL);
+                    copy_ubuf_to_gm_align_b32(gm_X + loop_tmpw * cont_tmpw * inc + loop_tmpx * cont_tmpx, ub_tmpx,
+                                              0,  // sid
+                                              1, remain_tmpx * sizeof(float), 0, 0, 0, 0);
+                    pipe_barrier(PIPE_ALL);
+                }
+            }
+        }
+    }
+}
+
+__aicore__ __inline__ __attribute__((always_inline)) void ascblas_ctrmv(
+    __gm__ float *__restrict__ gm_A, __gm__ float *__restrict__ gm_X, __gm__ float *__restrict__ gm_wksp,
+    __gm__ float *__restrict__ gm_uplo, ascblasFillMode_t mode, ascblasOperation_t trans, ascblasDiagType_t diag,
+    int64_t M, int64_t lda, int64_t incx, int64_t M0)
+{
+    if (M0 == 0) {
+        M0 = 128;
+    }
+
+    int32_t now_ub = 0;
+    auto ub_a_ptr = reinterpret_cast<__ubuf__ float *>((uintptr_t)now_ub);
+    now_ub += UB_MATRIX_SIZE * 2 * ELE_SIZE;  // 32KB
+    auto ub_a_real_ptr = reinterpret_cast<__ubuf__ float *>((uintptr_t)now_ub);
+    now_ub += UB_MATRIX_SIZE * ELE_SIZE;  // 16KB
+    auto ub_a_imag_ptr = reinterpret_cast<__ubuf__ float *>((uintptr_t)now_ub);
+    now_ub += UB_MATRIX_SIZE * ELE_SIZE;  // 16KB
+    auto ub_x_ptr = reinterpret_cast<__ubuf__ float *>((uintptr_t)now_ub);
+    now_ub += UB_VECTOR_SIZE * 2 * ELE_SIZE;  // 0.5KB
+    auto ub_x_real_ptr = reinterpret_cast<__ubuf__ float *>((uintptr_t)now_ub);
+    now_ub += UB_VECTOR_SIZE * ELE_SIZE;  // 0.25KB
+    auto ub_x_imag_ptr = reinterpret_cast<__ubuf__ float *>((uintptr_t)now_ub);
+    now_ub += UB_VECTOR_SIZE * ELE_SIZE;  // 0.25KB
+    auto ub_uplo_matrix = reinterpret_cast<__ubuf__ float *>((uintptr_t)now_ub);
+    now_ub += UB_MATRIX_SIZE * ELE_SIZE;  // 16KB
+    auto ub_res_real_ptr = reinterpret_cast<__ubuf__ float *>((uintptr_t)now_ub);
+    now_ub += UB_VECTOR_SIZE * ELE_SIZE;  // 0.25KB
+    auto ub_res_imag_ptr = reinterpret_cast<__ubuf__ float *>((uintptr_t)now_ub);
+    now_ub += UB_VECTOR_SIZE * ELE_SIZE;  // 0.25KB
+    auto ub_res_complex_ptr = reinterpret_cast<__ubuf__ float *>((uintptr_t)now_ub);
+    now_ub += UB_VECTOR_SIZE * 2 * ELE_SIZE;  // 0.5KB
+    auto ub_gather_mask_ptr = reinterpret_cast<__ubuf__ uint32_t *>((uintptr_t)now_ub);
+    now_ub += UB_VECTOR_SIZE * 2 * ELE_SIZE;  // 0.5KB
+    auto ub_wksp_ptr = reinterpret_cast<__ubuf__ float *>((uintptr_t)now_ub);
+    now_ub += UB_MATRIX_SIZE * ELE_SIZE;  // 16KB
+    auto ub_carry_buf_ptr = reinterpret_cast<__ubuf__ float *>((uintptr_t)now_ub);
+
+    int64_t m_tiles = (M + M0 - 1) / M0;
+    int64_t n_tiles = 1;
+    int64_t k_loop = (M + M0 - 1) / M0;
+    int64_t m_remain = M % M0;
+    int64_t k_remain = M % M0;
+
+    pipe_barrier(PIPE_ALL);
+    uint64_t offset = 0;
+    for (int i = 0; i < UB_VECTOR_SIZE; ++i) {
+        *(ub_gather_mask_ptr + offset) = (uintptr_t)ub_res_real_ptr + i * sizeof(float);
+        ++offset;
+        *(ub_gather_mask_ptr + offset) = (uintptr_t)ub_res_imag_ptr + i * sizeof(float);
+        ++offset;
+    }
+
+    pipe_barrier(PIPE_ALL);
+
+    copy_gm_to_ubuf(ub_uplo_matrix,         // dst
+                    gm_uplo,                // src
+                    0,                      // sid
+                    M0,                     // nBurst
+                    M0 / 8,                 // lenBurst
+                    0,                      // srcStride
+                    (BLOCK_DIM - M0) / 8);  // dstStride
+    pipe_barrier(PIPE_ALL);
+
+    int32_t sub_blocks_num = get_subblockdim();
+    int32_t blocks_num = get_block_num() * sub_blocks_num;
+    if (blocks_num == 0) {
+        blocks_num = 1;
+    }
+    int64_t tiles_num = m_tiles * n_tiles;
+    int64_t tiles_per_core = (int64_t)tiles_num / (int64_t)blocks_num;
+    int32_t block_id = get_block_idx() * sub_blocks_num + get_subblockid();
+    if (block_id < tiles_num % blocks_num) {
+        ++tiles_per_core;
+    }
+
+    int32_t btrans = trans == ASCBLAS_OP_N ? 0 : 1;
+    int32_t bmode = mode == ASCBLAS_FILL_MODE_UPPER ? 1 : 0;
+    int32_t bconj = trans == ASCBLAS_OP_C ? 1 : 0;
+
+    for (int64_t tiles_idx = 0; tiles_idx < tiles_per_core; ++tiles_idx) {
+        int64_t block_index = tiles_idx * blocks_num + get_block_idx() * sub_blocks_num + get_subblockid();
+        int64_t row = block_index / n_tiles;
+        int64_t m_real = M0;
+        if (row == m_tiles - 1 && m_remain > 0) {
+            m_real = m_remain;
+        }
+        int64_t m_real_pad = m_real % 8 ? (m_real & 0xfffffff8) + 8 : m_real;
+
+        __gm__ float *gm_wksp_ptr = gm_wksp + row * M0 * 2;
+
+        int32_t k_idx = row;
+        int32_t k_dst = k_loop;
+        if (btrans - bmode == 0) {
+            k_idx = 0;
+            k_dst = row + 1;
+        }
+
+        for (; k_idx < k_dst; ++k_idx) {
+            int32_t k_real = M0;
+            if (k_idx == k_loop - 1 && k_remain > 0) {
+                k_real = k_remain;
+            }
+
+            int64_t k_real_pad = k_real % 8 ? (k_real & 0xfffffff8) + 8 : k_real;
+            __gm__ float *gm_x_ptr = gm_X + M0 * incx * k_idx * 2;
+
+            if (trans == ASCBLAS_OP_N) {
+                __gm__ float *gm_a_ptr = gm_A + M0 * row * 2 + k_idx * M0 * lda * 2;
+
+                loda_matrix_gm2ub(ub_a_ptr, gm_a_ptr, m_real, k_real, m_real_pad, k_real_pad, lda);
+                pipe_barrier(PIPE_ALL);
+
+                pipe_barrier(PIPE_ALL);
+                loda_vector_gm2ub(ub_x_ptr, gm_x_ptr, ub_carry_buf_ptr, k_real, incx);
+                pipe_barrier(PIPE_ALL);
+
+                complex_to_real_imag(ub_a_real_ptr, ub_a_imag_ptr, ub_a_ptr, UB_MATRIX_SIZE);
+                pipe_barrier(PIPE_ALL);
+
+                complex_to_real_imag(ub_x_real_ptr, ub_x_imag_ptr, ub_x_ptr, UB_VECTOR_SIZE);
+                pipe_barrier(PIPE_ALL);
+
+                if (k_idx == row) {
+                    mask_invalid(ub_a_real_ptr, ub_uplo_matrix, m_real, 1, diag);
+                    mask_invalid(ub_a_imag_ptr, ub_uplo_matrix, m_real, 0, diag);
+                }
+
+                pipe_barrier(PIPE_ALL);
+                if (k_idx == 0 || (((btrans - bmode) != 0) && k_idx == row)) {
+                    vector_dup(ub_res_real_ptr, (float)0, 1, 1, 1, 8, 8);
+                    vector_dup(ub_res_imag_ptr, (float)0, 1, 1, 1, 8, 8);
+                }
+
+                pipe_barrier(PIPE_ALL);
+                complex_vmul_notrans(ub_res_real_ptr, ub_res_imag_ptr, ub_a_real_ptr, ub_a_imag_ptr, ub_x_real_ptr,
+                                     ub_x_imag_ptr, m_real, k_real, m_real_pad, k_real_pad);
+                pipe_barrier(PIPE_ALL);
+            } else {
+                __gm__ float *gm_a_ptr = gm_A + M0 * row * lda * 2 + k_idx * M0 * 2;
+                pipe_barrier(PIPE_ALL);
+                loda_matrix_gm2ub(ub_a_ptr, gm_a_ptr, k_real, m_real, k_real_pad, m_real_pad, lda);
+                pipe_barrier(PIPE_ALL);
+                loda_vector_gm2ub(ub_x_ptr, gm_x_ptr, ub_carry_buf_ptr, k_real, incx);
+                pipe_barrier(PIPE_ALL);
+                complex_to_real_imag(ub_a_real_ptr, ub_a_imag_ptr, ub_a_ptr, UB_MATRIX_SIZE);
+                pipe_barrier(PIPE_ALL);
+                complex_to_real_imag(ub_x_real_ptr, ub_x_imag_ptr, ub_x_ptr, UB_VECTOR_SIZE);
+                if (k_idx == row) {
+                    mask_invalid(ub_a_real_ptr, ub_uplo_matrix, m_real, 1, diag);
+                    mask_invalid(ub_a_imag_ptr, ub_uplo_matrix, m_real, 0, diag);
+                }
+                pipe_barrier(PIPE_ALL);
+                if (k_idx == 0 || (((btrans - bmode) != 0) && k_idx == row)) {
+                    vector_dup(ub_res_real_ptr, (float)0, 1, 1, 1, 8, 8);
+                    vector_dup(ub_res_imag_ptr, (float)0, 1, 1, 1, 8, 8);
+                }
+                pipe_barrier(PIPE_ALL);
+
+                if (bconj) {
+                    vmuls(ub_a_imag_ptr,  // dst,
+                          ub_a_imag_ptr,  // src0,
+                          -1.0f,          // src1,
+                          m_real,         // repeat,
+                          1,              // dstBlockStride,
+                          1,              // srcBlockStride,
+                          8,              // dstRepeatStride,
+                          8);             // srcRepeatStride
+                }
+
+                pipe_barrier(PIPE_ALL);
+                complex_vmul_trans(ub_res_real_ptr, ub_res_imag_ptr, ub_a_real_ptr, ub_a_imag_ptr, ub_x_real_ptr,
+                                   ub_x_imag_ptr, ub_wksp_ptr, m_real, k_real, m_real_pad, k_real_pad);
+            }
+        }
+
+        pipe_barrier(PIPE_ALL);
+        vgather(reinterpret_cast<__ubuf__ uint32_t *>(ub_res_complex_ptr), ub_gather_mask_ptr, 0, 8, 2);
+        pipe_barrier(PIPE_ALL);
+        store_vector_ub2gm(gm_wksp_ptr, ub_res_complex_ptr, m_real);
+    }
+    pipe_barrier(PIPE_ALL);
+
+    uint64_t flag_id = 0;
+    uint64_t mode_sync = 0;  // inner-group aic/aiv sync
+    uint64_t config = 1 | (mode_sync << 4) | (flag_id << 8);
+    ffts_cross_core_sync(PIPE_MTE3, config);
+}
+
+#if __DAV_C220_VEC__
+extern "C" __global__ __aicore__ void ctrmv(__gm__ uint8_t *__restrict__ ffts_addr, __gm__ float *__restrict__ gm_A,
+                                            __gm__ float *__restrict__ gm_X, __gm__ float *__restrict__ gm_uplo,
+                                            __gm__ float *__restrict__ gm_wksp,
+                                            __gm__ uint32_t *__restrict__ tiling_para_gm)
+{
+    // 初始设置
+    set_atomic_none();
+    set_mask_norm();
+    set_ffts_base_addr((uint64_t)ffts_addr);
+    set_vector_mask((uint64_t)-1, (uint64_t)-1);
+
+    auto tiling_buf = reinterpret_cast<__gm__ uint8_t *>(tiling_para_gm);
+
+    int64_t _mode = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf));
+    int64_t _trans = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 8));
+    int64_t _diag = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 16));
+
+    ascblasFillMode_t mode = _mode == 0 ? ASCBLAS_FILL_MODE_LOWER : ASCBLAS_FILL_MODE_UPPER;
+    ascblasOperation_t trans = ASCBLAS_OP_N;
+    if (_trans == 1) {
+        trans = ASCBLAS_OP_T;
+    } else if (_trans == 2) {
+        trans = ASCBLAS_OP_C;
+    }
+    ascblasDiagType_t diag = _diag == 0 ? ASCBLAS_DIAG_NON_UNIT : ASCBLAS_DIAG_UNIT;
+
+    int64_t M = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 24));
+    int64_t lda = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 32));
+    int64_t incx = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 40));
+    int64_t M0 = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 48));
+
+    pipe_barrier(PIPE_ALL);
+
+    ascblas_ctrmv(gm_A, gm_X, gm_wksp, gm_uplo, mode, trans, diag, M, lda, incx, M0);
+
+    uint64_t flag_id = 0;
+    wait_flag_dev(flag_id);
+
+    copy_wksp_to_x(gm_X, gm_wksp, M, incx);
+}
+#endif
+
+#if __DAV_C220_CUBE__
+extern "C" __global__ __aicore__ void ctrmv(__gm__ uint8_t *__restrict__ ffts_addr, __gm__ float *__restrict__ gm_A,
+                                            __gm__ float *__restrict__ gm_X, __gm__ float *__restrict__ gm_uplo,
+                                            __gm__ float *__restrict__ gm_wksp,
+                                            __gm__ uint32_t *__restrict__ tiling_para_gm)
+{
+    pipe_barrier(PIPE_ALL);
+}
+#endif

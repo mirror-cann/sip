@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 #include <complex>
+#include <cstdint>
 
 #include "utils/op_desc.h"
 #include "mki/operation.h"
@@ -39,8 +40,6 @@
 #include "acl/acl.h"
 #include "aclnn/acl_meta.h"
 #include <unordered_map>
-#include <ATen/ATen.h>
-#include <torch/torch.h>
 
 using namespace AsdSip;
 using namespace Mki;
@@ -316,6 +315,81 @@ static Status CopyDeviceTensorToHostTensor(Tensor &tensor)
     return Status::OkStatus();
 }
 
+// 辅助函数：根据dtype返回元素大小（字节）
+size_t GetElementSize(TensorDType dtype) {
+    switch (dtype) {
+        case TENSOR_DTYPE_FLOAT: return 4;
+        case TENSOR_DTYPE_FLOAT16: return 2;
+        case TENSOR_DTYPE_INT16:   return 2;
+        case TENSOR_DTYPE_INT32:   return 4;
+        case TENSOR_DTYPE_INT64:   return 8;
+        case TENSOR_DTYPE_COMPLEX64:   return 8;
+        case TENSOR_DTYPE_UINT8:   return 1;
+        // 添加其他需要的类型
+        default: return 0; // 未知类型
+    }
+}
+
+// 辅助函数：根据dtype返回元素类型字符串
+std::string GetElementDtype(TensorDType dtype) {
+    switch (dtype) {
+        case TENSOR_DTYPE_FLOAT: return "float";
+        case TENSOR_DTYPE_FLOAT16: return "half";
+        case TENSOR_DTYPE_INT16:   return "int16";
+        case TENSOR_DTYPE_INT32:   return "int32";
+        case TENSOR_DTYPE_INT64:   return "int64";
+        case TENSOR_DTYPE_COMPLEX64:   return "complex64";
+        case TENSOR_DTYPE_UINT8:   return "uint5";
+        // 添加其他需要的类型
+        default: return 0; // 未知类型
+    }
+}
+
+bool SaveTensorToBin(const Tensor& tensor, const std::string& filename) {
+    std::ofstream file(filename, std::ios::binary);
+    if (!file.is_open()) return false;
+
+    // 1. 写入dtype (int32_t)
+    int32_t dtype = static_cast<int32_t>(tensor.desc.dtype);
+    file.write(reinterpret_cast<const char*>(&dtype), sizeof(dtype));
+
+    // 2. 写入维度数量 (int32_t)
+    int32_t dimCount = static_cast<int32_t>(tensor.desc.dims.size());
+    file.write(reinterpret_cast<const char*>(&dimCount), sizeof(dimCount));
+
+    // 3. 写入每个维度值 (int64_t)
+    for (int64_t dim : tensor.desc.dims) {
+        file.write(reinterpret_cast<const char*>(&dim), sizeof(dim));
+    }
+
+    // 4. 写入原始数据
+    size_t elemSize = GetElementSize(tensor.desc.dtype);
+    int64_t numElements = tensor.Numel();
+    size_t dataByteSize = numElements * elemSize;
+
+    if (tensor.hostData && dataByteSize > 0) {
+        file.write(reinterpret_cast<const char*>(tensor.hostData), dataByteSize);
+    }
+
+    return !file.fail();
+}
+
+bool SaveOutTensorToBin(const Tensor& tensor, const std::string& filename) {
+    std::ofstream file(filename, std::ios::binary);
+    if (!file.is_open()) return false;
+
+    // 4. 写入原始数据
+    size_t elemSize = GetElementSize(tensor.desc.dtype);
+    int64_t numElements = tensor.Numel();
+    size_t dataByteSize = numElements * elemSize;
+
+    if (tensor.hostData && dataByteSize > 0) {
+        file.write(reinterpret_cast<const char*>(tensor.hostData), dataByteSize);
+    }
+
+    return !file.fail();
+}
+
 /**
  * @brief 根据tensor描述信息生成tensor
  * @param inTensorDescs tensors描述信息集
@@ -370,27 +444,6 @@ static Status OpTestMallocInAclTensors(const SVector<TensorDesc> &inTensorDescs,
     }
     return Status::OkStatus();
 }
-
-class DTypeMapper {
-private:
-    DTypeMapper() = delete;
-    static inline const std::unordered_map<Mki::TensorDType, c10::ScalarType> dtypeMap = {
-        {TENSOR_DTYPE_FLOAT, at::kFloat},
-        {TENSOR_DTYPE_INT32, at::kInt},
-        {TENSOR_DTYPE_COMPLEX32, at::kComplexHalf},
-        {TENSOR_DTYPE_COMPLEX64, at::kComplexFloat},
-    };
-
-public:
-    // 根据MKI dtype获取对应的 torch dtype
-    static c10::ScalarType ConvertToTorchDtype(const Mki::TensorDType dtype) {
-        auto it = dtypeMap.find(dtype);
-        if (it != dtypeMap.end()) {
-            return it->second;
-        }
-        throw std::invalid_argument("Unknown mki dtype.");
-    }
-};
 
 }  // namespace Asdsip
 

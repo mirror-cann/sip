@@ -11,4 +11,4 @@
 file(GLOB_RECURSE TEST_UTIL_SOURCE_FILES "${CMAKE_CURRENT_LIST_DIR}/test_util/*.cpp")
 add_library(asdsip_test_util ${TEST_UTIL_SOURCE_FILES})
 target_include_directories(asdsip_test_util PUBLIC ${CMAKE_CURRENT_LIST_DIR})
-target_link_libraries(asdsip_test_util PUBLIC asdsip asdsip_core torch torch_cpu c10)
+target_link_libraries(asdsip_test_util PUBLIC asdsip asdsip_core)

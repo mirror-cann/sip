@@ -10,10 +10,6 @@
 #include "utils/ops_base.h"
 #include <memory>
 #include <iostream>
-#ifdef UNITTESET
-#include <asdops/params/params.h>
-#include <asdops/ops.h>
-#endif
 #include "ops.h"
 #include "mki/types.h"
 #include "log/log.h"
@@ -105,14 +101,7 @@ static Status RunAsdOpsImpl(LaunchParam &launchParam, const AsdSip::OpDesc &opDe
 {
     Operation *op = AsdSip::Ops::Instance().GetOperationByName(opDesc.opName);
     if (op == nullptr) {
-#ifdef UNITTESET
-        op = AsdOps::Ops::Instance().GetOperationByName(opDesc.opName);
-        if (op == nullptr) {
-            return Status::FailStatus(-1, "Get operation failed.");
-        }
-#else
         return Status::FailStatus(-1, "Get operation failed.");
-#endif
     }
 
     int64_t inTensorNum = op->GetInputNum(launchParam.GetParam());
@@ -230,14 +219,7 @@ static Status RunAsdOpsImplV2(LaunchParam &launchParam, const AsdSip::OpDesc &op
 {
     Operation *op = AsdSip::Ops::Instance().GetOperationByName(opDesc.opName);
     if (op == nullptr) {
-#ifdef UNITTESET
-        op = AsdOps::Ops::Instance().GetOperationByName(opDesc.opName);
-        if (op == nullptr) {
-            return Status::FailStatus(-1, "Get operation failed.");
-        }
-#else
         return Status::FailStatus(-1, "Get operation failed.");
-#endif
     }
 
     Status status = op->InferShape(launchParam);

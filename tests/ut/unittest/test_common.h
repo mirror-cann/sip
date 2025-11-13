@@ -11,10 +11,7 @@
 #ifndef ASCEND_UNIT_TEST_COMMON_H
 #define ASCEND_UNIT_TEST_COMMON_H
 
-#include <ATen/ATen.h>
 #include "mki/utils/SVector/SVector.h"
 
-at::IntArrayRef ToIntArrayRef(const Mki::SVector<int64_t> &src);
-at::IntArrayRef ToIntArrayRef(const std::vector<int64_t> &src);
 int64_t Prod(const Mki::SVector<int64_t> &vec);
 #endif  // ASCEND_UNIT_TEST_COMMON_H

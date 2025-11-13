@@ -25,14 +25,3 @@ add_library(mki_static STATIC IMPORTED GLOBAL)
 set_property(TARGET mki_static PROPERTY IMPORTED_LOCATION ${MKI_STATIC_LIB})
 
 target_include_directories(mki_static INTERFACE ${MKI_PACKAGE_DIR}/include)
-
-if("$ENV{TEST_TYPE}" STREQUAL "UT")
-    # asdops: an existing shared target
-    file(GLOB_RECURSE ASDOPS_LIBS "$ENV{ATB_HOME_PATH}/lib**/libasdops.so")
-    list(GET ASDOPS_LIBS 0 ASDOPS_LIB)
-
-    add_library(asdops SHARED IMPORTED GLOBAL)
-    set_property(TARGET asdops PROPERTY IMPORTED_LOCATION ${ASDOPS_LIB})
-
-    target_include_directories(asdops INTERFACE $ENV{ATB_HOME_PATH}/include)
-endif()

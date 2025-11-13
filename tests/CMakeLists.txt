@@ -8,25 +8,16 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-# 设置torch lib地址
-set(PYTORCH_LIBRARY_DIRS $ENV{PYTHON_LIB_PATH}/torch/lib/  $ENV{PYTHON_LIB_PATH}/torch.libs/ $ENV{PYTHON_LIB_PATH}/torch_npu/lib/)
-
 # 设置链接库地址
-set(LINKED_LIBRARIES torch torch_python torch_npu blas base fft filter interpolation utils asdsip_core dl c_sec mmpa)
+set(LINKED_LIBRARIES blas base fft filter interpolation utils asdsip_core dl c_sec mmpa)
 
 # 设置C++标准
 set(CMAKE_CXX_STANDARD 17)
 
 # 包括PyTorch头文件目录
-include_directories($ENV{PYTHON_INCLUDE_PATH}/)
-include_directories($ENV{PYTHON_LIB_PATH}/torch/include/)
-include_directories($ENV{PYTHON_LIB_PATH}/torch/include/torch/csrc/api/include/)
-include_directories($ENV{PYTHON_LIB_PATH}/torch_npu/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/core/include)
 include_directories(${PROJECT_SOURCE_DIR}/core/utils/include)
-# 链接PyTorch库
-link_directories(${PYTORCH_LIBRARY_DIRS})
 
 if("$ENV{TEST_TYPE}" STREQUAL "UT")
     add_subdirectory(ut)

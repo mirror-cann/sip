@@ -11,9 +11,6 @@
 #define FLOATUTIL_H
 
 #include <vector>
-
-#include <ATen/ATen.h>
-
 #include "log/log.h"
 #include "mki/utils/status/status.h"
 
@@ -37,25 +34,6 @@ public:
     */
     template <class T>
     static void GenerateCode(float lower, float upper, std::vector<T> &code);
-
-    template <typename T>
-    static Mki::Status MatchAtTensorFloat(at::Tensor &out, at::Tensor &gt, float atol, float rtol)
-    {
-        T *result = static_cast<T *>(out.storage().data_ptr().get());
-        T *expect = static_cast<T *>(gt.storage().data_ptr().get());
-        ASDSIP_LOG(INFO) << "MatchAtTensorFloat";
-        for (int i = 0; i < out.numel(); i++) {
-            if (i < 10) {
-                ASDSIP_LOG(INFO) << "Index " << i << ", Expect " << expect[i] << ", Actual " << result[i];
-            }
-            if (!FloatJudgeEqual(expect[i], result[i], atol, rtol)) {
-                std::string msg = "pos " + std::to_string(i) + ", expect: " + std::to_string(expect[i]) +
-                                  ", result: " + std::to_string(result[i]);
-                return Mki::Status::FailStatus(-1, msg);
-            }
-        }
-        return Mki::Status::OkStatus();
-    }
 };
 
 #endif

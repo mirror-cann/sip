@@ -10,16 +10,6 @@
 
 #include "test_common.h"
 
-at::IntArrayRef ToIntArrayRef(const Mki::SVector<int64_t> &src)
-{
-    return at::IntArrayRef(src.data(), src.size());
-}
-
-at::IntArrayRef ToIntArrayRef(const std::vector<int64_t> &src)
-{
-    return at::IntArrayRef(src.data(), src.size());
-}
-
 int64_t Prod(const Mki::SVector<int64_t> &vec)
 {
     int64_t ret = 1;

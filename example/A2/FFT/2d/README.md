@@ -4,10 +4,7 @@
 
 ## 功能说明
 
-- 算子功能：
-    - FftExecC2C：执行复数到复数的FFT变换。
-    - FftExecC2R：执行复数到实数的FFT变换。
-    - FftExecR2C：执行实数到复数的FFT变换。
+- 算子功能：执行带batch的2D快速傅里叶变换。
 - 计算公式：
     $$
     X[k,l] = \sum_{m=0}^{M-1} \sum_{n=0}^{N-1} x[m,n] \cdot e^{-j2\pi (km/M + ln/N)}
@@ -53,15 +50,51 @@
 ## 场景说明
 提供示例代码分别对应不同场景，编译运行时需要对应更改build脚本：
 
-1. fftType = ASCEND_FFT_C2C
-    - example_acl_fft_c2c_2d.cpp
-    - 默认编译脚本可编译运行
+- **example_acl_fft_c2c_2d.cpp**
 
-2. fftType = ASCEND_FFT_C2R
-    - example_acl_fft_c2r_2d.cpp
-    - 编译脚本内替换 example_acl_fft_c2c_2d.cpp 为 example_acl_fft_c2r_2d.cpp 可编译运行。
-    - 默认编译脚本可编译运行
+    【注】：默认编译脚本可编译运行。
 
-3. fftType = ASCEND_FFT_R2C
-    - example_acl_fft_r2c_2d.cpp
-    - 编译脚本内替换 example_acl_fft_c2c_2d.cpp 为 example_acl_fft_r2c_2d.cpp 可编译运行。
+    **输入**
+    | TensorName |   DataType  | DataFormat |          Shape          |       Value     |
+    | :--------: | :---------: | :--------: | :---------------------: | :-------------: |
+    |  fftType   |  asdFftType |     nd     |           [1]           |  ASCEND_FFT_C2C |
+    |   input    |  complex64  |     nd     |  [batch, Nfft1, Nfft2]  |       -         |
+
+    **输出**
+    | TensorName |  DataType  | DataFormat |           Shape           |       Value     |
+    | :--------: | :--------: | :--------: | :-----------------------: | :-------------: |
+    |     out    |  complex64 |     nd     |   [batch, Nfft1, Nfft2]   |         -       |
+
+    ---
+
+- **example_acl_fft_c2r_2d.cpp**
+
+    【注】：编译脚本内替换 example_acl_fft_c2c_2d.cpp 为 example_acl_fft_c2r_2d.cpp 可编译运行。
+
+    **输入**
+    | TensorName |   DataType  | DataFormat |              Shape              |       Value     |
+    | :--------: | :---------: | :--------: | :-----------------------------: | :-------------: |
+    |  fftType   |  asdFftType |     nd     |                [1]              |  ASCEND_FFT_C2R |
+    |   input    |  complex64  |     nd     |  [batch, Nfft1, Nfft2 / 2 + 1]  |       -         |
+
+    **输出**
+    | TensorName |  DataType  | DataFormat |           Shape           |       Value     |
+    | :--------: | :--------: | :--------: | :-----------------------: | :-------------: |
+    |     out    |   flot32   |     nd     |   [batch, Nfft1, Nfft2]   |         -       |
+
+     ---
+
+- **example_acl_fft_r2c_2d.cpp**
+
+    【注】：编译脚本内替换 example_acl_fft_c2c_2d.cpp 为 example_acl_fft_r2c_2d.cpp 可编译运行。
+
+    **输入**
+    | TensorName |   DataType   | DataFormat |           Shape           |       Value     |
+    | :--------: | :----------: | :--------: | :-----------------------: | :-------------: |
+    |   fftType  |   asdFftType |     nd     |             [1]           |  ASCEND_FFT_R2C |
+    |    input   |    flot32    |     nd     |   [batch, Nfft1, Nfft2]   |         -       |
+
+    **输出**
+    | TensorName |   DataType  | DataFormat |              Shape              |       Value     |
+    | :--------: | :---------: | :--------: | :-----------------------------: | :-------------: |
+    |    out     |  complex64  |     nd     |  [batch, Nfft1, Nfft2 / 2 + 1]  |       -         |

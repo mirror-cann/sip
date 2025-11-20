@@ -4,7 +4,7 @@
 
 ## 功能说明
 
-- 算子功能：用于计算两批complex32复数矩阵的乘积。
+- 算子功能：半精度，用于批量计算复数矩阵的乘积。
 - 计算公式：
     $$
     C[k] = \alpha \cdot op(A[k]) \cdot op(B[k]) + \beta \cdot C[k] \quad \text{for } k = 1, 2, \dots, \text{batchCount}
@@ -12,8 +12,8 @@
 
     其中：
     - $A[k]$, $B[k], C[k]$ 为复数矩阵
-    - $op(A[k])$ 可以是 $A[k]$, $A[k]^T$, $A[k]^H$
-    - $op(B[k])$ 可以是 $B[k]$, $B[k]^T$, $B[k]^H$
+    - $op(A[k])$ 当前仅支持 $A[k]$
+    - $op(B[k])$ 当前仅支持 $B[k]$
 
 ## 使用说明
 

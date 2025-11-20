@@ -4,7 +4,7 @@
 
 ## 功能说明
 
-- 算子功能：用于计算批量复数矩阵与向量的乘积。
+- 算子功能：用于计算批量complex32复数矩阵与向量的乘积。
 - 计算公式：
     $$
     \mathbf{y} = \alpha \cdot op(A) \cdot \mathbf{x} + \beta \cdot \mathbf{y} \quad

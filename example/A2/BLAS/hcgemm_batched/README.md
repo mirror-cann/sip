@@ -4,7 +4,7 @@
 
 ## 功能说明
 
-- 算子功能：用于计算两批复数矩阵的乘积。
+- 算子功能：用于计算两批complex32复数矩阵的乘积。
 - 计算公式：
     $$
     C[k] = \alpha \cdot op(A[k]) \cdot op(B[k]) + \beta \cdot C[k] \quad \text{for } k = 1, 2, \dots, \text{batchCount}

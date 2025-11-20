@@ -8,9 +8,9 @@
     - Isamax：找到实数向量中绝对值最大的元素，并返回其索引。如果有多个元素相等，则返回其中的最小索引。
     - Icamax：找到复数向量中虚部、实部绝对值之和最大的元素，并返回其索引。如果有多个元素的绝对值之和相等，则返回最先找到的那个元素的索引。
 - 计算公式：
-    - Siamax 计算公式：
+    - Isamax 计算公式：
         $$\text{result} = \mathop{\mathrm{argmax}}_{i=1}^{n} |x_i|$$
-    - Ciamaxu 计算公式：
+    - Icamax 计算公式：
         $$\text{result} = \mathop{\mathrm{argmax}}_{i=1}^{n} |x_i| = \mathop{\mathrm{argmax}}_{i=1}^{n} \sqrt{\text{Re}(x_i)^2 + \text{Im}(x_i)^2}$$
 
 

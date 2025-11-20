@@ -71,7 +71,7 @@
     **输出**
     | TensorName |  DataType  | DataFormat |      Shape      |
     | :--------: | :--------: | :--------: | :-------------: |
-    |   result   |  float32   |     nd     |       [n]       |
+    |   result   |  float32   |     nd     |       [1]       |
 
     ---
 
@@ -88,7 +88,7 @@
     **输出**
     | TensorName |   DataType   | DataFormat |      Shape      |
     | :--------: | :----------: | :--------: | :-------------: |
-    |   result   |  complex64   |     nd     |       [n]       |
+    |   result   |  complex64   |     nd     |       [1]       |
 
     ---
 
@@ -104,4 +104,4 @@
     **输出**
     | TensorName |   DataType   | DataFormat |      Shape      |
     | :--------: | :----------: | :--------: | :-------------: |
-    |   result   |  complex64   |     nd     |       [n]       |
+    |   result   |  complex64   |     nd     |       [1]       |

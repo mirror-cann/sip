@@ -52,12 +52,6 @@
     | TensorName |  DataType  | DataFormat |      Shape      |
     | :--------: | :--------: | :--------: | :-------------: |
     |     x      |  float32   |     nd     |       [n]       |
-
-    **输出**
-    | TensorName |  DataType  | DataFormat |      Shape      |
-    | :--------: | :--------: | :--------: | :-------------: |
-    |     z      |  float32   |     nd     |       [1]       |
-
     ---
 
 - **example_scasum.cpp**
@@ -68,9 +62,3 @@
     | TensorName |  DataType  | DataFormat |      Shape      |
     | :--------: | :--------: | :--------: | :-------------: |
     |     x      | complex64  |     nd     |       [n]       |
-
-    **输出**
-    | TensorName |  DataType  | DataFormat |      Shape      |
-    | :--------: | :--------: | :--------: | :-------------: |
-    |     z      |  float32   |     nd     |       [1]       |
-

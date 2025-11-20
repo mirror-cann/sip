@@ -4,7 +4,7 @@
 
 ## 功能说明
 
-- 算子功能：用于计算批量复数矩阵与向量的乘积。
+- 算子功能：用于批量计算复数矩阵与向量的乘积。
 - 计算公式：
     $$
     \mathbf{y} = \alpha \cdot op(A) \cdot \mathbf{x} + \beta \cdot \mathbf{y} \quad
@@ -14,7 +14,7 @@
     - $A$ 为复数矩阵
     - $\mathbf{x}, \mathbf{y}$ 为复数向量
     - $\alpha, \beta$ 为复数标量
-    - $op(A[k])$ 可以是 $A[k]$, $A[k]^T$, $A[k]^H$
+    - $op(A[k])$ 可以是 $A[k]$, $A[k]^H$（共轭转置）
 
 ## 使用说明
 

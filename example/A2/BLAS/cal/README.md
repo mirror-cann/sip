@@ -18,7 +18,7 @@
     \end{aligned} \quad \text{for } i = 0, 1, \dots, n-1$$
     - Cscal的计算公式：
     $$\begin{aligned} 
-    \text{Re}(x_{\text{out},i}) &= \text{Re}(\alpha)\text{Re}(x_{in}) - \text{Im}(\alpha)\text{Im}(x_{\text{in},i}) \\ 
+    \text{Re}(x_{\text{out},i}) &= \text{Re}(\alpha)\text{Re}(x_{\text{in},i}) - \text{Im}(\alpha)\text{Im}(x_{\text{in},i}) \\ 
     \text{Im}(x_{\text{out},i}) &= \text{Re}(\alpha)\text{Im}(x_{\text{in},i}) + \text{Im}(\alpha)\text{Re}(x_{\text{in},i})
     \end{aligned} \quad \text{for } i = 0, 1, \dots, n-1$$
 

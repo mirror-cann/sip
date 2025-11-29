@@ -33,7 +33,7 @@ public:
         ASDSIP_CHECK(launchParam.GetParam().Type() == typeid(OpParam::Ssyr2),
             "Ssyr2: param type invalid", return false);
         ASDSIP_CHECK(launchParam.GetInTensorCount() == 2, "input num invalid", return false);
-        ASDSIP_CHECK(launchParam.GetOutTensorCount() == 1, "output num invalid", return false);  // markhere
+        ASDSIP_CHECK(launchParam.GetOutTensorCount() == 1, "output num invalid", return false);
 
         return true;
     }

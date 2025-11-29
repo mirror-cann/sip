@@ -280,7 +280,7 @@ public:
                 AscendC::CrossCoreWaitFlag(0x7);
             }
 
-            event_t enentId = (flagId == 0) ? EVENT_ID0 : EVENT_ID1;
+            event_t eventId = (flagId == 0) ? EVENT_ID0 : EVENT_ID1;
             AscendC::LocalTensor<DTYPE> raw_tensor = (flagId == 0) ? raw_tensor_ping : raw_tensor_pong;
             AscendC::LocalTensor<DTYPE> processed_tensor =
                 (flagId == 0) ? processed_tensor_ping : processed_tensor_pong;
@@ -288,16 +288,16 @@ public:
                 (flagId == 0) ? workspace_gm_tensor_ping : workspace_gm_tensor_pong;
 
             // copy in
-            AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(enentId);
+            AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(eventId);
             AscendC::DataCopyExtParams dataCopyExtParams{1, static_cast<uint32_t>(currEles * sizeof(DTYPE)), 0, 0, 0};
             AscendC::DataCopyPadExtParams<DTYPE> dataCopyInPadExtParams{false, 0, 0, 0};
             AscendC::DataCopyPad(
                 raw_tensor, b_gm_tensor[inOffset + currentOffset], dataCopyExtParams, dataCopyInPadExtParams);
-            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(enentId);
+            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(eventId);
 
             // compute I
-            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(enentId);
-            AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(enentId);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(eventId);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(eventId);
             for (int64_t gatherStart = 0; gatherStart < currEles; gatherStart += GATHER_NUM) {
                 int64_t num = GATHER_NUM;
                 if (gatherStart + GATHER_NUM > currEles) {
@@ -306,7 +306,7 @@ public:
                 AscendC::Gather(
                     processed_tensor[gatherStart], raw_tensor[gatherStart], gather_offset_tensor, (uint32_t)0, num);
             }
-            AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(enentId);
+            AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(eventId);
 
             // compute II
             AscendC::PipeBarrier<PIPE_V>();
@@ -314,13 +314,13 @@ public:
             AscendC::UnaryRepeatParams repeatParams{1, 1, 8, 8};
 
             AscendC::Muls(processed_tensor, processed_tensor, (DTYPE)(-1.0f), mask4Muls, repeatTimes, repeatParams);
-            AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(enentId);
+            AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(eventId);
 
             // copy out
             // set merged data continuous
-            AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(enentId);
+            AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(eventId);
             AscendC::DataCopyPad(workspace_gm_tensor[outOffset + currentOffset], processed_tensor, dataCopyExtParams);
-            AscendC::SetFlag<AscendC::HardEvent::MTE3_V>(enentId);
+            AscendC::SetFlag<AscendC::HardEvent::MTE3_V>(eventId);
 
             AscendC::PipeBarrier<PIPE_ALL>();
             AscendC::CrossCoreSetFlag<0x2, PIPE_MTE3>(0x8);

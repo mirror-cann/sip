@@ -307,7 +307,7 @@ void LogSinkFileSip::Init()
     const char *env = "asdsip";
     boostType_ = env && strlen(env) <= MAX_ENV_STRING_LEN && IsValidFileName(env) ? std::string(env) : "asdsip";
 
-    env = std::getenv("ASCEND_PROCESS_LOG_PATH");
+    env = std::getenv("ASCEND_PROCESS_LOG_PATH") ? std::getenv("ASCEND_PROCESS_LOG_PATH") : "asdsip";
     std::string logRootDir =
         env && strlen(env) <= MAX_ENV_STRING_LEN && IsValidFileName(env) ? std::string(env) : GetHomeDir();
 

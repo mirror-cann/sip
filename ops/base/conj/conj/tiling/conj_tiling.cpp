@@ -15,6 +15,7 @@
 
 namespace AsdSip {
 using namespace Mki;
+static constexpr uint32_t FLOAT_NUM_PER_BLOCK = 8; // one block = 32B
 AsdSip::AspbStatus ConjTiling(const LaunchParam &launchParam, KernelInfo &kernelInfo)
 {
     uint32_t maxCore = static_cast<uint32_t>(PlatformInfo::Instance().GetCoreNum(CoreType::CORE_TYPE_VECTOR));
@@ -22,7 +23,7 @@ AsdSip::AspbStatus ConjTiling(const LaunchParam &launchParam, KernelInfo &kernel
         maxCore = 1;
     }
     uint32_t size = static_cast<uint32_t>(launchParam.GetInTensor(0).Numel()) * 2;
-    uint32_t len = (size / maxCore + 7) / 8 * 8;
+    uint32_t len = (size / maxCore + FLOAT_NUM_PER_BLOCK - 1) / FLOAT_NUM_PER_BLOCK * FLOAT_NUM_PER_BLOCK;
     uint32_t seqLenLowerBound = 64;
     if (len < seqLenLowerBound) {
         len = seqLenLowerBound;

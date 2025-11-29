@@ -25,7 +25,7 @@ AsdSip::AspbStatus SsyrTiling(const LaunchParam &launchParam, KernelInfo &kernel
 {
     void *tilingData = kernelInfo.GetTilingHostAddr();
 
-    SsyrTilingData *tilingDataPtr = (SsyrTilingData *)(tilingData);
+    SsyrTilingData *tilingDataPtr = reinterpret_cast<AsdSip::SsyrTilingData *>(tilingData);
 
     ASDSIP_CHECK(tilingData != nullptr, "tilingDataPtr should not be empty",
               return AsdSip::ErrorType::ACL_ERROR_INVALID_PARAM);

@@ -78,7 +78,7 @@ AsdSip::AspbStatus SdotTiling(const LaunchParam &launchParam, KernelInfo &kernel
         uint32_t currOffset = 0;
         uint32_t currCalNum = 0;
         for (uint32_t i = 0; i < vecCoreNum; i++) {
-            if ((i > remainNum) || (i == remainNum)) {
+            if (i >= remainNum) {
                 currCalNum = numPerCore;
             } else {
                 currCalNum = numPerCore + 1;

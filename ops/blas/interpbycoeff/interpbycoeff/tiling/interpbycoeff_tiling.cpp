@@ -48,7 +48,7 @@ void LogTiling(InterpByCoeffTilingData tilingDataPtr)
 }
 
 
-void InterpByCoeffTCubeTiling(uint8_t *tilingData, int32_t tilingKey)
+bool InterpByCoeffTCubeTiling(uint8_t *tilingData, int32_t tilingKey)
 {
     matmul_tiling::MatmulApiTiling tilingApi;
     optiling::TCubeTiling tCubeTiling;
@@ -77,9 +77,11 @@ void InterpByCoeffTCubeTiling(uint8_t *tilingData, int32_t tilingKey)
     int ret = tilingApi.GetTiling(tCubeTiling);
     if (ret == -1) {
         ASDSIP_LOG(ERROR) << "gen tiling failed";
+        return false;
     }
     uint32_t tilingSize = tCubeTiling.GetDataSize();
     tCubeTiling.SaveToBuffer(tilingData + sizeof(InterpByCoeffTilingData), tilingSize);
+    return true;
 }
 
 AsdSip::AspbStatus InterpByCoeffTiling(const LaunchParam &launchParam, KernelInfo &kernelInfo)
@@ -156,7 +158,9 @@ AsdSip::AspbStatus InterpByCoeffTiling(const LaunchParam &launchParam, KernelInf
     tilingDataPtr->workspaceSize = L0_SIZE;
     tilingDataPtr->dataType = tilingKey;
     LogTiling(*tilingDataPtr);
-    InterpByCoeffTCubeTiling(tilingData, tilingKey);
+    auto res = InterpByCoeffTCubeTiling(tilingData, tilingKey);
+    ASDSIP_CHECK(res, "failed to execute func InterpByCoeffTCubeTiling!",
+              return AsdSip::ErrorType::ACL_ERROR_INVALID_PARAM);
 
     uint64_t workspaceSize = static_cast<uint64_t>(L0_SIZE) * static_cast<uint64_t>(usedCubeCoreNum) * 2;
     kernelInfo.SetBlockDim(usedCubeCoreNum);

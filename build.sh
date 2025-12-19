@@ -135,9 +135,9 @@ function fn_build_googletest()
     if [ ! -d $GTEST_DIR ]; then
         [[ ! -d $THIRD_PARTY_DIR_PATH ]] && mkdir -p $THIRD_PARTY_DIR_PATH
         cd $THIRD_PARTY_DIR_PATH
-        wget --no-check-certificate https://github.com/google/googletest/archive/refs/tags/release-1.11.0.tar.gz
-        tar -xf release-1.11.0.tar.gz
-        rm release-1.11.0.tar.gz
+        wget --no-check-certificate https://github.com/google/googletest/archive/refs/tags/release-1.14.0.tar.gz
+        tar -xf release-1.14.0.tar.gz
+        rm release-1.14.0.tar.gz
     fi
     cd $CODE_ROOT
 }

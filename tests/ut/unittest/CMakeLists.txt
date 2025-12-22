@@ -8,7 +8,7 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-add_subdirectory($ENV{CODE_ROOT}/3rdparty/googletest-release-1.11.0 googletest EXCLUDE_FROM_ALL)
+add_subdirectory($ENV{CODE_ROOT}/3rdparty/googletest-1.14.0 googletest EXCLUDE_FROM_ALL)
 add_subdirectory(base)
 
 include_directories(${CMAKE_CURRENT_LIST_DIR} $ENV{CODE_ROOT}/3rdparty/googletest/include

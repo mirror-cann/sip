@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 {
     // 设置算子使用的device id
     int deviceId = 0;
-    //（固定写法）创造执行流
+    //（固定写法）创建执行流
     aclrtStream stream;
     Init(deviceId, &stream);
 
@@ -141,7 +141,7 @@ int main(int argc, char **argv)
     asdBlasSdot(handle, n, inputX, incx, inputY, incy, result);
     asdBlasSynchronize(handle);
 
-    // 调度算子后销毁算子句柄
+    // 调用算子后销毁算子句柄
     asdBlasDestroy(handle);
 
     // 将输出tensor的Device侧数据复制到Host侧内存上
@@ -168,7 +168,7 @@ int main(int argc, char **argv)
         aclrtFree(buffer);
     }
 
-    // 调度算子后重置算子使用的deviceId
+    // 调用算子后重置算子使用的deviceId
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();

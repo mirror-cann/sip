@@ -13,23 +13,23 @@
    
 ## 学习资源
  
-- [编译与构建](docs/编译与构建.md)：SiP的编译命令说明。
+- [编译与构建](docs/编译与构建.md)：SiP库的编译命令说明。
 - [API文档](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/83RC1alpha003/API/SiPAPI/SIP_API_0002.html)：介绍了SiP库的接口和相关术语。
 - [问题报告](https://gitcode.com/cann/sip/issues)：通过issue提交发现的问题。
 
 ## 什么是SiP
 ### SiP介绍
-Ascend Signal Processing Boost 昇腾信号处理加速库（下文简称为SiP库）是一款高效、可靠的加速库，基于华为Ascend AI处理器，专门为信号处理领域设计的高性能算子加速库。
+Ascend Signal Processing Boost（昇腾信号处理加速库，下文简称为SiP库）是一款高效、可靠的加速库，基于华为Ascend AI处理器，专门为信号处理领域设计的高性能算子加速库。
 ### 软件架构
 加速库接口功能主要分成六个部分：
 - 信号处理加速库框架：负责算子的管理，算子在Device侧的二进制加载以及Host侧的tiling；负责对上层提供接口支持单算子调用、多算子批量调用等。
-- FFT库：包括专用的NPU Kernel、PLAN框架；实现FFT系列算子功能，对外提供接口以实现C2C、C2R和R2C，供开发者使用。
+- FFT库：包括专用的NPU Kernel、PLAN框架；实现FFT系列算子，对外提供接口以支持C2C、C2R和R2C功能，供开发者使用。
 - BLAS库：依照BLAS相关的标准定义，提供专用的Kernel，实现BLAS系列算子功能，对外提供从level1到level3的接口，供开发者使用。
-- 复数基础计算库：提供基础的支持复数类型的算子。
+- 复数基础计算库：提供基础的复数类型算子支持。
 - 信号领域融合算子库：包含PC、MTD、CFAR、Interpolation等融合算子，支撑脉冲信号分析，动态目标检测，恒虚警等场景。
 - Solver库：主要提供基于BLAS的复杂线性代数函数，例如矩阵分解、特征值求解等。
 
-### SiP仓介绍
+### SiP库介绍
 SiP库的目录结构如下：
 
 ```
@@ -82,7 +82,7 @@ sip
 ```
 
 ### 为什么选择SiP
-- 支持FFT、BLAS、FIR滤波、插值等高性能NPU算子，充分利用Ascend AI处理器的硬件特性，包括硬件算力、存储带宽、内存带宽等，实现了算子的极致性能。
+- 支持FFT、BLAS、FIR滤波、插值等高性能NPU算子，充分利用Ascend AI处理器的硬件特性，包括硬件算力、存储带宽、内存带宽等，进一步优化了算子的性能。
 
 ## 环境构建
 ### 快速安装CANN软件
@@ -125,11 +125,11 @@ pip3 install attrs cython 'numpy>=1.19.2,<=1.24.0' decorator sympy cffi pyyaml p
  - SiP库编译<br>
     编译加速库，设置加速库环境变量：
     ```sh
-    cd sip
+    cd ${SiP_root_path}
     bash build.sh
     source output/set_env.sh
     ```
-    注意：上述编译方式仅支持编译通过git下载的加速库，以zip压缩包方式下载的加速库暂不支持该编译方式；编译过程需要实时下载依赖库，因此编译环境需要满足联网条件；该编译过程涉及①拉取ascend-boost-comm组件并编译以及②编译加速库两个过程。更多命令介绍可查看SiP仓`build.sh`文件。
+    【注】：上述编译方式仅支持编译通过git下载的加速库，以zip压缩包方式下载的加速库不支持该编译方式；编译过程需要实时下载依赖库，因此编译环境需要联网；该编译过程包括拉取ascend-boost-comm组件并编译该组件，和编译加速库两个步骤。更多命令介绍可查看SiP仓库`build.sh`文件。
 
  - 更多编译命令说明请参考[编译与构建](docs/编译与构建.md)
 ### 调用示例说明
@@ -198,7 +198,7 @@ int main(int argc, char **argv)
 {
     // 设置算子使用的device id
     int deviceId = 0;
-    //（固定写法）创造执行流
+    //（固定写法）创建执行流
     aclrtStream stream;
     Init(deviceId, &stream);
 
@@ -272,7 +272,7 @@ int main(int argc, char **argv)
     asdBlasSdot(handle, n, inputX, incx, inputY, incy, result);
     asdBlasSynchronize(handle);
 
-    // 调度算子后销毁算子句柄
+    // 调用算子后销毁算子句柄
     asdBlasDestroy(handle);
 
     // 将输出tensor的Device侧数据复制到Host侧内存上
@@ -299,7 +299,7 @@ int main(int argc, char **argv)
         aclrtFree(buffer);
     }
 
-    // 调度算子后重置算子使用的deviceId
+    // 调用算子后重置算子使用的deviceId
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();

@@ -20,20 +20,23 @@
     ```  
     默认：source /usr/local/Ascend/ascend-toolkit/set_env.sh
 ### SiP编译
- - 进入SiP根目录，执行如下指令进行信号处理加速库的编译；设置加速库环境变量。
+ - 用户应进入SiP根目录，执行如下指令进行信号处理加速库的编译，并设置加速库环境变量。
     ```sh
     cd ${SiP_root_path}
     bash build.sh
     source output/set_env.sh
     ```
-    【注】：上述编译方式仅支持编译通过git下载的加速库，以zip压缩包方式下载的加速库不支持该编译方式；编译过程需要实时下载依赖库，因此编译环境需要联网；该编译过程包括拉取ascend-boost-comm组件并编译该组件，和编译加速库两个步骤。更多命令介绍可查看SiP仓库`build.sh`文件。
+    特别说明：
+    - 上述编译方式仅支持编译通过git下载的加速库，以zip压缩包方式下载的加速库不支持该编译方式；
+    - 由于编译过程需要联网下载依赖库，因此编译环境需要联网；
+    - 该编译过程包括获取ascend-boost-comm（昇腾分布式通信加速库）组件并编译该组件，和编译信号加速库两个步骤。更多命令介绍可查看SiP仓库`build.sh`文件。
 
  - 更多编译命令说明请参考[编译与构建](../../../../docs/编译与构建.md)
 
 ### 运行demo
 - 进入 `example` 目录并执行构建脚本。
     ```sh
-    cd  ${用例所在目录}
+    cd  ${示例所在目录}
     bash build.sh
     ```
 ## 额外说明
@@ -43,7 +46,7 @@
 适用于Atlas A2/A3 训练系列产品、Atlas 800I A2 推理产品、Atlas A3 推理系列产品。
 
 ## 场景说明
-提供示例代码分别对应不同场景，编译运行时需要对应更改build脚本：
+提供示例代码分别对应不同场景，编译运行时需要根据具体场景对应更改build脚本：
 - **example_asd_convolve_complex32.cpp**
 
     【注】：默认编译脚本可编译运行该示例。
@@ -62,7 +65,7 @@
 
 - **example_asd_convolve_complex64.cpp**
 
-    【注】：将编译脚本中的 example_asd_convolve_complex32.cpp 替换为 example_asd_convolve_complex64.cpp 后，可编译运行。
+    【注】：将编译脚本中的 example_asd_convolve_complex32.cpp 替换为 example_asd_convolve_complex64.cpp 后，替换后的编译脚本可编译运行。
 
     **输入**
     | TensorName |  DataType  | DataFormat |      Shape      |

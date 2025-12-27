@@ -89,7 +89,16 @@ sip
 本节提供快速安装CANN软件的示例命令，更多安装步骤请参考[详细安装指南](#详细安装指南)。
 
 #### 安装前准备
-在线安装和离线安装时，需确保已具备Python环境及pip3，当前CANN支持Python3.7.x至3.11.4版本。
+本项目源码编译用到的依赖如下，请注意版本要求。
+
+   - python >= 3.7.0
+   - gcc >= 7.3.0
+   - cmake >= 3.16.0
+   - pigz（安装后可提升打包速度，建议版本 >= 2.4）
+   - dos2unix
+   - gawk
+   - googletest（仅执行UT时依赖，建议版本 [1.14.0](https://github.com/google/googletest/releases/tag/v1.14.0)）
+
 离线安装时，请单击[获取链接](https://www.hiascend.com/developer/download/community/result?module=cann)下载CANN软件包，并上传到安装环境任意路径。
 #### 安装CANN
 ```shell

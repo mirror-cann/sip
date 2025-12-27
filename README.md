@@ -129,7 +129,10 @@ pip3 install attrs cython 'numpy>=1.19.2,<=1.24.0' decorator sympy cffi pyyaml p
     bash build.sh
     source output/set_env.sh
     ```
-    【注】：上述编译方式仅支持编译通过git下载的加速库，以zip压缩包方式下载的加速库不支持该编译方式；编译过程需要实时下载依赖库，因此编译环境需要联网；该编译过程包括拉取ascend-boost-comm组件并编译该组件，和编译加速库两个步骤。更多命令介绍可查看SiP仓库`build.sh`文件。
+    特别说明：
+    - 上述编译方式仅支持编译通过git下载的加速库，以zip压缩包方式下载的加速库不支持该编译方式；
+    - 由于编译过程需要联网下载依赖库，因此编译环境需要联网；
+    - 该编译过程包括获取ascend-boost-comm（昇腾分布式通信加速库）组件并编译该组件，和编译信号加速库两个步骤。更多命令介绍可查看SiP仓库`build.sh`文件。
 
  - 更多编译命令说明请参考[编译与构建](docs/编译与构建.md)
 ### 调用示例说明

@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
-# This file is a part of the CANN Open Software.
-# Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+# Copyright (c) 2025 Huawei Technologies Co., Ltd.
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+# CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -76,7 +76,6 @@ EOF
 
 
     chmod 755 -R $CODE_ROOT/output
-    chmod 755 -R $CODE_ROOT/scripts/makeself
 
     ARCH=`uname -i`
 
@@ -93,7 +92,8 @@ EOF
     sed -i "s!LOG_PATH_PLACEHOLDER!${LOG_PATH}!" $OUTPUT_DIR/scripts/uninstall.sh
     sed -i "s!LOG_NAME_PLACEHOLDER!${LOG_NAME}!" $OUTPUT_DIR/scripts/uninstall.sh
 
-    $CODE_ROOT/scripts/makeself/makeself.sh --header $CODE_ROOT/scripts/makeself/makeself-header.sh \
+    makeself_dir=${ASCEND_HOME_PATH}/toolkit/tools/op_project_templates/ascendc/customize/cmake/util/makeself
+    $makeself_dir/makeself.sh --header $makeself_dir/makeself-header.sh \
         --help-header $CODE_ROOT/scripts/help.info --pigz --complevel 4 --nomd5 --sha256 --chown \
         $CODE_ROOT/output $OUTPUT_DIR/Ascend-cann-SIP_${VERSION}_linux-${ARCH}.run ASCEND_SIP_RUN_PACKAGE ./install.sh
 
@@ -112,6 +112,89 @@ function fn_compile_and_pack()
     fn_make_run_package
 }
 
+function fn_install_lcov()
+{
+    LCOV_PACK_PATH=${CODE_ROOT}/lcov-1.16
+    LCOV_BIN_PATH=/${CODE_ROOT}/lcov
+    if [ ! -d $LCOV_BIN_PATH ]; then
+        if [ ! -d $LCOV_PACK_PATH ]; then
+            wget --no-check-certificate https://github.com/linux-test-project/lcov/archive/refs/tags/v1.16.tar.gz
+            tar -xvf v1.16.tar.gz
+            rm v1.16.tar.gz
+        fi
+        cd ${LCOV_PACK_PATH}
+        make -j
+        sudo make PREFIX=${LCOV_BIN_PATH} install
+    fi
+}
+
+function fn_build_googletest()
+{
+    THIRD_PARTY_DIR_PATH=${THIRD_PARTY_DIR}
+    GTEST_DIR=$THIRD_PARTY_DIR_PATH/googletest
+    if [ ! -d $GTEST_DIR ]; then
+        [[ ! -d $THIRD_PARTY_DIR_PATH ]] && mkdir -p $THIRD_PARTY_DIR_PATH
+        cd $THIRD_PARTY_DIR_PATH
+        wget --no-check-certificate https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz
+        tar -xf v1.14.0.tar.gz
+        rm v1.14.0.tar.gz
+    fi
+    cd $CODE_ROOT
+}
+
+function fn_ut_test_needed()
+{
+    export NEED_COMPILE_RT="TRUE"
+    export TEST_TYPE="UT"
+    fn_install_lcov
+    fn_build_googletest
+}
+
+function fn_build_coverage()
+{
+
+    export GCOV_DIR=$CACHE_DIR/gcov
+    PYYTHON_FILTER_TOOL=$CODE_ROOT/tests/ut/framework/test_util/FilterTool.py
+    LCOV_PATH=${CODE_ROOT}/lcov/bin/lcov
+
+    rm -rf $CACHE_DIR/core/CMakeFiles/asdops_static.dir/
+
+    [ -n "$GCOV_DIR" ] && rm -rf $GCOV_DIR
+    mkdir $GCOV_DIR
+
+    if [ "$TEST_TYPE" == "UT" ]; then
+        fn_run_unittest
+    fi
+    # if [ "$TEST_TYPE" == "FT" ]; then
+    #     fn_run_fuzztest
+    # fi
+
+    # cd $GCOV_DIR
+    # echo "CURRENT_DIR=${CURRENT_DIR}"
+    # $LCOV_PATH -c --directory ${CURRENT_DIR} --output-file tmp_coverage.info --rc lcov_branch_coverage=1 >> $GCOV_DIR/log.txt
+    # $LCOV_PATH -r tmp_coverage.info '*/3rdparty/*' '*/build/*' '*torch/*' '*c10/*' '*ATen/*' '*/c++/7*' '*tests/*' '*tools/*' '*torch_extension/*' '/opt/*'  '*/core/tbe/stubs/*' '/usr/*' '*/ascend-op-common-lib/*' '*/asdops/*' '*/Ascend/*' -output-file test_coverage.info --rc lcov_branch_coverage=1 >> $GCOV_DIR/log.txt
+    # $LCOV_PATH -a test_coverage.info -o main_coverage.info --rc lcov_branch_coverage=1 >> $GCOV_DIR/log.txt
+    # python3 $PYYTHON_FILTER_TOOL --input ./main_coverage.info --output ./final.info --root $CACHE_DIR --debug 1 >> $GCOV_DIR/log.txt
+    # ${CODE_ROOT}/lcov/bin/genhtml --branch-coverage final.info -o cover_result --rc lcov_branch_coverage=1 >> $GCOV_DIR/log.txt
+    # [[ ! -d ./cov_info ]] && mkdir cov_info
+    # cp final.info ./cov_info
+    # tail -n 4 $GCOV_DIR/log.txt
+    # cd ..
+    # tar -czf gcov.tar.gz gcov
+    # mv gcov.tar.gz $OUTPUT_DIR/
+}
+
+function fn_run_unittest()
+{
+    echo " CURRENT DIRECTORY: $(pwd)"
+    echo " UT CURRENT_DIR=${CURRENT_DIR}"
+    echo " UT OUTPUT_DIR=${OUTPUT_DIR}"
+
+    export LD_LIBRARY_PATH=$OUTPUT_DIR/lib/:$LD_LIBRARY_PATH
+    $OUTPUT_DIR/bin/ops_unittest --gtest_output=xml:test_detail.xml
+    cp test_detail.xml unittest_result.xml
+}
+
 function fn_build()
 {
     # check dependcy mki
@@ -122,7 +205,7 @@ function fn_build()
         if [ ! -d "${MKI_ROOT}" ]; then
             echo "Third_party dir does not complete and ascend-boost-comm does not exit!"
             cd ${THIRD_PARTY_DIR}/
-            git clone https://gitcode.com/cann/ascend-boost-comm.git -b br_release_cann_8.3.RC1_20260322
+            git clone https://gitcode.com/cann/ascend-boost-comm.git -b br_release_cann_8.5.0_20260527
         fi
         cd $CODE_ROOT/
         rm -rf MKI_PATH
@@ -131,6 +214,17 @@ function fn_build()
         cp -r ${THIRD_PARTY_DIR}/ascend-boost-comm/output/mki ${THIRD_PARTY_DIR}/
         cp -r ${THIRD_PARTY_DIR}/ascend-boost-comm/3rdparty/compiler ${THIRD_PARTY_DIR}/
     fi
+
+    # check dependcy catlass
+    CATLASS_PATH="${THIRD_PARTY_DIR}/catlass"
+    if [ ! -d "${CATLASS_PATH}" ]; then
+        echo "Third_party dir catlass does not exit!"
+        cd ${THIRD_PARTY_DIR}/
+        git clone https://gitcode.com/cann/catlass.git -b master
+        cd $CODE_ROOT/
+    fi
+
+    cmake -B build -S . -DCURRENT_DIR="$CURRENT_DIR"
 
     cd $CODE_ROOT/
     echo  "current commid id of ascendSipBoost: $(git rev-parse HEAD)"
@@ -149,9 +243,9 @@ function help_info() {
     echo "Usage: bash build.sh [type] [options]"
     echo
     echo "type:"
-    echo "help                         Displays help message."
-    echo "dev                          仅编译算子库, 若type为空，默认为dev."
-    echo "clean                        清除缓存和依赖的三方库."
+    echo "--help                         Displays help message."
+    echo "--dev                          仅编译算子库, 若type为空，默认为dev."
+    echo "--clean                        清除缓存和依赖的三方库."
     echo
     echo "options:"
     echo "--output=<dir>               指定编译输出目录，默认为${repo}/output目录."
@@ -166,7 +260,7 @@ function fn_main()
 {
      if [[ "$BUILD_OPTION_LIST" =~ "$1" ]];then
         if [[ -z "$1" ]];then
-            arg1="dev"
+            arg1="--dev"
         else
             arg1=$1
             shift
@@ -180,9 +274,9 @@ function fn_main()
             fi
         done
         if [[ "$cfg_flag" == 1 ]];then
-            arg1="dev"
+            arg1="--dev"
         else
-            echo "argument $1 is unknown, please type 'build.sh help' for more imformation"
+            echo "argument $1 is unknown, please type 'build.sh --help' for more imformation"
             exit 1
         fi
     fi
@@ -225,10 +319,15 @@ function fn_main()
     COMPILE_OPTIONS="${COMPILE_OPTIONS} -DUSE_CXX11_ABI=$USE_CXX11_ABI"
     COMPILE_OPTIONS="${COMPILE_OPTIONS} -DCMAKE_BUILD_TYPE=Release"
     case "${arg1}" in
-        "dev")
+        --dev)
             fn_build
             ;;
-        "clean")
+        "ut")
+            fn_ut_test_needed
+            fn_build
+            fn_build_coverage
+            ;;
+        --clean)
             [[ -d "$OUTPUT_DIR" ]] && rm -rf $OUTPUT_DIR
             [[ -d "$THIRD_PARTY_DIR" ]] && rm -rf $THIRD_PARTY_DIR
             echo "clear all build history."
@@ -241,6 +340,7 @@ function fn_main()
 
 set -e
 cd $(dirname $0)
+export CURRENT_DIR=$(pwd)
 
 CURRENT_DIR=$(pwd)
 export CODE_ROOT=${CURRENT_DIR}
@@ -250,8 +350,8 @@ THIRD_PARTY_DIR=$CODE_ROOT/3rdparty
 ASDSIP_DIR=$CODE_ROOT
 RELEASE_DIR=$CODE_ROOT/ci/release
 MKI_ROOT=$THIRD_PARTY_DIR/ascend-boost-comm
-VERSION="1.0.0"
-VERSION_B="1.0.0"
+VERSION="8.5.0"
+VERSION_B="8.5.0"
 LOG_PATH="/var/log/cann_asdsip_log/"
 LOG_NAME="cann_asdsip_install.log"
 
@@ -259,7 +359,7 @@ export COMPILE_OPTIONS="-DNO_WERROR=ON"
 export USE_VERBOSE=OFF
 export USE_CXX11_ABI="OFF"
 MSSANITIZER_SWITCH=OFF
-BUILD_OPTION_LIST="ops_unit ut st ft dev clean help"
+BUILD_OPTION_LIST="ops_unit ut st ft --dev --clean --help"
 BUILD_CONFIGURE_LIST=("--output=.*" "--use_cxx11_abi=0" "--use_cxx11_abi=1 --verbose --mssanitizer")
 
 fn_main "$@"

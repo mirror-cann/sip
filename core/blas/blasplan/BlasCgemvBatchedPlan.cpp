@@ -1,7 +1,7 @@
 /**
- * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -27,7 +27,7 @@ static constexpr uint32_t COMPLEX_ELENUM = 2;
 
 static constexpr uint32_t FP16_DTYPE_SIZE = sizeof(float) / 2;  // 2b
 
-static uint32_t CalMaxMatNum(bool isTrans, bool dataType, int64_t m)
+static uint32_t CalMaxMatNum(bool isTrans, bool dataType, uint32_t m)
 {
     uint32_t matNum = 0;
     if (isTrans) {
@@ -92,7 +92,7 @@ void BlasCgemvBatchedPlan::SetMaskTensor()
     bool dataType = dtype == asdDataType_t::ASD_C_64F ? true : false;
     uint32_t dtypeSize = dataType ? sizeof(float) : FP16_DTYPE_SIZE;
 
-    maxMatNum = CalMaxMatNum(isTrans, dataType, m);
+    maxMatNum = CalMaxMatNum(isTrans, dataType, static_cast<uint32_t>(m));
     maxMatNum = maxMatNum > 0 ? maxMatNum : 1;
 
     uint32_t eleNumPerRepeat = BYTENUM_REPEAT / dtypeSize;

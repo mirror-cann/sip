@@ -1,7 +1,7 @@
 /**
- * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -23,6 +23,12 @@ struct DftTilingData {
     int32_t m0{0};
     int32_t n0{0};
     int32_t k0{0};
+    int32_t loopTime{0};
+    int32_t batchNumPreLoop{0}; // batchNumPreCore * 40
+    int32_t batchNumPreCore{0};
+    int32_t batchTailNum{0};    // batchTailNumPreCore * 40 + batchTailCoreNum
+    int32_t batchTailNumPreCore{0};
+    int32_t batchTailCoreNum{0};
 };
 }
 #endif

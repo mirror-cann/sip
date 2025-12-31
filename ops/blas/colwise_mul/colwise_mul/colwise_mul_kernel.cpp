@@ -1,7 +1,7 @@
 /**
- * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -21,6 +21,9 @@ using namespace Mki;
 
 namespace AsdSip {
 
+static constexpr int64_t COLWISEMUL_INPUT_NUM = 3;
+static constexpr int64_t COLWISEMUL_OUTPUT_NUM = 1;
+
 class ColwiseMulKernel : public KernelBase {
 public:
     explicit ColwiseMulKernel(const std::string &kernelName, const BinHandle *handle) noexcept
@@ -32,8 +35,8 @@ public:
     {
         ASDSIP_CHECK(launchParam.GetParam().Type() == typeid(OpParam::ColwiseMul), "ColwiseMul: param type invalid",
                   return false);
-        ASDSIP_CHECK(launchParam.GetInTensorCount() == 3, "input num invalid", return false);
-        ASDSIP_CHECK(launchParam.GetOutTensorCount() == 1, "output num invalid", return false);  // markhere
+        ASDSIP_CHECK(launchParam.GetInTensorCount() == COLWISEMUL_INPUT_NUM, "input num invalid", return false);
+        ASDSIP_CHECK(launchParam.GetOutTensorCount() == COLWISEMUL_OUTPUT_NUM, "output num invalid", return false);  // markhere
 
         return true;
     }

@@ -1,7 +1,7 @@
 /**
- * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -105,6 +105,7 @@ AspbStatus asdBlasCgemvBatchedImpl(asdBlasHandle handle, CgemvBatchedImplParam i
     try {
         AsdSip::BlasCgemvBatchedPlan &plan =
             dynamic_cast<AsdSip::BlasCgemvBatchedPlan &>(BlasPlanCache::getPlan(handle));
+        ASDSIP_ECHECK(plan.IsInitialized(), "CgemvBatched plan init Error!.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
 
         Status status;
 
@@ -139,6 +140,8 @@ AspbStatus asdBlasHCgemvBatched(asdBlasHandle handle, asdBlasOperation_t trans, 
     const std::complex<op::fp16_t> &alpha, aclTensor *A, const int64_t lda, aclTensor *x, const int64_t incx,
     const std::complex<op::fp16_t> &beta, aclTensor *y, const int64_t incy, const int64_t batchCount)
 {
+    (void)alpha;
+    (void)beta;
     // aclGetDataType does not support complex32 now, so no check datatype.
     std::lock_guard<std::mutex> lock(blas_mtx);
     if (lda <= 0) {
@@ -159,6 +162,8 @@ AspbStatus asdBlasCgemvBatched(asdBlasHandle handle, asdBlasOperation_t trans, c
     const std::complex<float> &alpha, aclTensor *A, const int64_t lda, aclTensor *x, const int64_t incx,
     const std::complex<float> &beta, aclTensor *y, const int64_t incy, const int64_t batchCount)
 {
+    (void)alpha;
+    (void)beta;
     std::lock_guard<std::mutex> lock(blas_mtx);
     aclDataType dataType = aclDataType::ACL_DT_UNDEFINED;
     CHECK_STATUS_WITH_ACL_RETURN(aclGetDataType(x, &dataType), "asdBlasCgemvBatched: aclGetDataType");
@@ -195,9 +200,24 @@ AspbStatus asdBlasMakeCgemvBatchedPlanImpl(
 {
     ASDSIP_ECHECK(handle != nullptr, "blas CgemvBatched Make Plan failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
     ASDSIP_ECHECK(m > 0, "blas asdBlasMakeCgemvBatchedPlan get m <= 0.", ErrorType::ACL_ERROR_INVALID_PARAM);
-    AsdSip::BlasCgemvBatchedPlan *plan = new AsdSip::BlasCgemvBatchedPlan(trans, dtype, m);
-    plan->CreateTensor();
-    BlasPlanCache::MakePlan(handle, plan);
+
+    AsdSip::BlasCgemvBatchedPlan *plan = nullptr;
+    try {
+        plan = new AsdSip::BlasCgemvBatchedPlan(trans, dtype, m);
+        BlasPlanCache::MakePlan(handle, plan);
+    } catch (const std::exception &e) {
+        if (plan != nullptr) {
+            delete plan;
+        }
+        delete static_cast<int *>(handle);
+        ASDSIP_ELOG(ErrorType::ACL_ERROR_INTERNAL_ERROR) << "Make CgemvBatched Plan failed: " << e.what();
+        throw std::runtime_error("Make CgemvBatched Plan failed.");
+    }
+    if (plan->CreateTensor() != ErrorType::ACL_SUCCESS) {
+        plan->MarkFailed();
+        ASDSIP_ELOG(ErrorType::ACL_ERROR_INTERNAL_ERROR) << "Fail to create blas CgemvBatchedPlan mask tensor.";
+        return ErrorType::ACL_ERROR_INTERNAL_ERROR;
+    }
     plan->MarkInitialized();
     return ErrorType::ACL_SUCCESS;
 }

@@ -19,4 +19,3 @@ add_operation(ComplexMatDotOperation "${complex_mat_dot_src}")
 add_kernel(complex_mat_dot ascend910b mix 
     complex_mat_dot/kernel/complex_mat_dot.cpp
     ComplexMatDotC64Kernel)
-

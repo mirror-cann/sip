@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# Copyright (c) 2024 Huawei Technologies Co., Ltd.
-# This file is a part of the CANN Open Software.
-# Licensed under CANN Open Software License Agreement Version 1.0 (the "License").
+# Copyright (c) 2025 Huawei Technologies Co., Ltd.
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+# CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -112,13 +112,13 @@ EOF
     rm -rf $CODE_ROOT/output/bin/
 
     # api.h 归档
-    chmod 755 -R $CODE_ROOT/scripts/install.sh
+    chmod 750 -R $CODE_ROOT/scripts/install.sh
     cp $CODE_ROOT/scripts/install.sh $CODE_ROOT/output/
     cp $CODE_ROOT/scripts/set_env.sh $CODE_ROOT/output/
 
 
-    chmod 755 -R $CODE_ROOT/output
-    chmod 755 -R $CODE_ROOT/scripts/makeself
+    chmod 750 -R $CODE_ROOT/output
+    chmod 750 -R $CODE_ROOT/scripts/makeself
 
     ARCH=`uname -i`
 
@@ -152,25 +152,12 @@ function fn_build()
     export ASCEND_HOME_PATH=/home/slave1/Ascend/ascend-toolkit/latest
     export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/lib64:${LD_LIBRARY_PATH}
 
-    source_file="${ASCEND_HOME_PATH}/opp/built-in/op_impl/ai_core/tbe/op_api/lib/linux/$(arch)/libopapi.so"
-    link_file="${ASCEND_HOME_PATH}/lib64/libopapi.so"
+    source_file="${ASCEND_HOME_PATH}/lib64/libopapi.so"
 
     # 检查源文件是否存在
     if [ ! -e "$source_file" ]; then
         echo "error '$source_file':File not exists!"
         exit 1
-    fi
-
-    # 检查软链接状态
-    if [ -L "$link_file" ]; then
-        # 软链接存在，检查是否有效（指向的文件是否存在）
-        if [ ! -e "$link_file" ]; then
-            rm "$link_file"
-            ln -s "$source_file" "$link_file"
-        fi
-    else
-        # 软链接不存在，创建新链接
-        ln -s "$source_file" "$link_file"
     fi
 
     if [ ! -d "$CODE_ROOT"/3rdparty ]; then

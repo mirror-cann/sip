@@ -1,8 +1,8 @@
 
 /**
- * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -48,7 +48,7 @@ void LogTiling(InterpByCoeffTilingData tilingDataPtr)
 }
 
 
-void InterpByCoeffTCubeTiling(uint8_t *tilingData, int32_t tilingKey)
+bool InterpByCoeffTCubeTiling(uint8_t *tilingData, int32_t tilingKey)
 {
     matmul_tiling::MatmulApiTiling tilingApi;
     optiling::TCubeTiling tCubeTiling;
@@ -77,9 +77,11 @@ void InterpByCoeffTCubeTiling(uint8_t *tilingData, int32_t tilingKey)
     int ret = tilingApi.GetTiling(tCubeTiling);
     if (ret == -1) {
         ASDSIP_LOG(ERROR) << "gen tiling failed";
+        return false;
     }
     uint32_t tilingSize = tCubeTiling.GetDataSize();
     tCubeTiling.SaveToBuffer(tilingData + sizeof(InterpByCoeffTilingData), tilingSize);
+    return true;
 }
 
 AsdSip::AspbStatus InterpByCoeffTiling(const LaunchParam &launchParam, KernelInfo &kernelInfo)
@@ -100,6 +102,9 @@ AsdSip::AspbStatus InterpByCoeffTiling(const LaunchParam &launchParam, KernelInf
     int32_t repeatNum = REPEAT_32;
     int32_t maxBaseN = static_cast<int32_t>(L0_SIZE / BASE_MATMUL_SIZE / sizeof(float)) / (param.rsNum * 2) *
                        BASE_MATMUL_SIZE;  // Complex32
+    ASDSIP_CHECK(maxBaseN != 0, "maxBaseN is 0!",
+              return AsdSip::ErrorType::ACL_ERROR_INVALID_PARAM);
+
     if (inDtype == TensorDType::TENSOR_DTYPE_COMPLEX64) {
         tilingKey = 0;
         repeatNum = REPEAT_64;
@@ -156,7 +161,9 @@ AsdSip::AspbStatus InterpByCoeffTiling(const LaunchParam &launchParam, KernelInf
     tilingDataPtr->workspaceSize = L0_SIZE;
     tilingDataPtr->dataType = tilingKey;
     LogTiling(*tilingDataPtr);
-    InterpByCoeffTCubeTiling(tilingData, tilingKey);
+    auto res = InterpByCoeffTCubeTiling(tilingData, tilingKey);
+    ASDSIP_CHECK(res, "Failed to execute func InterpByCoeffTCubeTiling!",
+              return AsdSip::ErrorType::ACL_ERROR_INVALID_PARAM);
 
     uint64_t workspaceSize = static_cast<uint64_t>(L0_SIZE) * static_cast<uint64_t>(usedCubeCoreNum) * 2;
     kernelInfo.SetBlockDim(usedCubeCoreNum);

@@ -1,7 +1,7 @@
 /**
- * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -28,7 +28,7 @@ __aicore__ __inline__ __attribute__((overloadable, always_inline)) void init_ub(
                                                                                 AscendC::LocalTensor<float>& buf1_output,
                                                                                 AscendC::LocalTensor<float>& buf2_output)
 {
-    const int32_t BUF_SIZE = 16 * 1024;
+    const int32_t BUF_SIZE = 23 * 1024;
     AsdopsBuffer<ArchType::ASCEND_V220> buf;
     buf1_input_addr_buf = buf.GetBuffer<BufferType::ASCEND_UB, uint16_t>(0);
     buf1_output_addr_buf = buf.GetBuffer<BufferType::ASCEND_UB, uint16_t>(64);

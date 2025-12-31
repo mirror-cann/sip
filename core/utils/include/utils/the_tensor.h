@@ -1,7 +1,7 @@
 /**
- * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -19,19 +19,19 @@ template <typename T>
 class TheTensor {
 public:
     TheTensor(const std::vector<int64_t> &shape)
+        : shape_(shape),
+          strides_(std::vector<int64_t>(shape.size())),
+          size_(compute_size(shape)),
+          data_(new T[size_])
     {
-        shape_ = shape;
-        strides_ = std::vector<int64_t>(shape.size());
-        size_ = compute_size(shape_);
-        data_ = new T[size_];
         update_strides();
     }
 
     TheTensor(TheTensor &&tensor)
-        : data_(tensor.move_data()),
+        : shape_(tensor.shape_),
+          strides_(tensor.strides_),
           size_(tensor.size_),
-          shape_(tensor.shape_),
-          strides_(tensor.strides_)
+          data_(tensor.move_data())
     {
     }
 
@@ -105,10 +105,10 @@ public:
     };
 
 private:
-    T *data_;
-    size_t size_;
     std::vector<int64_t> shape_;
     std::vector<int64_t> strides_;
+    size_t size_;
+    T *data_;
 
     size_t compute_size(const std::vector<int64_t> &shape) const
     {

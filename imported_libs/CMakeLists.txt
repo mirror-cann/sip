@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
-# This file is a part of the CANN Open Software.
-# Licensed under CANN Open Software License Agreement Version 1.0 (the "License").
+# Copyright (c) 2025 Huawei Technologies Co., Ltd.
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+# CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -25,14 +25,3 @@ add_library(mki_static STATIC IMPORTED GLOBAL)
 set_property(TARGET mki_static PROPERTY IMPORTED_LOCATION ${MKI_STATIC_LIB})
 
 target_include_directories(mki_static INTERFACE ${MKI_PACKAGE_DIR}/include)
-
-if("$ENV{TEST_TYPE}" STREQUAL "UT")
-    # asdops: an existing shared target
-    file(GLOB_RECURSE ASDOPS_LIBS "$ENV{ATB_HOME_PATH}/lib**/libasdops.so")
-    list(GET ASDOPS_LIBS 0 ASDOPS_LIB)
-
-    add_library(asdops SHARED IMPORTED GLOBAL)
-    set_property(TARGET asdops PROPERTY IMPORTED_LOCATION ${ASDOPS_LIB})
-
-    target_include_directories(asdops INTERFACE $ENV{ATB_HOME_PATH}/include)
-endif()

@@ -1,7 +1,7 @@
 /**
- * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -30,6 +30,7 @@ using namespace Mki;
 // WORKSPACE_SIZE : (ALPHA * COMPUTE_PER_NUM * 2) * (COMPUTE_PER_NUM * 2) + 16 + (ALPHA * COMPUTE_PER_NUM + 8) * 2;
 // WORKSPACE_SIZE * usedCubeCoreNum * sizeof(float) * 2;
 constexpr uint32_t INTERPOLATION_WORKSPACE_SIZE = 680960;  // 4256 * 20 * 4 * 2
+static constexpr uint32_t DIM_2 = 2;
 
 namespace AsdSip {
 
@@ -85,6 +86,13 @@ AspbStatus rsInterpolationBySinc(const aclTensor *inputTensor, const aclTensor *
 
     CHECK_STATUS_WITH_ACL_RETURN(
         aclGetStorageShape(inputTensor, &storageDims, &storageDimsNum), "rsInterpolationBySinc: aclGetStorageShape");
+    
+    if (storageDimsNum != DIM_2) {
+        delete[] storageDims;
+        storageDims = nullptr;
+        ASDSIP_ELOG(ErrorType::ACL_ERROR_OP_INPUT_NOT_MATCH) << "Interpolation input tensor must be 2-dimensional.";
+        return ErrorType::ACL_ERROR_OP_INPUT_NOT_MATCH;
+    }
 
     OpDesc opDesc;
     opDesc.opName = "InterpolationOperation";

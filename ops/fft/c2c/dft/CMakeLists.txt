@@ -13,9 +13,19 @@ set(dft_src
     ${CMAKE_CURRENT_LIST_DIR}/dft/dft_kernel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/dft/tiling/dft_tiling.cpp
 )
- 
+
+set(CATLASS_INCLUDES
+    ${OPS_THIRD_PARTY_DIR}/catlass/include
+    $ENV{ASCEND_HOME_PATH}/include
+)
+
 add_operation(DftOperation "${dft_src}")
 
 add_kernel(dft ascend910b cube
     dft/kernel/dft.cce
     DftC64Kernel)
+
+add_kernel(dft_complex32 ascend910b mix
+    dft/kernel/dft_complex32.cpp
+    DftC32Kernel
+    INCLUDE_DIRECTORIES ${CATLASS_INCLUDES})

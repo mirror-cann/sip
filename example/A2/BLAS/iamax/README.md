@@ -1,0 +1,71 @@
+# 信号处理加速库IamaxOperation C++ Demo
+## 介绍
+该目录下为信号处理加速库IamaxOperation C++调用示例。
+
+## 功能说明
+
+- 算子功能：
+    - Isamax：找到实数向量中绝对值最大的元素，并返回其索引。如果有多个元素相等，则返回其中的最小索引。
+    - Icamax：找到复数向量中虚部、实部绝对值之和最大的元素，并返回其索引。如果有多个元素的绝对值之和相等，则返回最先找到的那个元素的索引。
+- 计算公式：
+    - Isamax 计算公式：
+        $$\text{result} = \mathop{\mathrm{argmax}}_{i=1}^{n} |x_i|$$
+    - Icamax 计算公式：
+        $$\text{result} = \mathop{\mathrm{argmax}}_{i=1}^{n} ({|\text{Re}(x_i)| + |\text{Im}(x_i)|})
+
+
+## 使用说明
+
+### 环境配置
+ - 配置CANN环境变量
+    ```
+    source [CANN安装路径]/set_env.sh
+    ```  
+    默认：source /usr/local/Ascend/ascend-toolkit/set_env.sh
+### SiP编译
+ - 用户应进入SiP根目录，执行如下指令进行信号处理加速库的编译，并设置加速库环境变量。
+    ```sh
+    cd ${SiP_root_path}
+    bash build.sh
+    source output/set_env.sh
+    ```
+    特别说明：
+    - 上述编译方式仅支持编译通过git下载的加速库，以zip压缩包方式下载的加速库不支持该编译方式；
+    - 由于编译过程需要联网下载依赖库，因此编译环境需要联网；
+    - 该编译过程包括获取ascend-boost-comm（昇腾分布式通信加速库）组件并编译该组件，和编译信号加速库两个步骤。更多命令介绍可查看SiP仓库`build.sh`文件。
+
+ - 更多编译命令说明请参考[编译与构建](../../../../docs/编译与构建.md)
+
+### 运行demo
+- 进入 `example` 目录并执行构建脚本。
+    ```sh
+    cd  ${示例所在目录}
+    bash build.sh
+    ```
+## 额外说明
+示例中生成的数据不代表实际场景，可根据具体使用场景进行数据修改。
+
+## 产品支持情况
+适用于Atlas A2/A3 训练系列产品、Atlas 800I A2 推理产品、Atlas A3 推理系列产品。
+
+## 场景说明
+提供示例代码分别对应不同场景，编译运行时需要根据具体场景对应更改build脚本：
+- **example_isamax.cpp**
+
+    【注】：默认编译脚本可编译运行该示例。
+
+    **输入**
+    | TensorName |  DataType  | DataFormat |      Shape      |
+    | :--------: | :--------: | :--------: | :-------------: |
+    |     x      |  float32   |     nd     |       [n]       |
+
+    ---
+
+- **example_icamax.cpp**
+
+    【注】：将编译脚本中的 example_isamax.cpp 替换为 example_icamax.cpp 后，替换后的编译脚本可编译运行。
+
+    **输入**
+    | TensorName |   DataType   | DataFormat |      Shape      |
+    | :--------: | :----------: | :--------: | :-------------: |
+    |     x      |  complex64   |     nd     |       [n]       |

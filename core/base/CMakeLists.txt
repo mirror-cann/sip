@@ -16,3 +16,4 @@ target_link_libraries(base PUBLIC utils ascendcl nnopbase opapi)
 
 target_include_directories(utils PUBLIC $ENV{ASCEND_HOME_PATH}/include)
 target_include_directories(utils PUBLIC $ENV{ASCEND_HOME_PATH}/include/aclnn)
+target_include_directories(utils PUBLIC $ENV{ASCEND_HOME_PATH}/pkg_inc)

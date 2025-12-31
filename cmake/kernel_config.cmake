@@ -36,7 +36,7 @@ macro(add_kernel kernel soc channel srcs tac)
                 OUTPUT ${${kernel}_${soc}_output}
                 DEPENDS ${srcs}
                 WORKING_DIRECTORY ${OPS_PROJECT_ROOT_DIR}
-                COMMAND python3 ${MKI_SCRIPT_DIR}/compile_ascendc.py ${PYTHON_ARGS}
+                COMMAND python3 ${PROJECT_SOURCE_DIR}/scripts/compile_ascendc.py ${PYTHON_ARGS}
             )
             # build target: obj/soc/op/kernel.cpp
             set(${kernel}_${soc}_cpp_output

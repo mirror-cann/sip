@@ -1,7 +1,7 @@
 /**
- * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 {
     // 设置算子使用的device id
     int deviceId = 0;
-    //（固定写法）创造执行流
+    //（固定写法）创建执行流
     aclrtStream stream;
     Init(deviceId, &stream);
 
@@ -141,7 +141,7 @@ int main(int argc, char **argv)
     asdBlasSdot(handle, n, inputX, incx, inputY, incy, result);
     asdBlasSynchronize(handle);
 
-    // 调度算子后销毁算子句柄
+    // 调用算子后销毁算子句柄
     asdBlasDestroy(handle);
 
     // 将输出tensor的Device侧数据复制到Host侧内存上
@@ -168,7 +168,7 @@ int main(int argc, char **argv)
         aclrtFree(buffer);
     }
 
-    // 调度算子后重置算子使用的deviceId
+    // 调用算子后重置算子使用的deviceId
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();

@@ -1,7 +1,7 @@
 /**
- * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -15,6 +15,8 @@
 
 namespace AsdSip {
 using namespace Mki;
+
+static constexpr uint32_t FLOAT_NUM_PER_BLOCK = 8;  // one block = 32B
 AsdSip::AspbStatus ConjTiling(const LaunchParam &launchParam, KernelInfo &kernelInfo)
 {
     uint32_t maxCore = static_cast<uint32_t>(PlatformInfo::Instance().GetCoreNum(CoreType::CORE_TYPE_VECTOR));
@@ -22,7 +24,7 @@ AsdSip::AspbStatus ConjTiling(const LaunchParam &launchParam, KernelInfo &kernel
         maxCore = 1;
     }
     uint32_t size = static_cast<uint32_t>(launchParam.GetInTensor(0).Numel()) * 2;
-    uint32_t len = (size / maxCore + 7) / 8 * 8;
+    uint32_t len = (size / maxCore + FLOAT_NUM_PER_BLOCK - 1) / FLOAT_NUM_PER_BLOCK * FLOAT_NUM_PER_BLOCK;
     uint32_t seqLenLowerBound = 64;
     if (len < seqLenLowerBound) {
         len = seqLenLowerBound;

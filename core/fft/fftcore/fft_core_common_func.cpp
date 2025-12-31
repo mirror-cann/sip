@@ -1,7 +1,7 @@
 /**
- * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -34,55 +34,6 @@ constexpr int64_t BIASC_SIZE = 4096;
 using namespace AsdSip;
 
 namespace {
-
-constexpr int W_MARK = 1;
-constexpr int T_MARK = 2;
-constexpr int S_MARK = 3;
-constexpr int DD_P_MARK = 0;
-constexpr int DD_Q_MARK = 1;
-constexpr int DFT_TWIDDLE_MARK = 0;
-constexpr int INPUT_MARK = 1;
-constexpr int OUTPUT_MARK = 2;
-constexpr int A_MARK = 3;
-constexpr int B_MARK = 4;
-constexpr int MIX_RADIX_LIST_MARK = 5;
-constexpr int MIX_FORWARD_MARK = 6;
-constexpr int MIX_BACKWARD_MARK = 7;
-constexpr int MIX_TW_MARK = 8;
-constexpr int TWO_MUL = 2;
-constexpr int RADIX_8K = 8192;
-constexpr int RADIX_16K = 16384;
-constexpr int RADIX_ADDR_START = 128;
-constexpr int RADIX_ADDR_END = 2;
-constexpr int32_t RADIX_LEN_19683 = 19683;
-constexpr int32_t RADIX_LEN_243 = 243;
-constexpr int32_t RADIX_LEN_729 = 729;
-constexpr int32_t RADIX_LEN_59049 = 59049;
-constexpr int32_t RADIX_LEN_177147 = 177147;
-constexpr int32_t RADIX_LEN_1594323 = 1594323;
-constexpr int32_t RADIX_LEN_129140163 = 129140163;
-constexpr int32_t RADIX_LEN_387420489 = 387420489;
-constexpr int32_t RADIX_LEN_625 = 625;
-constexpr int32_t RADIX_LEN_3125 = 3125;
-constexpr int32_t RADIX_LEN_15625 = 15625;
-constexpr int32_t RADIX_LEN_78125 = 78125;
-constexpr int32_t RADIX_LEN_390625 = 390625;
-constexpr int32_t RADIX_LEN_2401 = 2401;
-constexpr int32_t RADIX_LEN_16807 = 16807;
-constexpr int32_t RADIX_LEN_117649 = 117649;
-constexpr int32_t RADIX_LEN_76800 = 76800;
-constexpr int32_t RADIX_LEN_EVEN_NUM = 2;
-constexpr int32_t RADIX_LEN_THREE_NUM = 3;
-constexpr int32_t RADIX_LEN_FIVE_NUM = 5;
-constexpr int32_t RADIX_LEN_SEVEN_NUM = 7;
-constexpr int32_t RADIX_LEN_FOUR_NUM = 4;
-constexpr int32_t ROUND_16 = 16;
-constexpr int32_t ROUND_32 = 32;
-constexpr int32_t AUXILSIZE = 64;
-constexpr int32_t VECVTRANS_LEN = 88;
-constexpr int32_t RADIX_LIST_LEN = 45;
-constexpr int32_t AIVSPLITWAY_TWO = 2;
-constexpr int32_t AIVSPLITWAY_THREE = 3;
 
 constexpr int64_t L2_CACHE_MAX_FLOAT_22 = (1 << 22);
 constexpr int64_t L2_CACHE_MAX_FLOAT_21 = (1 << 21);
@@ -205,13 +156,13 @@ int64_t GetTwiddleMatrixLen(int64_t fftN, const std::vector<int64_t> &radixVecRe
         }
         int64_t n2 = n / n1 / n0;
 
-        int32_t tileM0;
-        int32_t tileK0;
-        int32_t tileN0;
+        int32_t tilM0;
+        int32_t tilK0;
+        int32_t tilN0;
 
-        getTile(n1, (n2 > 1) ? n2 : n0, stepIndex, stepLen, tileM0, tileN0, tileK0);
+        getTile(n1, (n2 > 1) ? n2 : n0, stepIndex, stepLen, tilM0, tilN0, tilK0);
 
-        dftMatrixLen += ROUND(TWO_MUL * n1, tileM0) * ROUND(TWO_MUL * n1, tileK0);
+        dftMatrixLen += ROUND(TWO_MUL * n1, tilM0) * ROUND(TWO_MUL * n1, tilK0);
         n0 *= n1;
     }
 
@@ -233,10 +184,6 @@ AspbStatus InitWMatrixCommon(FFTCoreType coreType, std::vector<int64_t> &radixVe
         wMatrix_.desc.format = TENSOR_FORMAT_ND;
         wMatrix_.desc.dims = {size};
         wMatrix_.dataSize = sizeof(float) * size;
-
-        if (!checkSizeToMalloc(sizeof(float) * size)) {
-            throw std::runtime_error("Invalid malloc size");
-        }
 
         float *wMatrixHost = nullptr;
         try {
@@ -321,10 +268,6 @@ AspbStatus InitTMatrixCommon(FFTCoreType coreType, std::vector<int64_t> &radixVe
         tMatrix_.desc.dims = {eleNum};
         tMatrix_.dataSize = sizeof(float) * eleNum;
 
-        if (!checkSizeToMalloc(sizeof(float) * eleNum)) {
-            throw std::runtime_error("Invalid malloc size");
-        }
-
         float *tMatrixHost = nullptr;
         try {
             tMatrixHost = new float[eleNum];
@@ -385,10 +328,6 @@ AspbStatus InitSMatrixCommon(FFTCoreType coreType, std::vector<int64_t> &radixVe
         sMatrix_.desc.format = TENSOR_FORMAT_ND;
         sMatrix_.desc.dims = {size};
         sMatrix_.dataSize = sizeof(float) * size;
-
-        if (!checkSizeToMalloc(sizeof(float) * size)) {
-            throw std::runtime_error("Invalid malloc size");
-        }
 
         float *sMatrixHost = nullptr;
         try {
@@ -886,25 +825,20 @@ void InitMixRadixShort(int64_t fftN, std::vector<int64_t> &radixVecRef)
     radixVecRef = radixList;
 }
 
-AspbStatus InitMixRadixList(FFTCoreType coreType, int64_t fftN, bool forward, const std::vector<int64_t> &radixVecRef,
+AspbStatus InitMixRadixList(FFTCoreType coreType, int64_t fftN, bool forward, std::vector<int64_t> &radixVecRef,
                             std::shared_ptr<AsdSip::FFTensor> &radixList)
 {
-    int64_t *radixListRefPtr = const_cast<int64_t *>(radixVecRef.data());
+    int64_t *radixListRefPtr = static_cast<int64_t *>(radixVecRef.data());
     size_t radixListLen = radixVecRef.size();
 
     std::function<AsdSip::FFTensor *()> func = [=]() mutable -> AsdSip::FFTensor* {
         AsdSip::FFTensor *radixListPtr = new AsdSip::FFTensor;
         AsdSip::FFTensor &radixList_ = *radixListPtr;
 
-        if (!checkSizeToMalloc(sizeof(int32_t) * radixListLen)) {
-            throw std::runtime_error("Invalid malloc size");
-        }
-        int32_t *radixListHost = nullptr;
-        try {
-            radixListHost = new int32_t[radixListLen];
-        } catch(std::bad_alloc& e) {
+        int32_t *radixListHost = new(std::nothrow) int32_t[radixListLen];
+        if (radixListHost == nullptr) {
             delete radixListPtr;
-            ASDSIP_LOG(ERROR) << "radixListHost nalloc failed: " << e.what();
+            ASDSIP_LOG(ERROR) << "radixListHost nalloc failed: ";
             throw std::runtime_error("radixListHost nalloc failed:.");
         }
         InitMem(radixListHost, 0, sizeof(int32_t) * radixListLen);
@@ -930,41 +864,35 @@ AspbStatus InitMixRadixList(FFTCoreType coreType, int64_t fftN, bool forward, co
 namespace {
 
 AspbStatus InitMixRadixForwardTwiddleMatrix(FFTCoreType coreType, int64_t fftN, int64_t batchSize,
-                                            const std::vector<int64_t> &radixVecRef,
+                                            std::vector<int64_t> &radixVecRef,
                                             std::shared_ptr<AsdSip::FFTensor> &dftMatrixArray)
 {
     int64_t dftMatrixLen = GetTwiddleMatrixLen(fftN, radixVecRef);
-    int64_t *radixListPtr = const_cast<int64_t *>(radixVecRef.data());
+    int64_t *radixListPtr = static_cast<int64_t *>(radixVecRef.data());
     int64_t radixListLen = static_cast<int64_t>(radixVecRef.size());
 
     std::function<AsdSip::FFTensor *()> funcMultiSteplen = [=]() mutable -> AsdSip::FFTensor* {
         AsdSip::FFTensor *dftMatrixArrayPtr = new AsdSip::FFTensor;
         AsdSip::FFTensor &dftMatrixArray_ = *dftMatrixArrayPtr;
 
-        if (!checkSizeToMalloc(dftMatrixLen * sizeof(float))) {
-            throw std::runtime_error("Invalid malloc size");
-        }
-
-        float *dftMatrixArrayHost = nullptr;
-        try {
-            dftMatrixArrayHost = new float[dftMatrixLen];
-        } catch(std::bad_alloc& e) {
+        float *matrixArrayHost = new(std::nothrow) float[dftMatrixLen];
+        if (matrixArrayHost == nullptr) {
             delete dftMatrixArrayPtr;
-            ASDSIP_LOG(ERROR) << "dftMatrixArrayHost nalloc failed: " << e.what();
-            throw std::runtime_error("dftMatrixArrayHost nalloc failed:.");
+            ASDSIP_LOG(ERROR) << "matrixArrayHost nalloc failed: ";
+            throw std::runtime_error("matrixArrayHost nalloc failed:.");
         }
-        InitMem(dftMatrixArrayHost, 0, dftMatrixLen * sizeof(float));
+        InitMem(matrixArrayHost, 0, dftMatrixLen * sizeof(float));
 
         // 构造DFT矩阵
-        auto nowDftMatrixArrayHost = dftMatrixArrayHost;
+        auto nowMatrixArrayHost = matrixArrayHost;
         int64_t stepLen = radixListLen;
 
         // 生成正向所需的W矩阵
-        GenWMatrixForwardForMultiLen(stepLen, radixListPtr, fftN, nowDftMatrixArrayHost);
+        GenWMatrixForwardForMultiLen(stepLen, radixListPtr, fftN, nowMatrixArrayHost);
 
         dftMatrixArray_.desc = {
             Mki::TensorDType::TENSOR_DTYPE_FLOAT, Mki::TensorFormat::TENSOR_FORMAT_ND, {dftMatrixLen}, {}, 0};
-        dftMatrixArray_.hostData = dftMatrixArrayHost;
+        dftMatrixArray_.hostData = matrixArrayHost;
         dftMatrixArray_.dataSize = dftMatrixLen * sizeof(float);
 
         return dftMatrixArrayPtr;
@@ -974,16 +902,10 @@ AspbStatus InitMixRadixForwardTwiddleMatrix(FFTCoreType coreType, int64_t fftN, 
         AsdSip::FFTensor *dftMatrixArrayPtr = new AsdSip::FFTensor;
         AsdSip::FFTensor &dftMatrixArray_ = *dftMatrixArrayPtr;
 
-        if (!checkSizeToMalloc(dftMatrixLen * sizeof(float))) {
-            throw std::runtime_error("Invalid malloc size");
-        }
-
-        float *dftMatrixArrayHost = nullptr;
-        try {
-            dftMatrixArrayHost = new float[dftMatrixLen];
-        } catch(std::bad_alloc& e) {
+        float *dftMatrixArrayHost = new(std::nothrow) float[dftMatrixLen];
+        if (dftMatrixArrayHost == nullptr) {
             delete dftMatrixArrayPtr;
-            ASDSIP_LOG(ERROR) << "dftMatrixArrayHost nalloc failed: " << e.what();
+            ASDSIP_LOG(ERROR) << "dftMatrixArrayHost nalloc failed: ";
             throw std::runtime_error("dftMatrixArrayHost nalloc failed:.");
         }
         InitMem(dftMatrixArrayHost, 0, dftMatrixLen * sizeof(float));
@@ -1009,28 +931,22 @@ AspbStatus InitMixRadixForwardTwiddleMatrix(FFTCoreType coreType, int64_t fftN, 
 }
 
 AspbStatus InitMixRadixInverseTwiddleMatrix(FFTCoreType coreType, int64_t fftN, int64_t batchSize,
-                                            const std::vector<int64_t> &radixVecRef,
+                                            std::vector<int64_t> &radixVecRef,
                                             std::shared_ptr<AsdSip::FFTensor> &dftMatrixArrayInverse)
 {
     int64_t dftMatrixLen = GetTwiddleMatrixLen(fftN, radixVecRef);
-    int64_t *radixListPtr = const_cast<int64_t *>(radixVecRef.data());
+    int64_t *radixListPtr = static_cast<int64_t *>(radixVecRef.data());
     int64_t radixListLen = static_cast<int64_t>(radixVecRef.size());
 
     std::function<AsdSip::FFTensor *()> funcMultiSteplen = [=]() mutable -> AsdSip::FFTensor* {
         AsdSip::FFTensor *dftMatrixArrayInversePtr = new AsdSip::FFTensor;
         AsdSip::FFTensor &dftMatrixArrayInverse_ = *dftMatrixArrayInversePtr;
 
-        if (!checkSizeToMalloc(dftMatrixLen * sizeof(float))) {
-            throw std::runtime_error("Invalid malloc size");
-        }
-
-        float *dftMatrixArrayInverseHost = nullptr;
-        try {
-            dftMatrixArrayInverseHost = new float[dftMatrixLen];
-        } catch(std::bad_alloc& e) {
+        float *dftMatrixArrayInverseHost = new(std::nothrow) float[dftMatrixLen];
+        if (dftMatrixArrayInverseHost == nullptr) {
             delete dftMatrixArrayInversePtr;
-            ASDSIP_LOG(ERROR) << "dftMatrixArrayInverseHost nalloc failed: " << e.what();
-            throw std::runtime_error("dftMatrixArrayInverseHost nalloc failed:.");
+            ASDSIP_LOG(ERROR) << "dftMatrixArrayInverseHost malloc failed: ";
+            throw std::runtime_error("dftMatrixArrayInverseHost malloc failed:.");
         }
 
         InitMem(dftMatrixArrayInverseHost, 0, dftMatrixLen * sizeof(float));
@@ -1052,17 +968,11 @@ AspbStatus InitMixRadixInverseTwiddleMatrix(FFTCoreType coreType, int64_t fftN, 
         AsdSip::FFTensor *dftMatrixArrayInversePtr = new AsdSip::FFTensor;
         AsdSip::FFTensor &dftMatrixArrayInverse_ = *dftMatrixArrayInversePtr;
 
-        if (!checkSizeToMalloc(dftMatrixLen * sizeof(float))) {
-            throw std::runtime_error("Invalid malloc size");
-        }
-
-        float *dftMatrixArrayInverseHost = nullptr;
-        try {
-            dftMatrixArrayInverseHost = new float[dftMatrixLen];
-        } catch(std::bad_alloc& e) {
+        float *dftMatrixArrayInverseHost = new(std::nothrow) float[dftMatrixLen];
+        if (dftMatrixArrayInverseHost == nullptr) {
             delete dftMatrixArrayInversePtr;
-            ASDSIP_LOG(ERROR) << "dftMatrixArrayInverseHost nalloc failed: " << e.what();
-            throw std::runtime_error("dftMatrixArrayInverseHost nalloc failed:.");
+            ASDSIP_LOG(ERROR) << "dftMatrixArrayInverseHost malloc failed: ";
+            throw std::runtime_error("dftMatrixArrayInverseHost malloc failed:.");
         }
 
         InitMem(dftMatrixArrayInverseHost, 0, dftMatrixLen * sizeof(float));
@@ -1088,7 +998,7 @@ AspbStatus InitMixRadixInverseTwiddleMatrix(FFTCoreType coreType, int64_t fftN, 
 }
 
 AspbStatus InitMixRadixTwiddleMatrix(FFTCoreType coreType, int64_t fftN, int64_t batchSize, bool forward,
-                                     const std::vector<int64_t> &radixVecRef,
+                                     std::vector<int64_t> &radixVecRef,
                                      std::shared_ptr<AsdSip::FFTensor> &twiddleMatrixArray)
 {
     if (forward) {
@@ -1132,11 +1042,11 @@ int64_t GetTwMatrixLen(int64_t fftN, const std::vector<int64_t> &radixVecRef)
 }
 
 AspbStatus InitMixRadixTWMatrix(FFTCoreType coreType, int64_t fftN, bool forward,
-                                const std::vector<int64_t> &radixVecRef,
+                                std::vector<int64_t> &radixVecRef,
                                 std::shared_ptr<AsdSip::FFTensor> &twMatrixArray)
 {
     int64_t twMatrixLen = GetTwMatrixLen(fftN, radixVecRef);
-    int64_t *radixListPtr = const_cast<int64_t *>(radixVecRef.data());
+    int64_t *radixListPtr = static_cast<int64_t *>(radixVecRef.data());
     int64_t radixListLen = static_cast<int64_t>(radixVecRef.size());
 
     std::function<AsdSip::FFTensor *()> func = [=]() mutable -> AsdSip::FFTensor* {
@@ -1146,10 +1056,6 @@ AspbStatus InitMixRadixTWMatrix(FFTCoreType coreType, int64_t fftN, bool forward
         float *twMatrixArrayHost = nullptr;
 
         if (twMatrixLen > 0) {
-            if (!checkSizeToMalloc(twMatrixLen * sizeof(float))) {
-                throw std::runtime_error("Invalid malloc size");
-            }
-
             try {
                 twMatrixArrayHost = new float[twMatrixLen];
             } catch(std::bad_alloc& e) {
@@ -1205,7 +1111,7 @@ AspbStatus InitMixRadixTWMatrix(FFTCoreType coreType, int64_t fftN, bool forward
 }
 
 // to estimate workspace
-void InitMixRadixParam(int64_t parity, int64_t fftN, int64_t batchSize, const std::vector<int64_t> &radixVecRef,
+void InitMixRadixParam(int64_t parity, int64_t fftN, int64_t batchSize, std::vector<int64_t> &radixVecRef,
                        int64_t &workspaceInputSize, int64_t &workspaceOutputSize, int64_t &workspaceSyncSize,
                        int64_t &workspaceC2cOutputSize, int64_t &workspaceAuxilSize)
 {
@@ -1214,7 +1120,7 @@ void InitMixRadixParam(int64_t parity, int64_t fftN, int64_t batchSize, const st
     }
     int64_t n = fftN;
 
-    int64_t *radixListPtr = const_cast<int64_t *>(radixVecRef.data());
+    int64_t *radixListPtr = static_cast<int64_t *>(radixVecRef.data());
     int64_t stepLen = static_cast<int64_t>(radixVecRef.size());
     int64_t tmpBatchSize = batchSize;
     // 让每次处理的数据小于 2 ^ 21/2 ^ 22 次方
@@ -1280,9 +1186,9 @@ void InitMixRadixParam(int64_t parity, int64_t fftN, int64_t batchSize, const st
     workspaceAuxilSize = AUXILSIZE;
 }
 
-void InitAiVSplitWay(FFTCoreType coreType, int64_t fftN, const std::vector<int64_t> &radixVecRef, int32_t &aivSplitWay)
+void InitAiVSplitWay(FFTCoreType coreType, int64_t fftN, std::vector<int64_t> &radixVecRef, int32_t &aivSplitWay)
 {
-    int64_t *radixListPtr = const_cast<int64_t *>(radixVecRef.data());
+    int64_t *radixListPtr = static_cast<int64_t *>(radixVecRef.data());
     int64_t stepLen = static_cast<int64_t>(radixVecRef.size());
     int64_t n = fftN;
 

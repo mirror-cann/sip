@@ -1,7 +1,7 @@
 /**
- * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -26,9 +26,37 @@ using Mki::AnyCast;
 using Mki::PlatformInfo;
 using Mki::PlatformType;
 using Mki::CoreType;
+using Mki::TENSOR_DTYPE_COMPLEX64;
+using Mki::TENSOR_DTYPE_COMPLEX32;
 
 constexpr uint32_t DFT_SIZE_MULTIPLIER = 2;
 constexpr uint32_t WORKSPACE_SIZE = 32;
+constexpr uint32_t MAX_WORKSPACE_SIZE = 192 * 1024 * 40 * 4; // UB * 40
+constexpr int64_t UB_SIZE = 192 * 1024;
+constexpr uint32_t SUB_BLOCK_NUM = 2;
+
+AsdSip::AspbStatus DftTilingForComplex32(DftTilingData *tilingDataPtr, uint32_t maxCore)
+{
+    int32_t maxBatchPreCore = static_cast<int32_t>(UB_SIZE / 3 / sizeof(int16_t) / tilingDataPtr->n);
+    int32_t vecNum = static_cast<int32_t>(maxCore * SUB_BLOCK_NUM);
+    int32_t maxBatchPreLoop = maxBatchPreCore * vecNum;
+    if (tilingDataPtr->m > maxBatchPreLoop) {
+        tilingDataPtr->loopTime = (tilingDataPtr->m + maxBatchPreLoop - 1) / maxBatchPreLoop;
+        tilingDataPtr->batchNumPreLoop = maxBatchPreLoop;
+        tilingDataPtr->batchNumPreCore = maxBatchPreCore;
+        tilingDataPtr->batchTailNum = tilingDataPtr->m - maxBatchPreLoop * (tilingDataPtr->loopTime - 1);
+        tilingDataPtr->batchTailNumPreCore = tilingDataPtr->batchTailNum / vecNum;
+        tilingDataPtr->batchTailCoreNum = tilingDataPtr->batchTailNum % vecNum;
+    } else {
+        tilingDataPtr->loopTime = 1;
+        tilingDataPtr->batchNumPreLoop = 0;
+        tilingDataPtr->batchNumPreCore = 0;
+        tilingDataPtr->batchTailNum = tilingDataPtr->m;
+        tilingDataPtr->batchTailNumPreCore = tilingDataPtr->batchTailNum / vecNum;
+        tilingDataPtr->batchTailCoreNum = tilingDataPtr->batchTailNum % vecNum;
+    }
+    return AsdSip::ErrorType::ACL_SUCCESS;
+}
 
 AsdSip::AspbStatus DftTiling(const LaunchParam &launchParam, KernelInfo &kernelInfo)
 {
@@ -48,7 +76,7 @@ AsdSip::AspbStatus DftTiling(const LaunchParam &launchParam, KernelInfo &kernelI
     tilingDataPtr->k = param.fftN * DFT_SIZE_MULTIPLIER;
     tilingDataPtr->transA = 0;
     tilingDataPtr->transB = 0;
-    if (param.isInverse) {
+    if (static_cast<bool>(param.isInverse)) {
         tilingDataPtr->transB = 1;
     }
     tilingDataPtr->m0 = cubeDataCountPerLoopSmall;
@@ -67,8 +95,17 @@ AsdSip::AspbStatus DftTiling(const LaunchParam &launchParam, KernelInfo &kernelI
         }
     }
 
+    if (launchParam.GetInTensor(0).desc.dtype == TENSOR_DTYPE_COMPLEX32) {
+        DftTilingForComplex32(tilingDataPtr, maxCore);
+    }
+
     kernelInfo.SetBlockDim(maxCore);
-    kernelInfo.GetScratchSizes().push_back(WORKSPACE_SIZE);
+    if (launchParam.GetInTensor(0).desc.dtype == TENSOR_DTYPE_COMPLEX64) {
+        kernelInfo.GetScratchSizes().push_back(WORKSPACE_SIZE);
+    } else {
+        kernelInfo.GetScratchSizes().push_back(MAX_WORKSPACE_SIZE);
+    }
+
     ASDSIP_LOG(DEBUG) << "KernelInfo:\n" << kernelInfo.ToString();
 
     return AsdSip::ErrorType::ACL_SUCCESS;

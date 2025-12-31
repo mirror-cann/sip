@@ -1,7 +1,7 @@
 /**
- * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -23,7 +23,8 @@ public:
     virtual ~FftOperation() = default;
     virtual bool init() = 0;
     virtual void Run(Tensor &input, Tensor &output, void *stream, workspace::Workspace &workspace) = 0;
-
+    virtual void Run(Tensor &inputReal, Tensor &inputImag, Tensor &outputReal, Tensor &outputImag, void *stream, workspace::Workspace &workspace) {}
+    virtual void Run(Tensor &input, Tensor &window, Tensor &output, void *stream, workspace::Workspace &workspace) {}
     virtual void Run(void *input, void *output, void *stream, workspace::Workspace &workspace)
     {
         const Mki::KernelInfo &kernelInfo = kernel->GetKernelInfo();
@@ -35,6 +36,9 @@ public:
         kernel->Run(launchParam, runInfo);
         workspace.recycleLast();
     }
+
+    virtual void Run(void *inputReal, void *inputImag, void *outputReal, void *outputImag, void *stream, workspace::Workspace &workspace) {}
+    virtual void Run(void *input, void *window, void *output, void *stream, workspace::Workspace &workspace) {}
 
     virtual size_t EstimateWorkspaceSize()
     {

@@ -1,7 +1,7 @@
 /**
- * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -85,6 +85,10 @@ AspbStatus asdBlasMakeCgemvBatchedPlan(asdBlasHandle handle, asdBlasOperation_t 
 AspbStatus asdBlasMakeHCgemmBatchedPlan(asdBlasHandle handle);
 
 AspbStatus asdBlasMakeCgemmBatchedPlan(asdBlasHandle handle);
+
+AspbStatus asdBlasMakeHCmatinvBatchedPlan(asdBlasHandle handle, const int64_t n, const int64_t batchSize);
+
+AspbStatus asdBlasMakeCmatinvBatchedPlan(asdBlasHandle handle, const int64_t n, const int64_t batchSize);
 
 // get minimum workspace size
 AspbStatus asdBlasGetWorkspaceSize(asdBlasHandle handle, size_t &workspaceSize);
@@ -195,5 +199,11 @@ AspbStatus asdBlasCgemmBatched(asdBlasHandle handle, asdBlasOperation_t transa, 
     const int64_t m, const int64_t n, const int64_t k, const std::complex<float> &alpha, aclTensor *A,
     const int64_t lda, aclTensor *B, const int64_t ldb, const std::complex<float> &beta, aclTensor *C,
     const int64_t ldc, const int64_t batchCount);
+
+AspbStatus asdBlasHCmatinvBatched(asdBlasHandle handle, const int64_t n, aclTensor *A, const int64_t lda,
+    aclTensor *Ainv, const int64_t lda_inv, aclTensor *info, int64_t batchSize);
+
+AspbStatus asdBlasCmatinvBatched(asdBlasHandle handle, const int64_t n, aclTensor *A, const int64_t lda,
+    aclTensor *Ainv, const int64_t lda_inv, aclTensor *info, int64_t batchSize);
 }  // namespace AsdSip
 #endif

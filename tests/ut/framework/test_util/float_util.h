@@ -1,7 +1,7 @@
 /**
- * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -11,9 +11,6 @@
 #define FLOATUTIL_H
 
 #include <vector>
-
-#include <ATen/ATen.h>
-
 #include "log/log.h"
 #include "mki/utils/status/status.h"
 
@@ -37,25 +34,6 @@ public:
     */
     template <class T>
     static void GenerateCode(float lower, float upper, std::vector<T> &code);
-
-    template <typename T>
-    static Mki::Status MatchAtTensorFloat(at::Tensor &out, at::Tensor &gt, float atol, float rtol)
-    {
-        T *result = static_cast<T *>(out.storage().data_ptr().get());
-        T *expect = static_cast<T *>(gt.storage().data_ptr().get());
-        ASDSIP_LOG(INFO) << "MatchAtTensorFloat";
-        for (int i = 0; i < out.numel(); i++) {
-            if (i < 10) {
-                ASDSIP_LOG(INFO) << "Index " << i << ", Expect " << expect[i] << ", Actual " << result[i];
-            }
-            if (!FloatJudgeEqual(expect[i], result[i], atol, rtol)) {
-                std::string msg = "pos " + std::to_string(i) + ", expect: " + std::to_string(expect[i]) +
-                                  ", result: " + std::to_string(result[i]);
-                return Mki::Status::FailStatus(-1, msg);
-            }
-        }
-        return Mki::Status::OkStatus();
-    }
 };
 
 #endif

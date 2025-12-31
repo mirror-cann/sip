@@ -1,8 +1,8 @@
 
 /**
- * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -78,7 +78,7 @@ AsdSip::AspbStatus SdotTiling(const LaunchParam &launchParam, KernelInfo &kernel
         uint32_t currOffset = 0;
         uint32_t currCalNum = 0;
         for (uint32_t i = 0; i < vecCoreNum; i++) {
-            if ((i > remainNum) || (i == remainNum)) {
+            if (i >= remainNum) {
                 currCalNum = numPerCore;
             } else {
                 currCalNum = numPerCore + 1;
@@ -98,9 +98,12 @@ AsdSip::AspbStatus SdotTiling(const LaunchParam &launchParam, KernelInfo &kernel
     tilingDataPtr->coreNum = vecCoreNum;
     tilingDataPtr->isconj = 0;
 
-    memcpy_s(tilingDataPtr->startOffset, sizeof(tilingDataPtr->startOffset), startOffset,
+    auto ret = memcpy_s(tilingDataPtr->startOffset, sizeof(tilingDataPtr->startOffset), startOffset,
              vecCoreNum * sizeof(uint32_t));
-    memcpy_s(tilingDataPtr->calNum, sizeof(tilingDataPtr->calNum), calNum, vecCoreNum * sizeof(uint32_t));
+    ASDSIP_CHECK_WITH_NO_RETURN(ret == EOK, "startOffset memcpy_s failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
+    ret = memcpy_s(tilingDataPtr->calNum, sizeof(tilingDataPtr->calNum), calNum, vecCoreNum * sizeof(uint32_t));
+    ASDSIP_CHECK_WITH_NO_RETURN(ret == EOK, "calNum memcpy_s failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
+
     delete[] startOffset;
     startOffset = nullptr;
     delete[] calNum;

@@ -23,7 +23,7 @@ inline __aicore__ void InitTilingData(const __gm__ uint8_t *p_tilingdata, AsdSip
 extern "C" __global__ __aicore__ void swapLast2AxesComplex(GM_ADDR inTensor, GM_ADDR outTensor, GM_ADDR workspace,
                                                            GM_ADDR tilingGm)
 {
-    set_atomic_none();
+    AscendC::SetAtomicNone();
 
     AsdSip::SwapLast2AxesTilingData tilingData;
     InitTilingData(tilingGm, &tilingData);

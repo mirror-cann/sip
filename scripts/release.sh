@@ -152,25 +152,12 @@ function fn_build()
     export ASCEND_HOME_PATH=/home/slave1/Ascend/ascend-toolkit/latest
     export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/lib64:${LD_LIBRARY_PATH}
 
-    source_file="${ASCEND_HOME_PATH}/opp/built-in/op_impl/ai_core/tbe/op_api/lib/linux/$(arch)/libopapi.so"
-    link_file="${ASCEND_HOME_PATH}/lib64/libopapi.so"
+    source_file="${ASCEND_HOME_PATH}/lib64/libopapi.so"
 
     # 检查源文件是否存在
     if [ ! -e "$source_file" ]; then
         echo "error '$source_file':File not exists!"
         exit 1
-    fi
-
-    # 检查软链接状态
-    if [ -L "$link_file" ]; then
-        # 软链接存在，检查是否有效（指向的文件是否存在）
-        if [ ! -e "$link_file" ]; then
-            rm "$link_file"
-            ln -s "$source_file" "$link_file"
-        fi
-    else
-        # 软链接不存在，创建新链接
-        ln -s "$source_file" "$link_file"
     fi
 
     if [ ! -d "$CODE_ROOT"/3rdparty ]; then

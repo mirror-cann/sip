@@ -10,8 +10,6 @@
 
 #pragma once
 
-#include <memory>
-
 #include "fftplan/fft_plan.h"
 
 namespace FFTPlanCache {

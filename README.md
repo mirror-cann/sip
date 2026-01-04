@@ -99,31 +99,36 @@ sip
    - gawk
    - googletest（仅执行UT时依赖，建议版本 [1.14.0](https://github.com/google/googletest/releases/tag/v1.14.0)）
 
-离线安装时，请单击[获取链接](https://www.hiascend.com/developer/download/community/result?module=cann)下载CANN软件包，并上传到安装环境任意路径。
-#### 安装CANN
-```shell
-chmod +x Ascend-cann-toolkit_8.2.RC1_linux-$(arch).run
-./Ascend-cann-toolkit_8.2.RC1_linux-$(arch).run --install
+#### 安装社区版CANN toolkit包
+- Atlas A2/A3系列产品：单击[下载链接](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1)获取软件包
+```bash
+# 确保安装包具有可执行权限
+chmod +x Ascend-cann-toolkit_${cann_version}_linux-${arch}.run
+# 安装命令
+./Ascend-cann-toolkit_${cann_version}_linux-${arch}.run --install --force --install-path=${install_path}
 ```
-#### 安装后配置
-配置环境变量脚本set_env.sh，当前安装路径以${HOME}/Ascend为例。
+- \$\{cann\_version\}：表示CANN包版本号。
+- \$\{arch\}：表示CPU架构，如aarch64、x86_64。
+- \$\{install\_path\}：表示指定安装路径，默认安装在`/usr/local/Ascend`目录。
+
+#### 安装社区版CANN ops包
+- Atlas A2/A3系列产品：单击[下载链接](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1)获取软件包。
+```bash
+# 确保安装包具有可执行权限
+chmod +x Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run
+# 安装命令
+./Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run --install --install-path=${install_path}
 ```
-source ${HOME}/Ascend/ascend-toolkit/set_env.sh
-```  
-安装业务运行时依赖的Python第三方库（如果使用root用户安装，请将命令中的--user删除）。
+- \$\{soc\_name\}：表示NPU型号名称，即\$\{soc\_version\}删除“ascend”后剩余的内容。
+- \$\{install\_path\}：表示指定安装路径，需要与toolkit包安装在相同路径，默认安装在`/usr/local/Ascend`目录。
+
+#### 环境变量配置
+```bash
+# 默认路径安装，以root用户为例（非root用户，将/usr/local替换为${HOME}）
+source /usr/local/Ascend/cann/set_env.sh
+# 指定路径安装
+# source ${install_path}/cann/set_env.sh
 ```
-pip3 install attrs cython 'numpy>=1.19.2,<=1.24.0' decorator sympy cffi pyyaml pathlib2 psutil protobuf==3.20.0 scipy requests absl-py --user
-```
-### 详细安装指南 
-开发者可访问[昇腾文档-昇腾社区](https://www.hiascend.com/document)->CANN社区版->软件安装，查看CANN软件安装引导，根据机器环境、操作系统和业务场景选择后阅读详细安装步骤。
-
-### 基础工具版本要求与安装
-
-安装CANN之后，还需要安装一些工具方便后续开发，参见以下内容：
-
-* [CANN依赖列表](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/83RC1alpha003/softwareinst/instg/instg_0045.html?Mode=PmIns&OS=Debian&Software=cannToolKit)
-* [CANN安装后操作](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/83RC1alpha003/softwareinst/instg/instg_0094.html?Mode=PmIns&OS=Debian&Software=cannToolKit)
-
 ## 快速上手
 ### SiP编译
  - 加速库下载
@@ -134,7 +139,7 @@ pip3 install attrs cython 'numpy>=1.19.2,<=1.24.0' decorator sympy cffi pyyaml p
  - SiP库编译<br>
     编译加速库，设置加速库环境变量：
     ```sh
-    cd ${SiP_root_path}
+    cd ${sip_root_path}
     bash build.sh
     source output/set_env.sh
     ```
@@ -144,68 +149,14 @@ pip3 install attrs cython 'numpy>=1.19.2,<=1.24.0' decorator sympy cffi pyyaml p
     - 该编译过程包括获取ascend-boost-comm（昇腾分布式通信加速库）组件并编译该组件，和编译信号加速库两个步骤。更多命令介绍可查看SiP仓库`build.sh`文件。
 
  - 更多编译命令说明请参考[编译与构建](docs/编译与构建.md)
+
 ### 调用示例说明
 本节示例代码分别展示了如何通过C++调用算子。
 
 #### C++
 
-在SiP仓库的`example`目录下，存放了多个不依赖测试框架、即编可用的算子调用Demo示例。本节示例代码展示通过C++调用SiP asdBlasSdot算子实现向量点乘（内积）功能，代码完整内容可参考`example\example.cpp`，下面仅展示其核心内容：
+在SiP仓库的`example`目录下，存放了多个不依赖测试框架、即编可用的算子调用Demo示例。本节示例代码展示通过C++调用SiP asdBlasSdot算子实现向量点乘（内积）功能，代码完整内容可参考[example](example/example.cpp)，下面仅展示其核心内容：
 ```c++
-#include <iostream>
-#include <vector>
-#include "asdsip.h"
-#include "acl/acl.h"
-#include "acl_meta.h"
-
-using namespace AsdSip;
-
-int64_t GetShapeSize(const std::vector<int64_t> &shape)
-{
-    int64_t shapeSize = 1;
-    for (auto i : shape) {
-        shapeSize *= i;
-    }
-    return shapeSize;
-}
-
-int Init(int32_t deviceId, aclrtStream *stream)
-{
-    // 固定写法，acl初始化
-    aclInit(nullptr);
-    aclrtSetDevice(deviceId);
-    aclrtCreateStream(stream);
-    return 0;
-}
-
-template <typename T>
-int CreateAclTensor(const std::vector<T> &hostData, const std::vector<int64_t> &shape, void **deviceAddr,
-    aclDataType dataType, aclTensor **tensor)
-{
-    auto size = GetShapeSize(shape) * sizeof(T);
-    // 调用aclrtMalloc申请Device侧内存
-    aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
-    // 调用aclrtMemcpy将Host侧数据复制到Device侧内存上
-    aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
-
-    // 计算连续tensor的strides
-    std::vector<int64_t> strides(shape.size(), 1);
-    for (int64_t i = shape.size() - 2; i >= 0; i--) {
-        strides[i] = shape[i + 1] * strides[i + 1];
-    }
-
-    // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(shape.data(),
-        shape.size(),
-        dataType,
-        strides.data(),
-        0,
-        aclFormat::ACL_FORMAT_ND,
-        shape.data(),
-        shape.size(),
-        *deviceAddr);
-    return 0;
-}
-
 int main(int argc, char **argv)
 {
     // 设置算子使用的device id

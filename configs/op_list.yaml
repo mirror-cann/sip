@@ -82,6 +82,14 @@ CgemmBatchedOperation:
     CgemmBatchedC64Kernel:
         ascend910b: true
 
+CmatinvBatchedOperation:
+    CmatinvBatchedC64Kernel:
+        ascend910b: true
+
+CgetriBatchedOperation:
+    CgetriBatchedC64Kernel:
+        ascend910b: true
+
 InterpolationOperation:
     InterpolationC64Kernel:
         ascend910b: true
@@ -113,6 +121,12 @@ FftC2ROperation:
 DftOperation:
     DftC64Kernel:
         ascend910b: true
+    DftC32Kernel:
+        ascend910b: true
+
+DftSepOperation:
+    DftSepC64Kernel:
+        ascend910b: true
 
 DftR2COperation:
     DftR2CC64Kernel:
@@ -140,6 +154,10 @@ FftR2COperation:
 
 FftBOperation:
     FftBC64Kernel:
+        ascend910b: true
+
+FftBSepOperation:
+    FftBSepC64Kernel:
         ascend910b: true
 
 FftMixOperation:
@@ -170,6 +188,10 @@ DdOperation:
 
 FftStrideOperation:
     FftStrideKernel:
+        ascend910b: true
+
+DddSepOperation:
+    DddSepC64Kernel:
         ascend910b: true
 
 MulOperation:

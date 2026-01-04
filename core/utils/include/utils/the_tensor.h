@@ -19,19 +19,19 @@ template <typename T>
 class TheTensor {
 public:
     TheTensor(const std::vector<int64_t> &shape)
+        : shape_(shape),
+          strides_(std::vector<int64_t>(shape.size())),
+          size_(compute_size(shape)),
+          data_(new T[size_])
     {
-        shape_ = shape;
-        strides_ = std::vector<int64_t>(shape.size());
-        size_ = compute_size(shape_);
-        data_ = new T[size_];
         update_strides();
     }
 
     TheTensor(TheTensor &&tensor)
-        : data_(tensor.move_data()),
+        : shape_(tensor.shape_),
+          strides_(tensor.strides_),
           size_(tensor.size_),
-          shape_(tensor.shape_),
-          strides_(tensor.strides_)
+          data_(tensor.move_data())
     {
     }
 
@@ -105,10 +105,10 @@ public:
     };
 
 private:
-    T *data_;
-    size_t size_;
     std::vector<int64_t> shape_;
     std::vector<int64_t> strides_;
+    size_t size_;
+    T *data_;
 
     size_t compute_size(const std::vector<int64_t> &shape) const
     {

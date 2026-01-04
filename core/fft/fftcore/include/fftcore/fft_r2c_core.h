@@ -13,7 +13,6 @@
 
 #include "ops.h"
 #include "fftcore/fft_core_mix_base.h"
-#include "utils/aspb_status.h"
 
 constexpr unsigned DIV_TWO = 2;
 class FftR2CCore : public FftCoreMixBase {
@@ -21,7 +20,7 @@ public:
     FftR2CCore(unsigned nDone, unsigned nDoing, unsigned nLeft, unsigned batch, AsdSip::asdFftType fftType,
                bool forward)
         : FftCoreMixBase(FFTCoreType::kFftR2C, nDone, nDoing, nLeft, batch, fftType, forward,
-                         static_cast<bool>(nDoing % DIV_TWO) ? 1 : 0, nDoing % DIV_TWO ? nDoing : nDoing / DIV_TWO)
+                         static_cast<bool>(nDoing % DIV_TWO) ? 1 : 0, (nDoing % DIV_TWO != 0) ? nDoing : nDoing / DIV_TWO)
     {
     }
 

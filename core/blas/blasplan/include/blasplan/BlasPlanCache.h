@@ -9,9 +9,6 @@
  */
 #pragma once
 
-#include <memory>
-#include <unordered_map>
-
 #include "BlasPlan.h"
 
 namespace BlasPlanCache {

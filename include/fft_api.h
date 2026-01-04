@@ -19,8 +19,6 @@ extern "C" {
 typedef struct aclTensor aclTensor;
 
 namespace AsdSip {
-
-
 typedef void *asdFftHandle;
 
 enum asdFftStatus { SUCCESS = 0, FAILED = 1 };
@@ -31,7 +29,8 @@ enum asdFftType {
     ASCEND_FFT_R2C = 0x12,
     ASCEND_STFT_C2C = 0x20,
     ASCEND_STFT_C2R = 0x21,
-    ASCEND_STFT_R2C = 0x22
+    ASCEND_STFT_R2C = 0x22,
+    ASCEND_FFT_C2C_SEP = 0x30
 };
 
 enum asdFftDirection {
@@ -57,8 +56,18 @@ AsdSip::AspbStatus asdFftMakePlan1D(asdFftHandle handle, int64_t fftSize, asdFft
                                     asdFftDirection direction, int64_t batchSize,
                                     asdFft1dDimType dimType = asdFft1dDimType::ASCEND_FFT_HORIZONTAL);
 
+AspbStatus asdFftIstftMakePlan(asdFftHandle handle, const aclTensor *input, const int64_t nFft,
+                               const int64_t hopLengthOpt, const int64_t winLengthOpt, const bool center = true,
+                               const bool normalized = false, const bool onesidedOpt = false,
+                               int64_t lengthOpt = 0, const bool returnComplex = true);
+
 // Executes a c2c fft transform.
 AsdSip::AspbStatus asdFftExecC2C(asdFftHandle handle, const aclTensor *input, const aclTensor *output);
+
+// Executes a c2c fft transform with real part and imag part separated.
+AsdSip::AspbStatus asdFftExecC2CSeparated(asdFftHandle handle, const aclTensor *inputReal, const aclTensor *inputImag,
+    const aclTensor *outputReal, const aclTensor *outputImag);
+
 
 // Executes a c2r fft transform.
 AsdSip::AspbStatus asdFftExecC2R(asdFftHandle handle, const aclTensor *input, const aclTensor *output);
@@ -66,11 +75,17 @@ AsdSip::AspbStatus asdFftExecC2R(asdFftHandle handle, const aclTensor *input, co
 // Executes a r2c fft transform.
 AsdSip::AspbStatus asdFftExecR2C(asdFftHandle handle, const aclTensor *input, const aclTensor *output);
 
+AspbStatus asdFftExecIstft(asdFftHandle handle, const aclTensor *input,
+                           const aclTensor *windowOpt, const aclTensor *output);
+
 // Destroy a handle, free all spaces allocated for it.
 AsdSip::AspbStatus asdFftDestroy(asdFftHandle handle);
 
 AsdSip::AspbStatus asdFftMakePlan2D(asdFftHandle handle, int64_t fftSizeX, int64_t fftSizeY, asdFftType fftType,
                                     asdFftDirection direction, int32_t batchSize);
+
+AspbStatus asdFftMakePlan3D(asdFftHandle handle, int64_t fftSizeX, int64_t fftSizeY, int64_t fftSizeZ,
+    asdFftType fftType, asdFftDirection direction, int32_t batchSize);
 
 AsdSip::AspbStatus asdFftGetWorkspaceSize(asdFftHandle handle, size_t &workspaceSize);
 

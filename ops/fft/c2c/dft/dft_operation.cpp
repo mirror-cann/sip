@@ -24,6 +24,7 @@ using Mki::Any;
 using Mki::Status;
 using Mki::SVector;
 using Mki::Tensor;
+using Mki::TENSOR_DTYPE_COMPLEX64;
 
 constexpr int64_t INPUT_NUM = 2;
 
@@ -34,7 +35,11 @@ public:
     Kernel *GetBestKernel(const LaunchParam &launchParam) const override
     {
         ASDSIP_CHECK(IsConsistent(launchParam), "Failed to check consistent", return nullptr);
-        return GetKernelByName("DftC64Kernel");
+        if (launchParam.GetInTensor(0).desc.dtype == TENSOR_DTYPE_COMPLEX64) {
+            return GetKernelByName("DftC64Kernel");
+        } else {
+            return GetKernelByName("DftC32Kernel");
+        }
     }
 
     int64_t GetInputNum(const Any &specificParam) const override

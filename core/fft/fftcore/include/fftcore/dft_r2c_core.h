@@ -15,7 +15,6 @@
 #include "fftcore/fft_core_base.h"
 #include "utils/aspb_status.h"
 
-using namespace AsdSip;
 class DftR2CCore : public FFTCoreBase {
 public:
     DftR2CCore(unsigned nDone, unsigned nDoing, unsigned nLeft, unsigned batch, AsdSip::asdFftType fftType,
@@ -37,8 +36,8 @@ private:
     void InitRadix() override;
     bool PreAllocateInDevice() override;
     void DestroyInDevice() const;
-    AspbStatus InitRotationMatrix();
-    AspbStatus InitTactic();
+    AsdSip::AspbStatus InitRotationMatrix();
+    AsdSip::AspbStatus InitTactic();
 };
 
 #endif

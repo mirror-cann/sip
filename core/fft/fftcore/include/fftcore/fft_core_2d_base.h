@@ -11,7 +11,6 @@
 #ifndef __FFTCORE_2D_BASE__
 #define __FFTCORE_2D_BASE__
 
-#include "utils/fftensor_cache.h"
 #include "fftoperation/fft_operation.h"
 
 #include "fft_api.h"
@@ -38,7 +37,6 @@ public:
         return PreAllocateInDevice();
     }
     ~FftCore2DBase() override {}
-    virtual void Run(Tensor &input, Tensor &output, void *stream, workspace::Workspace &workspace) = 0;
 
 protected:
     virtual bool PreAllocateInDevice() = 0;

@@ -21,7 +21,8 @@ __aicore__ inline void CopyTiling(TCubeTiling *tiling, GM_ADDR tilingGM)
     uint32_t *ptr = reinterpret_cast<uint32_t *>(tiling);
     auto tiling32 = reinterpret_cast<__gm__ uint32_t *>(tilingGM + sizeof(AsdSip::InterpByCoeffTilingData));
 
-    for (int i = 0; i < sizeof(TCubeTiling) / sizeof(uint32_t); i++, ptr++) {
+    int TCubeTilingBlocks = static_cast<int>(sizeof(TCubeTiling) / sizeof(uint32_t));
+    for (int i = 0; i < TCubeTilingBlocks; i++, ptr++) {
         *ptr = *(tiling32 + i);
     }
     return;

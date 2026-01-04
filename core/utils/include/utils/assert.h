@@ -47,6 +47,13 @@ do {                                                                            
 } while (0)
 }
 
+#define ASDSIP_CHECK_WITH_NO_RETURN(condition, logExpr, handleExpr)                                                               \
+do {                                                                                                                \
+    if (!(condition)) {                                                                                             \
+        ASDSIP_ELOG(handleExpr) << (logExpr);                                                                       \
+    }                                                                                                               \
+} while (0)
+
 #define UNUSED_VALUE(x) (void)(x)
 } // namespace AsdSip
 #endif

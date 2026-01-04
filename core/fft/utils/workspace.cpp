@@ -11,6 +11,8 @@
 #include "log/log.h"
 #include "utils/workspace.h"
 
+using Mki::Tensor;
+
 namespace workspace {
 
 Workspace::Workspace(const Tensor &dataSegment)

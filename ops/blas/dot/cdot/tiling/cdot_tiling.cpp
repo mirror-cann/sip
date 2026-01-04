@@ -104,9 +104,11 @@ AsdSip::AspbStatus DotTiling(const LaunchParam &launchParam, KernelInfo &kernelI
     tilingDataPtr->coreNum = vecCoreNum;
     tilingDataPtr->isConj = isConj;
 
-    memcpy_s(tilingDataPtr->startOffset, sizeof(tilingDataPtr->startOffset), startOffset,
-             vecCoreNum * sizeof(uint32_t));
-    memcpy_s(tilingDataPtr->calNum, sizeof(tilingDataPtr->calNum), calNum, vecCoreNum * sizeof(uint32_t));
+    auto ret = memcpy_s(
+        tilingDataPtr->startOffset, sizeof(tilingDataPtr->startOffset), startOffset, vecCoreNum * sizeof(uint32_t));
+    ASDSIP_CHECK_WITH_NO_RETURN(ret == EOK, "startOffset memcpy_s failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
+    ret = memcpy_s(tilingDataPtr->calNum, sizeof(tilingDataPtr->calNum), calNum, vecCoreNum * sizeof(uint32_t));
+    ASDSIP_CHECK_WITH_NO_RETURN(ret == EOK, "calNum memcpy_s failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
     delete[] startOffset;
     startOffset = nullptr;
     delete[] calNum;

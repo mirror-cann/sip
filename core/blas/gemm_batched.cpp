@@ -123,6 +123,7 @@ AspbStatus asdBlasHCgemmBatched(asdBlasHandle handle, asdBlasOperation_t transa,
     try {
         AsdSip::BlasHCgemmBatchedPlan &plan =
             dynamic_cast<AsdSip::BlasHCgemmBatchedPlan &>(BlasPlanCache::getPlan(handle));
+        ASDSIP_ECHECK(plan.IsInitialized(), "HCgemmBatched plan init Error!.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
 
         OpDesc opDesc;
         opDesc.opName = "HCgemmBatchedOperation";
@@ -155,9 +156,23 @@ AspbStatus asdBlasMakeHCgemmBatchedPlan(asdBlasHandle handle)
     std::lock_guard<std::mutex> lock(blas_mtx);
     ASDSIP_ECHECK(handle != nullptr, "blas MakeHCgemmBatchedPlan failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
 
-    AsdSip::BlasHCgemmBatchedPlan *plan = new AsdSip::BlasHCgemmBatchedPlan();
-    plan->CreateTensor();
-    BlasPlanCache::MakePlan(handle, plan);
+    AsdSip::BlasHCgemmBatchedPlan *plan = nullptr;
+    try {
+        plan = new AsdSip::BlasHCgemmBatchedPlan();
+        BlasPlanCache::MakePlan(handle, plan);
+    } catch (const std::exception &e) {
+        if (plan != nullptr) {
+            delete plan;
+        }
+        delete static_cast<int *>(handle);
+        ASDSIP_ELOG(ErrorType::ACL_ERROR_INTERNAL_ERROR) << "Make HCgemmBatched Plan failed: " << e.what();
+        throw std::runtime_error("Make HCgemmBatched Plan failed.");
+    }
+    if (plan->CreateTensor() != ErrorType::ACL_SUCCESS) {
+        plan->MarkFailed();
+        ASDSIP_ELOG(ErrorType::ACL_ERROR_INTERNAL_ERROR) << "Fail to create blas asdBlasMakeHCgemmBatchedPlan mask tensor.";
+        return ErrorType::ACL_ERROR_INTERNAL_ERROR;
+    }
     plan->MarkInitialized();
     return ErrorType::ACL_SUCCESS;
 }
@@ -218,6 +233,7 @@ AspbStatus asdBlasCgemmBatched(asdBlasHandle handle, asdBlasOperation_t transa, 
     try {
         AsdSip::BlasCgemmBatchedPlan &plan =
             dynamic_cast<AsdSip::BlasCgemmBatchedPlan &>(BlasPlanCache::getPlan(handle));
+        ASDSIP_ECHECK(plan.IsInitialized(), "CgemmBatched plan init Error!.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
 
         OpDesc opDesc;
         opDesc.opName = "CgemmBatchedOperation";
@@ -250,9 +266,23 @@ AspbStatus asdBlasMakeCgemmBatchedPlan(asdBlasHandle handle)
     std::lock_guard<std::mutex> lock(blas_mtx);
     ASDSIP_ECHECK(handle != nullptr, "blas MakeCgemmBatchedPlan failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
 
-    AsdSip::BlasCgemmBatchedPlan *plan = new AsdSip::BlasCgemmBatchedPlan();
-    plan->CreateTensor();
-    BlasPlanCache::MakePlan(handle, plan);
+    AsdSip::BlasCgemmBatchedPlan *plan = nullptr;
+    try {
+        plan = new AsdSip::BlasCgemmBatchedPlan();
+        BlasPlanCache::MakePlan(handle, plan);
+    } catch (const std::exception &e) {
+        if (plan != nullptr) {
+            delete plan;
+        }
+        delete static_cast<int *>(handle);
+        ASDSIP_ELOG(ErrorType::ACL_ERROR_INTERNAL_ERROR) << "Make CgemmBatched Plan failed: " << e.what();
+        throw std::runtime_error("Make CgemmBatched Plan failed.");
+    }
+    if (plan->CreateTensor() != ErrorType::ACL_SUCCESS) {
+        plan->MarkFailed();
+        ASDSIP_ELOG(ErrorType::ACL_ERROR_INTERNAL_ERROR) << "Fail to create blas asdBlasMakeCgemmBatchedPlan mask tensor.";
+        return ErrorType::ACL_ERROR_INTERNAL_ERROR;
+    }
     plan->MarkInitialized();
     return ErrorType::ACL_SUCCESS;
 }

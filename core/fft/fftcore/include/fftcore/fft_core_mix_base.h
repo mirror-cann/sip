@@ -15,8 +15,6 @@
 #include "fftcore/fft_core_base.h"
 #include "utils/aspb_status.h"
 
-using namespace AsdSip;
-
 class FftCoreMixBase : public FFTCoreBase {
 public:
     FftCoreMixBase(FFTCoreType coreType, unsigned nDone, unsigned nDoing, unsigned nLeft, unsigned batch,
@@ -35,14 +33,17 @@ public:
 
 protected:
     void InitRadix() override;
-    AspbStatus InitTactic();
+    AsdSip::AspbStatus InitTactic();
     bool PreAllocateC2CInDevice();
     bool PreAllocateX2XInDevice();
     void DestroyInDevice() const;
 
     virtual void InitParams();
     virtual std::string GetOpName() = 0;
-    virtual bool PreAllocateInDevice() = 0;
+    bool PreAllocateInDevice() override
+    {
+        return true;
+    }
     virtual void InitLaunchParam() = 0;
 
     int aivSplitWay{0};

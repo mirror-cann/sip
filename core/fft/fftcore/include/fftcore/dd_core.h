@@ -16,8 +16,6 @@
 #include "fftcore/fft_core_2d_base.h"
 #include "utils/aspb_status.h"
 
-using namespace AsdSip;
-
 class DdCore : public FftCore2DBase {
 public:
     DdCore(unsigned fftX, unsigned fftY,
@@ -31,9 +29,9 @@ private:
     void DestroyInDevice() const;
     
     std::string opName{"DdOperation"};
-    AspbStatus InitPMatrix();
-    AspbStatus InitQMatrix();
-    AspbStatus InitTactic();
+    AsdSip::AspbStatus InitPMatrix();
+    AsdSip::AspbStatus InitQMatrix();
+    AsdSip::AspbStatus InitTactic();
     std::shared_ptr<AsdSip::FFTensor> pMatrix;
     std::shared_ptr<AsdSip::FFTensor> qMatrix;
 };

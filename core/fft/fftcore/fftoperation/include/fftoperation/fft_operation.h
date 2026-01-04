@@ -23,7 +23,8 @@ public:
     virtual ~FftOperation() = default;
     virtual bool init() = 0;
     virtual void Run(Tensor &input, Tensor &output, void *stream, workspace::Workspace &workspace) = 0;
-
+    virtual void Run(Tensor &inputReal, Tensor &inputImag, Tensor &outputReal, Tensor &outputImag, void *stream, workspace::Workspace &workspace) {}
+    virtual void Run(Tensor &input, Tensor &window, Tensor &output, void *stream, workspace::Workspace &workspace) {}
     virtual void Run(void *input, void *output, void *stream, workspace::Workspace &workspace)
     {
         const Mki::KernelInfo &kernelInfo = kernel->GetKernelInfo();
@@ -35,6 +36,9 @@ public:
         kernel->Run(launchParam, runInfo);
         workspace.recycleLast();
     }
+
+    virtual void Run(void *inputReal, void *inputImag, void *outputReal, void *outputImag, void *stream, workspace::Workspace &workspace) {}
+    virtual void Run(void *input, void *window, void *output, void *stream, workspace::Workspace &workspace) {}
 
     virtual size_t EstimateWorkspaceSize()
     {

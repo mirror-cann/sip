@@ -16,7 +16,10 @@ add_library(fft_core STATIC
     fft_core_mix_base.cpp
 
     dft_core.cpp
+    dft_core_sep.cpp
+
     fft_core_b.cpp
+    fft_core_b_sep.cpp
     fft_core_n.cpp
     fft_core_stride.cpp
 
@@ -32,7 +35,11 @@ add_library(fft_core STATIC
 
     dd_core.cpp
 
+    ddd_core_sep.cpp
+
     select_core.cpp
+    
+    fft_core_istft_any.cpp
 )
 
 target_include_directories(fft_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

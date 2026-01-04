@@ -14,6 +14,12 @@
 #define __aicore__ [aicore]
 #endif
 
+#include "kernel_operator.h"
+#include "../../../../../include/common/common.h"
+#include "../../../../../include/common/iterator.h"
+#include "../../../../../include/common/simd.h"
+#include "../../../../../include/common/utils.h"
+
 constexpr int AICFLAGID = 0;
 constexpr int AIVFLAGID = 1;
 constexpr int AIC2AIVFLAGID = 2;
@@ -25,24 +31,35 @@ constexpr int COMPLEX_DATA_NUM_PER_REPEAT = 32;
 constexpr int FLOAT_DATA_NUM_PER_REPEAT = 64;
 
 struct UB_FOR_CACL {
-    __ubuf__ float *buf_for_load_vector_fp32;  // 加载复数向量(存在地址ping-pong)
-    __ubuf__ float *buf_for_real_part_fp32;    // 虚实分离后，存储实部
-    __ubuf__ float *buf_for_imag_part_fp32;    // 虚实分离后，存储虚部
-    __ubuf__ uint32_t *buf_for_mask_fp32;      // mask
+    AscendC::LocalTensor<float> buf_for_load_vector_fp32;  // 加载复数向量(存在地址ping-pong)
+    AscendC::LocalTensor<float> buf_for_real_part_fp32;    // 虚实分离后，存储实部
+    AscendC::LocalTensor<float> buf_for_imag_part_fp32;    // 虚实分离后，存储虚部
+    AscendC::LocalTensor<uint32_t> buf_for_mask_fp32;      // mask
 
     /**可复用的地址**/
-    __ubuf__ float *buf_for_imag_real_fp32;  // 虚部*实部
-    __ubuf__ float *buf_for_imag_imag_fp32;  // 虚部*虚部
+    AscendC::LocalTensor<float> buf_for_imag_real_fp32;  // 虚部*实部
+    AscendC::LocalTensor<float> buf_for_imag_imag_fp32;  // 虚部*虚部
 
-    __ubuf__ float *buf_for_final_real_fp32;     // 最终的实部
-    __ubuf__ float *buf_for_final_imag_fp32;     // 最终的虚部
-    __ubuf__ float *buf_for_final_complex_fp32;  // 虚实合并
+    AscendC::LocalTensor<float> buf_for_final_real_fp32;     // 最终的实部
+    AscendC::LocalTensor<float> buf_for_final_imag_fp32;     // 最终的虚部
+    AscendC::LocalTensor<float> buf_for_final_complex_fp32;  // 虚实合并
 
     /***ping pong***/
-    __ubuf__ float *pp_buf_for_load_vector_fp32[2];
-    __ubuf__ float *pp_buf_for_real_real_fp32[2];  // 实部*实部 (存在地址ping-pong，复用buf_for_load_vector_fp32)
-    __ubuf__ float *pp_buf_for_real_imag_fp32[2];  // 实部*虚部 (存在地址ping-pong，复用buf_for_load_vector_fp32)
-    __ubuf__ float *pp_buf_for_final_complex_fp32[2];  // 虚实合并(存在地址ping-pong，复用buf_for_load_vector_fp32)
+    AscendC::LocalTensor<float> pp_buf_for_load_vector_fp32;
+    AscendC::LocalTensor<float> pp_buf_for_load_vector_fp32_0;
+    AscendC::LocalTensor<float> pp_buf_for_load_vector_fp32_1;
+    // 实部*实部 (存在地址ping-pong，复用buf_for_load_vector_fp32)
+    AscendC::LocalTensor<float> pp_buf_for_real_real_fp32;
+    AscendC::LocalTensor<float> pp_buf_for_real_real_fp32_0;
+    AscendC::LocalTensor<float> pp_buf_for_real_real_fp32_1;
+    // 实部*虚部 (存在地址ping-pong，复用buf_for_load_vector_fp32)
+    AscendC::LocalTensor<float> pp_buf_for_real_imag_fp32;
+    AscendC::LocalTensor<float> pp_buf_for_real_imag_fp32_0;
+    AscendC::LocalTensor<float> pp_buf_for_real_imag_fp32_1;
+    // 虚实合并(存在地址ping-pong，复用buf_for_load_vector_fp32)
+    AscendC::LocalTensor<float> pp_buf_for_final_complex_fp32;
+    AscendC::LocalTensor<float> pp_buf_for_final_complex_fp32_0;
+    AscendC::LocalTensor<float> pp_buf_for_final_complex_fp32_1;
 };
 
 struct LocalInfo {
@@ -60,21 +77,23 @@ __aicore__ __inline__ void allocate_ubuf(UB_FOR_CACL *ub_buf)
 {
     int32_t offset = 0;
 
-    ub_buf->buf_for_mask_fp32 = reinterpret_cast<__ubuf__ uint32_t *>((uintptr_t)offset);
+    AsdopsBuffer<ArchType::ASCEND_V220> buf;
+
+    ub_buf->buf_for_mask_fp32 = buf.GetBuffer<BufferType::ASCEND_UB, uint32_t>(offset);
     offset += MAX_LENG_PER_UB_PROC * 2 * 4;  //
 
-    ub_buf->buf_for_load_vector_fp32 = reinterpret_cast<__ubuf__ float *>((uintptr_t)offset);
+    ub_buf->buf_for_load_vector_fp32 = buf.GetBuffer<BufferType::ASCEND_UB, float>(offset);
     offset += MAX_LENG_PER_UB_PROC * 8 * 2;  //
 
-    ub_buf->buf_for_real_part_fp32 = reinterpret_cast<__ubuf__ float *>((uintptr_t)offset);
+    ub_buf->buf_for_real_part_fp32 = buf.GetBuffer<BufferType::ASCEND_UB, float>(offset);
     offset += MAX_LENG_PER_UB_PROC * 4;  //
 
-    ub_buf->buf_for_imag_part_fp32 = reinterpret_cast<__ubuf__ float *>((uintptr_t)offset);
+    ub_buf->buf_for_imag_part_fp32 = buf.GetBuffer<BufferType::ASCEND_UB, float>(offset);
     offset += MAX_LENG_PER_UB_PROC * 4;  //
 
     /**ping-pong**/
-    ub_buf->pp_buf_for_load_vector_fp32[0] = ub_buf->buf_for_load_vector_fp32;
-    ub_buf->pp_buf_for_load_vector_fp32[1] = ub_buf->buf_for_load_vector_fp32 + MAX_LENG_PER_UB_PROC * 2;  // 复数
+    ub_buf->pp_buf_for_load_vector_fp32_0 = ub_buf->buf_for_load_vector_fp32;
+    ub_buf->pp_buf_for_load_vector_fp32_1 = ub_buf->buf_for_load_vector_fp32[MAX_LENG_PER_UB_PROC * 2];  // 复数
 
     /**复用地址***/
     ub_buf->buf_for_imag_real_fp32 = ub_buf->buf_for_real_part_fp32;
@@ -82,14 +101,15 @@ __aicore__ __inline__ void allocate_ubuf(UB_FOR_CACL *ub_buf)
     ub_buf->buf_for_final_imag_fp32 = ub_buf->buf_for_real_part_fp32;
     ub_buf->buf_for_final_real_fp32 = ub_buf->buf_for_imag_part_fp32;
 
-    ub_buf->pp_buf_for_real_real_fp32[0] = ub_buf->pp_buf_for_load_vector_fp32[0];
-    ub_buf->pp_buf_for_real_real_fp32[1] = ub_buf->pp_buf_for_load_vector_fp32[1];
+    ub_buf->pp_buf_for_real_real_fp32_0 = ub_buf->pp_buf_for_load_vector_fp32_0;
+    ub_buf->pp_buf_for_real_real_fp32_1 = ub_buf->pp_buf_for_load_vector_fp32_1;
 
-    ub_buf->pp_buf_for_real_imag_fp32[0] = ub_buf->pp_buf_for_load_vector_fp32[0] + MAX_LENG_PER_UB_PROC;
-    ub_buf->pp_buf_for_real_imag_fp32[1] = ub_buf->pp_buf_for_load_vector_fp32[1] + MAX_LENG_PER_UB_PROC;
+    ub_buf->pp_buf_for_real_imag_fp32_0 = ub_buf->pp_buf_for_load_vector_fp32_0[MAX_LENG_PER_UB_PROC];
+    ub_buf->pp_buf_for_real_imag_fp32_1 = ub_buf->pp_buf_for_load_vector_fp32_1[MAX_LENG_PER_UB_PROC];
 
-    ub_buf->pp_buf_for_final_complex_fp32[0] = ub_buf->pp_buf_for_load_vector_fp32[0];
-    ub_buf->pp_buf_for_final_complex_fp32[1] = ub_buf->pp_buf_for_load_vector_fp32[1];
+    ub_buf->pp_buf_for_final_complex_fp32_0 = ub_buf->pp_buf_for_load_vector_fp32_0;
+    ub_buf->pp_buf_for_final_complex_fp32_1 = ub_buf->pp_buf_for_load_vector_fp32_1;
+
 }
 
 /**
@@ -97,11 +117,11 @@ __aicore__ __inline__ void allocate_ubuf(UB_FOR_CACL *ub_buf)
 */
 __aicore__ __inline__ void get_local_info(LocalInfo *local_info, int vector_len)
 {
-    local_info->cur_core_id = get_block_idx() * 2 + get_subblockid();
+    local_info->cur_core_id = AscendC::GetBlockIdx();
 
     int32_t max_cores = vector_len / COMPLEX_DATA_NUM_PER_BLOCK;  // 数据量较少时，用不着所有的core
 
-    int32_t total_cores = get_block_num() * 2;
+    int32_t total_cores = AscendC::GetBlockNum() * 2;
     int32_t cores_num = total_cores > max_cores ? max_cores : total_cores;
     if (cores_num == 0) {
         cores_num = 1;
@@ -138,98 +158,119 @@ __aicore__ __inline__ void get_local_info(LocalInfo *local_info, int vector_len)
 }
 
 __aicore__ __inline__ void _cacl(Param param, int32_t ping_pong_flag, UB_FOR_CACL ub_buf, float alpha_real,
-                                 float alpha_imag, __gm__ float *vector_x, __gm__ float *vector_y,
-                                 __gm__ float *workspace, int32_t loops)
+                                 float alpha_imag, AscendC::GlobalTensor<float> vector_x,
+                                 AscendC::GlobalTensor<float> vector_y, AscendC::GlobalTensor<float> workspace,
+                                 int32_t loops)
 {
     auto event_id = ping_pong_flag == 0 ? EVENT_ID0 : EVENT_ID1;
 
-    wait_flag(PIPE_MTE3, PIPE_MTE2, event_id);
+    WAIT_FLAG(MTE3, MTE2, event_id);
+
+    ub_buf.pp_buf_for_load_vector_fp32 =
+        (ping_pong_flag == 0) ? ub_buf.pp_buf_for_load_vector_fp32_0 : ub_buf.pp_buf_for_load_vector_fp32_1;
+    ub_buf.pp_buf_for_real_real_fp32 =
+        (ping_pong_flag == 0) ? ub_buf.pp_buf_for_real_real_fp32_0 : ub_buf.pp_buf_for_real_real_fp32_1;
+    ub_buf.pp_buf_for_real_imag_fp32 =
+        (ping_pong_flag == 0) ? ub_buf.pp_buf_for_real_imag_fp32_0 : ub_buf.pp_buf_for_real_imag_fp32_1;
+    ub_buf.pp_buf_for_final_complex_fp32 =
+        (ping_pong_flag == 0) ? ub_buf.pp_buf_for_final_complex_fp32_0 : ub_buf.pp_buf_for_final_complex_fp32_1;
 
     /*copy data**/
-    copy_gm_to_ubuf(ub_buf.pp_buf_for_load_vector_fp32[ping_pong_flag], vector_x + param.data_offset * 2,
-                    0,  //sid 一般0
-                    1,  //burst_number 搬运几块(连续拷贝，只搬运一块)
-                    param.data_count / COMPLEX_DATA_NUM_PER_BLOCK,  //burst_len 32B unit
-                    0,   //src stride 即burst stride (incx通过这里表达)
-                    0);  // //dts stride
+    gm_to_ub<ArchType::ASCEND_V220, float>(
+        ub_buf.pp_buf_for_load_vector_fp32,
+        vector_x[param.data_offset * 2],
+        0,  //sid 一般0
+        1,  //burst_number 搬运几块(连续拷贝，只搬运一块)
+        param.data_count / COMPLEX_DATA_NUM_PER_BLOCK,  //burst_len 32B unit
+        0,   //src stride 即burst stride (incx通过这里表达)
+        0);  // //dts stride
 
-    set_flag(PIPE_MTE2, PIPE_V, event_id);
-    wait_flag(PIPE_MTE2, PIPE_V, event_id);
+    SET_FLAG(MTE2, V, event_id);
+    WAIT_FLAG(MTE2, V, event_id);
 
     /**1. 虚实分离***/                                                              /**还未考虑repeat超过255**/
     int32_t repeat_times_complex = param.data_count / COMPLEX_DATA_NUM_PER_REPEAT;  // 32个复数是256字节
     int32_t repeat_tail_complex = param.data_count % COMPLEX_DATA_NUM_PER_REPEAT;
     int32_t all_repeat_times_complex = repeat_times_complex + (repeat_tail_complex > 0 ? 1 : 0);
 
-    vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(ub_buf.buf_for_real_part_fp32),                       // dst in UB
-              reinterpret_cast<__ubuf__ uint32_t *>(ub_buf.pp_buf_for_load_vector_fp32[ping_pong_flag]),  // src in UB
+    vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(ub_buf.buf_for_real_part_fp32.GetPhyAddr()),                       // dst in UB
+              reinterpret_cast<__ubuf__ uint32_t *>(ub_buf.pp_buf_for_load_vector_fp32.GetPhyAddr()),  // src in UB
               nullptr, all_repeat_times_complex,
               1,      // src0BlockStride
               1,      // patternMode, 101010…10
               8, 8);  // src0RepeatStride, src1RepeatStride
 
-    vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(ub_buf.buf_for_imag_part_fp32),                       // dst in UB
-              reinterpret_cast<__ubuf__ uint32_t *>(ub_buf.pp_buf_for_load_vector_fp32[ping_pong_flag]),  // src in UB
+    vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(ub_buf.buf_for_imag_part_fp32.GetPhyAddr()),                       // dst in UB
+              reinterpret_cast<__ubuf__ uint32_t *>(ub_buf.pp_buf_for_load_vector_fp32.GetPhyAddr()),  // src in UB
               nullptr, all_repeat_times_complex,
               1,      // src0BlockStride
               2,      // patternMode, 010101…01
               8, 8);  // src0RepeatStride, src1RepeatStride
 
-    pipe_barrier(PIPE_V);
+    PIPE_BARRIER(V);
 
     /**2.虚部实部计算**/
     int32_t repeat_times = param.data_count / FLOAT_DATA_NUM_PER_REPEAT;
     int32_t repeat_tail = param.data_count % FLOAT_DATA_NUM_PER_REPEAT;
     int32_t all_repeat_times = repeat_times + (repeat_tail > 0 ? 1 : 0);
 
-    vmuls(ub_buf.pp_buf_for_real_real_fp32[ping_pong_flag], ub_buf.buf_for_real_part_fp32, alpha_real, all_repeat_times,
-          1, 1, 8, 8);  // 实部 * 实部
-    pipe_barrier(PIPE_V);
+    muls_v<ArchType::ASCEND_V220, float>(
+        ub_buf.pp_buf_for_real_real_fp32, ub_buf.buf_for_real_part_fp32, alpha_real, all_repeat_times, 1, 1, 8, 8);  // 实部 * 实部
+    PIPE_BARRIER(V);
 
-    vmuls(ub_buf.pp_buf_for_real_imag_fp32[ping_pong_flag], ub_buf.buf_for_real_part_fp32, alpha_imag, all_repeat_times,
-          1, 1, 8, 8);  // 实部 * 虚部
-    pipe_barrier(PIPE_V);
+    muls_v<ArchType::ASCEND_V220, float>(
+        ub_buf.pp_buf_for_real_imag_fp32, ub_buf.buf_for_real_part_fp32, alpha_imag, all_repeat_times, 1, 1, 8, 8);  // 实部 * 虚部
+    PIPE_BARRIER(V);
 
-    vmuls(ub_buf.buf_for_imag_real_fp32, ub_buf.buf_for_imag_part_fp32, alpha_real, all_repeat_times, 1, 1, 8,
-          8);  // 虚部 * 实部
-    pipe_barrier(PIPE_V);
+    muls_v<ArchType::ASCEND_V220, float>(
+        ub_buf.buf_for_imag_real_fp32, ub_buf.buf_for_imag_part_fp32, alpha_real, all_repeat_times, 1, 1, 8, 8);  // 虚部 * 实部
+    PIPE_BARRIER(V);
 
-    vmuls(ub_buf.buf_for_imag_imag_fp32, ub_buf.buf_for_imag_part_fp32, (-alpha_imag), all_repeat_times, 1, 1, 8, 8);
-    pipe_barrier(PIPE_V);  // 虚部 * 虚部
+    muls_v<ArchType::ASCEND_V220, float>(
+        ub_buf.buf_for_imag_imag_fp32, ub_buf.buf_for_imag_part_fp32, (-alpha_imag), all_repeat_times, 1, 1, 8, 8);
+    PIPE_BARRIER(V);  // 虚部 * 虚部
 
-    vadd(ub_buf.buf_for_final_imag_fp32, ub_buf.pp_buf_for_real_imag_fp32[ping_pong_flag],
-         ub_buf.buf_for_imag_real_fp32, all_repeat_times, 1, 1, 1, 8, 8, 8);  // 虚部
-    pipe_barrier(PIPE_V);
+    add_v<ArchType::ASCEND_V220, float>(
+        ub_buf.buf_for_final_imag_fp32, ub_buf.pp_buf_for_real_imag_fp32,
+        ub_buf.buf_for_imag_real_fp32, all_repeat_times, 1, 1, 1, 8, 8, 8);  // 虚部
+    PIPE_BARRIER(V);
 
-    vadd(ub_buf.buf_for_final_real_fp32, ub_buf.pp_buf_for_real_real_fp32[ping_pong_flag],
-         ub_buf.buf_for_imag_imag_fp32, all_repeat_times, 1, 1, 1, 8, 8, 8);  // 虚部
-    pipe_barrier(PIPE_V);
+    add_v<ArchType::ASCEND_V220, float>(
+        ub_buf.buf_for_final_real_fp32, ub_buf.pp_buf_for_real_real_fp32,
+        ub_buf.buf_for_imag_imag_fp32, all_repeat_times, 1, 1, 1, 8, 8, 8);  // 虚部
+    PIPE_BARRIER(V);
 
     /**3.虚实合并**/
-    vgather(reinterpret_cast<__ubuf__ uint32_t *>(ub_buf.pp_buf_for_final_complex_fp32[ping_pong_flag]),
-            reinterpret_cast<__ubuf__ uint32_t *>(ub_buf.buf_for_mask_fp32),
+    vgather(reinterpret_cast<__ubuf__ uint32_t *>((ub_buf.pp_buf_for_final_complex_fp32).GetPhyAddr()),
+            reinterpret_cast<__ubuf__ uint32_t *>(ub_buf.buf_for_mask_fp32.GetPhyAddr()),
             0,                        // offsetAddr
             8,                        // dstRepeatStride，以32Byte为单位，1个block
             all_repeat_times_complex  // repeat,以256Byte为单位，8个block
     );
-    pipe_barrier(PIPE_V);
+    AsdopsBuffer<ArchType::ASCEND_V220> buf;
+    AscendC::LocalTensor<float> mask_addr = buf.GetBuffer<BufferType::ASCEND_UB, float>(0);
+    AscendC::Gather(ub_buf.pp_buf_for_final_complex_fp32, mask_addr, ub_buf.buf_for_mask_fp32,
+                    (uint32_t)(0), all_repeat_times_complex * 64);
+    PIPE_BARRIER(V);
 
-    set_flag(PIPE_V, PIPE_MTE3, event_id);
-    wait_flag(PIPE_V, PIPE_MTE3, event_id);
+    SET_FLAG(V, MTE3, event_id);
+    WAIT_FLAG(V, MTE3, event_id);
 
-    copy_ubuf_to_gm(vector_y + param.data_offset * 2, ub_buf.pp_buf_for_final_complex_fp32[ping_pong_flag], 0, 1,
-                    param.data_count / COMPLEX_DATA_NUM_PER_BLOCK,  // burst_len 32B unit
-                    0,                                              // src stride 即burst stride
-                    0);                                             // dts stride (incx通过这里表达)
+    ub_to_gm<ArchType::ASCEND_V220, float>(
+        vector_y[param.data_offset * 2], ub_buf.pp_buf_for_final_complex_fp32, 0, 1,
+        param.data_count / COMPLEX_DATA_NUM_PER_BLOCK,  // burst_len 32B unit
+        0,                                              // src stride 即burst stride
+        0);                                             // dts stride (incx通过这里表达)
 
-    set_flag(PIPE_MTE3, PIPE_MTE2, event_id);
+    SET_FLAG(MTE3, MTE2, event_id);
 }
 
 /*
 * 执行计算
 */
 __aicore__ __inline__ void process_cacl(LocalInfo local_info, UB_FOR_CACL ub_buf, float alpha_real, float alpha_imag,
-                                        __gm__ float *vector_x, __gm__ float *vector_y, __gm__ float *workspace)
+                                        AscendC::GlobalTensor<float> vector_x, AscendC::GlobalTensor<float> vector_y,
+                                        AscendC::GlobalTensor<float> workspace)
 {
     int32_t cur_data_per_proc = MAX_LENG_PER_UB_PROC;
 
@@ -240,11 +281,11 @@ __aicore__ __inline__ void process_cacl(LocalInfo local_info, UB_FOR_CACL ub_buf
         pp_param.data_offset = local_info.start_pos;
         pp_param.data_count = local_info.element_count;
 
-        set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
+        SET_FLAG(MTE3, MTE2, EVENT_ID0);
 
         _cacl(pp_param, 0, ub_buf, alpha_real, alpha_imag, vector_x, vector_y, workspace, 0);
 
-        wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
+        WAIT_FLAG(MTE3, MTE2, EVENT_ID0);
     } else if (local_info.element_count <= cur_data_per_proc * 2)  // 一次ping，一次pong
     {
         /**ping-pong参数**/
@@ -258,16 +299,16 @@ __aicore__ __inline__ void process_cacl(LocalInfo local_info, UB_FOR_CACL ub_buf
 
         int32_t ping_pong_flag = 0;
 
-        set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
-        set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID1);
+        SET_FLAG(MTE3, MTE2, EVENT_ID0);
+        SET_FLAG(MTE3, MTE2, EVENT_ID1);
         for (int32_t loop_time = 0; loop_time < 2; loop_time++) {
             _cacl(pp_param[ping_pong_flag], ping_pong_flag, ub_buf, alpha_real, alpha_imag, vector_x, vector_y,
                   workspace, loop_time);
 
             ping_pong_flag = 1 - ping_pong_flag;
         }
-        wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
-        wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID1);
+        WAIT_FLAG(MTE3, MTE2, EVENT_ID0);
+        WAIT_FLAG(MTE3, MTE2, EVENT_ID1);
     } else {
         Param pp_param[2];
 
@@ -286,8 +327,8 @@ __aicore__ __inline__ void process_cacl(LocalInfo local_info, UB_FOR_CACL ub_buf
 
         int32_t ping_pong_flag = 0;
 
-        set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
-        set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID1);
+        SET_FLAG(MTE3, MTE2, EVENT_ID0);
+        SET_FLAG(MTE3, MTE2, EVENT_ID1);
         for (int32_t loop = 0; loop < ping_pong_times; loop++) {
             if (loop == ping_pong_times - 1 && ping_pong_tail > 0) {
                 pp_param[ping_pong_flag].data_count = ping_pong_tail;
@@ -305,8 +346,8 @@ __aicore__ __inline__ void process_cacl(LocalInfo local_info, UB_FOR_CACL ub_buf
 
             ping_pong_flag = 1 - ping_pong_flag;
         }
-        wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
-        wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID1);
+        WAIT_FLAG(MTE3, MTE2, EVENT_ID0);
+        WAIT_FLAG(MTE3, MTE2, EVENT_ID1);
     }
 }
 
@@ -321,10 +362,10 @@ __aicore__ __inline__ void cscal_mix_aiv(__gm__ uint8_t *__restrict__ ffts_addr,
                                          __gm__ uint32_t *maskBuf_device, __gm__ float *workspace,
                                          __gm__ uint8_t *__restrict__ tiling_para_gm)
 {
-    set_mask_norm();
-    set_atomic_none();
-    set_ffts_base_addr((uint64_t)ffts_addr);
-    set_vector_mask((uint64_t)-1, (uint64_t)-1);
+    AscendC::SetMaskNorm();
+    SetAtomicnone();
+    SetFftsBaseAddr((uint64_t)ffts_addr);
+    SetVectorMask<float>((uint64_t)-1, (uint64_t)-1);
 
     auto tiling_para = reinterpret_cast<__gm__ uint8_t *>(tiling_para_gm);
 
@@ -332,22 +373,32 @@ __aicore__ __inline__ void cscal_mix_aiv(__gm__ uint8_t *__restrict__ ffts_addr,
     float alpha_r = (*(__gm__ float *)((__gm__ uint8_t *)tiling_para + 4));
     float alpha_i = (*(__gm__ float *)((__gm__ uint8_t *)tiling_para + 8));
 
+    AscendC::GlobalTensor<float> x_tensor;
+    AscendC::GlobalTensor<float> workspace_tensor;
+    AscendC::GlobalTensor<uint32_t> maskBuf_device_tensor;
+ 
+    x_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(x));
+    workspace_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(workspace));
+    maskBuf_device_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ uint32_t *>(maskBuf_device));
+
     /**分配内存空间**/
     UB_FOR_CACL ub_buf;
     allocate_ubuf(&ub_buf);
 
     /**拷贝mask矩阵**/
-    copy_gm_to_ubuf(ub_buf.buf_for_mask_fp32, maskBuf_device,
-                    0,  //sid 一般0
-                    1,  //burst_number 搬运几块(连续拷贝，只搬运一块)
-                    MAX_LENG_PER_UB_PROC / COMPLEX_DATA_NUM_PER_BLOCK,  //burst_len 32B unit
-                    0,   //src stride 即burst stride (incx通过这里表达)
-                    0);  // //dts stride
+    gm_to_ub<ArchType::ASCEND_V220, uint32_t>(
+        ub_buf.buf_for_mask_fp32,
+        maskBuf_device_tensor,
+        0,  //sid 一般0
+        1,  //burst_number 搬运几块(连续拷贝，只搬运一块)
+        MAX_LENG_PER_UB_PROC / COMPLEX_DATA_NUM_PER_BLOCK,  //burst_len 32B unit
+        0,   //src stride 即burst stride (incx通过这里表达)
+        0);  // //dts stride
 
-    set_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
-    set_flag(PIPE_MTE2, PIPE_V, EVENT_ID1);
-    wait_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
-    wait_flag(PIPE_MTE2, PIPE_V, EVENT_ID1);
+    SET_FLAG(MTE2, V, EVENT_ID0);
+    SET_FLAG(MTE2, V, EVENT_ID1);
+    WAIT_FLAG(MTE2, V, EVENT_ID0);
+    WAIT_FLAG(MTE2, V, EVENT_ID1);
 
     /**每个vector core处理的处理信息**/
     LocalInfo local_info;
@@ -356,7 +407,7 @@ __aicore__ __inline__ void cscal_mix_aiv(__gm__ uint8_t *__restrict__ ffts_addr,
     if (local_info.start_pos == -1) {
         return;  // 当前core不需要处理任何数据
     }
-    process_cacl(local_info, ub_buf, alpha_r, alpha_i, x, x, workspace);
+    process_cacl(local_info, ub_buf, alpha_r, alpha_i, x_tensor, x_tensor, workspace_tensor);
 }
 
 __aicore__ __inline__ void cscal_mix_aic(__gm__ uint8_t *__restrict__ ffts_addr, __gm__ float *x,

@@ -41,7 +41,7 @@ public:
         return PreAllocateInDevice();
     }
     ~FFTCoreBase() override {}
-    virtual void Run(Tensor &input, Tensor &output, void *stream, workspace::Workspace &workspace) = 0;
+    void Run(Tensor &input, Tensor &output, void *stream, workspace::Workspace &workspace) override {};
 
 protected:
     virtual void InitRadix() {}

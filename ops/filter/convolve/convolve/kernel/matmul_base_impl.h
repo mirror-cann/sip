@@ -176,7 +176,7 @@ __aicore__ __attribute__((always_inline)) inline void base_matmul_single_core_de
             // not implement yet
             if (trans_b) {
             } else {
-                offset_b = k_idx * K0 * rightCol + n_idx * N0;
+                offset_b = (int64_t)k_idx * K0 * rightCol + (int64_t)n_idx * N0;
             }
 
             int32_t k_actual = (k_idx == (k_loop - 1)) ? (K - k_idx * K0) : K0;

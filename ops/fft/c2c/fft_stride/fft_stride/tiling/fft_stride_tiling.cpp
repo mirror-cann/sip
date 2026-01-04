@@ -45,7 +45,7 @@ AsdSip::AspbStatus FftStrideTiling(const LaunchParam &launchParam, KernelInfo &k
     tilingDataPtr->fftStride = param.strideSize;
 
     tilingDataPtr->iterCount = param.radixVec.size();
-    ASDSIP_CHECK(sizeof(tilingDataPtr->radixVec) / sizeof(tilingDataPtr->radixVec[0]) >= param.radixVec.size(),
+    ASDSIP_CHECK(param.radixVec.size() <= sizeof(tilingDataPtr->radixVec) / sizeof(tilingDataPtr->radixVec[0]),
             "RadixVec in tilingDataPtr is more smaller in param!", return AsdSip::ErrorType::ACL_ERROR_INVALID_PARAM);
     for (uint32_t i = 0; i < param.radixVec.size(); i++) {
         tilingDataPtr->radixVec[i] = param.radixVec[i];

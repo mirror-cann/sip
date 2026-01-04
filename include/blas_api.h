@@ -86,6 +86,10 @@ AspbStatus asdBlasMakeHCgemmBatchedPlan(asdBlasHandle handle);
 
 AspbStatus asdBlasMakeCgemmBatchedPlan(asdBlasHandle handle);
 
+AspbStatus asdBlasMakeHCmatinvBatchedPlan(asdBlasHandle handle, const int64_t n, const int64_t batchSize);
+
+AspbStatus asdBlasMakeCmatinvBatchedPlan(asdBlasHandle handle, const int64_t n, const int64_t batchSize);
+
 // get minimum workspace size
 AspbStatus asdBlasGetWorkspaceSize(asdBlasHandle handle, size_t &workspaceSize);
 
@@ -195,5 +199,11 @@ AspbStatus asdBlasCgemmBatched(asdBlasHandle handle, asdBlasOperation_t transa, 
     const int64_t m, const int64_t n, const int64_t k, const std::complex<float> &alpha, aclTensor *A,
     const int64_t lda, aclTensor *B, const int64_t ldb, const std::complex<float> &beta, aclTensor *C,
     const int64_t ldc, const int64_t batchCount);
+
+AspbStatus asdBlasHCmatinvBatched(asdBlasHandle handle, const int64_t n, aclTensor *A, const int64_t lda,
+    aclTensor *Ainv, const int64_t lda_inv, aclTensor *info, int64_t batchSize);
+
+AspbStatus asdBlasCmatinvBatched(asdBlasHandle handle, const int64_t n, aclTensor *A, const int64_t lda,
+    aclTensor *Ainv, const int64_t lda_inv, aclTensor *info, int64_t batchSize);
 }  // namespace AsdSip
 #endif

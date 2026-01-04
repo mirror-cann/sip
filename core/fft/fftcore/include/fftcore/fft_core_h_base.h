@@ -40,7 +40,6 @@ public:
         return PreAllocateInDevice();
     }
     ~FftCoreHBase() override {}
-    virtual void Run(Tensor &input, Tensor &output, void *stream, workspace::Workspace &workspace) = 0;
 
 protected:
     virtual void InitRadix() {}

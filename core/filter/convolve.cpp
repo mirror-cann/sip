@@ -27,6 +27,7 @@ constexpr uint64_t BASE_COL_BLOCK = 128;
 AsdSip::AspbStatus asdConvolve(const aclTensor *signal, const aclTensor *kernel, aclTensor *output,
     asdConvolveMode_t mode, void *stream, void *workspace)
 {
+    (void)mode;
     int64_t *storageDims = nullptr;
     uint64_t storageDimsNum = 0;
     CHECK_STATUS_WITH_ACL_RETURN(

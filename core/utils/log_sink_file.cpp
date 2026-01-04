@@ -13,6 +13,7 @@
 #include <clocale>
 #include <cctype>
 #include <syscall.h>
+#include <mutex>
 #include <sstream>
 #include <iostream>
 #include <iomanip>
@@ -46,21 +47,35 @@ static bool isValidChar(unsigned char c)
            (c == '-') || (c == '/');
 }
 
+
+std::mutex localeMutex;
+
 static bool IsValidFileName(const char *name)
 {
+    std::lock_guard<std::mutex> lock(localeMutex);
+    
     size_t len = strlen(name);
     if (len == 0 || len > MAX_FILE_NAME_LEN) {
         return false;
     }
 
+    // 保存当前的locale设置
+    std::string original_locale = std::setlocale(LC_CTYPE, nullptr);
+    
+    // 设置新的locale环境
+    std::setlocale(LC_CTYPE, "en_US.UTF-8");
+    
     for (size_t i = 0; i < len; ++i) {
-        std::setlocale(LC_CTYPE, "en_US.UTF-8");
         char c = name[i];
         if (!isValidChar(static_cast<unsigned char>(c))) {
+            // 恢复原来的locale设置
+            std::setlocale(LC_CTYPE, original_locale.c_str());
             return false;
         }
     }
-
+    
+    // 恢复原来的locale设置
+    std::setlocale(LC_CTYPE, original_locale.c_str());
     return true;
 }
 
@@ -230,9 +245,9 @@ static std::string ResolveAndValidatePath(const std::string& inputPath)
 {
     // 1. 安全规范化路径
     std::string normalized = SafeNormalizePath(inputPath);
-    
-    // 2. 解析真实路径
     char resolved[PATH_MAX] = {0};
+
+    // 2. 解析真实路径
     if (realpath(normalized.c_str(), resolved) == nullptr) {
         // 路径不存在，尝试创建
         if (mkdir(normalized.c_str(), 0755) != 0 && errno != EEXIST) {
@@ -244,7 +259,7 @@ static std::string ResolveAndValidatePath(const std::string& inputPath)
     }
     
     std::string realPath = resolved;
-    
+
     // 3. 验证路径属性
     if (!IsDirectory(realPath)) {
         return ""; // 不是目录
@@ -316,7 +331,7 @@ void LogSinkFileSip::Init()
         std::cerr << "Warning: User-specified log path is invalid: " << env;
         // 回退到默认安全路径
         std::string defaultPath = GetHomeDir();
-        logDir_ = ResolveAndValidatePath(defaultPath);
+        logRootDir = ResolveAndValidatePath(defaultPath);
     }
 
     logDir_ = logRootDir + "/log" + "/" + boostType_;
@@ -457,6 +472,7 @@ void LogSinkFileSip::MakeLogDir()
         if (stat(childDir.c_str(), &st) < 0) {
             std::cout << "asdsip_log mkdir " << childDir << std::endl;
             if (mkdir(childDir.c_str(), mode) < 0) {
+                std::cerr << "Failed to create directory: " << childDir << ", error: " << strerror(errno) << std::endl;
                 return;
             }
         }

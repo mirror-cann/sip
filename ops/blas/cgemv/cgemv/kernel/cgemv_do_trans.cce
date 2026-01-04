@@ -7,6 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+
 #include "ascblasCgemv_utils.cceh"
 
 #define MAXALIGN_WITH(a, b) (((a) + (b)-1) / (b)) * (b)
@@ -15,13 +16,13 @@
 
 extern "C" __global__ __aicore__ void cgemv_do_trans(
     __gm__ uint8_t *__restrict__ ffts_addr, __gm__ float *__restrict__ d_A, __gm__ float *__restrict__ d_x,
-    __gm__ float *__restrict__ d_y_in, __gm__ float *__restrict__ maskBuf_device, __gm__ float *__restrict__ d_y,
+    __gm__ float *__restrict__ d_y_in, __gm__ uint32_t *__restrict__ maskBuf_device, __gm__ float *__restrict__ d_y,
     __gm__ float *__restrict__ workspace, __gm__ uint32_t *__restrict__ tiling_para_gm)
 {
-    set_ffts_base_addr((uint64_t)ffts_addr);
-    set_padding(0);
-    set_atomic_none();
-    set_nd_para(0x1);
+    SetFftsBaseAddr((uint64_t)ffts_addr);
+    SetPadding(0);
+    SetAtomicnone();
+    AscendC::SetNdParaImpl(0x1);
 
     // get tiling value
     auto tiling_buf = reinterpret_cast<__gm__ uint8_t *>(tiling_para_gm);
@@ -38,7 +39,7 @@ extern "C" __global__ __aicore__ void cgemv_do_trans(
     float beta_r = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 64));
     float beta_i = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 68));
 
-    pipe_barrier(PIPE_ALL);
+    PIPE_BARRIER(ALL);
 
     ascComplex alpha{alpha_r, alpha_i};
     ascComplex beta{beta_r, beta_i};
@@ -51,13 +52,23 @@ extern "C" __global__ __aicore__ void cgemv_do_trans(
 
 extern "C" __global__ __aicore__ void cgemv_do_trans(
     __gm__ uint8_t *__restrict__ ffts_addr, __gm__ float *__restrict__ d_A, __gm__ float *__restrict__ d_x,
-    __gm__ float *__restrict__ d_y_in, __gm__ float *__restrict__ maskBuf_device, __gm__ float *__restrict__ d_y,
+    __gm__ float *__restrict__ d_y_in, __gm__ uint32_t *__restrict__ maskBuf_device, __gm__ float *__restrict__ d_y,
     __gm__ float *__restrict__ workspace, __gm__ uint32_t *__restrict__ tiling_para_gm)
 {
-    set_atomic_none();
-    set_mask_norm();
-    set_ffts_base_addr((uint64_t)ffts_addr);
-    set_vector_mask((uint64_t)-1, (uint64_t)-1);  // 恢复正常vector运算
+    SetAtomicnone();
+    AscendC::SetMaskNorm();
+    SetFftsBaseAddr((uint64_t)ffts_addr);
+    SetVectorMask<float>((uint64_t)-1, (uint64_t)-1);  // 恢复正常vector运算
+
+    AscendC::GlobalTensor<float> d_A_tensor;
+    AscendC::GlobalTensor<float> d_x_tensor;
+    AscendC::GlobalTensor<float> d_y_tensor;
+    AscendC::GlobalTensor<uint32_t> maskBuf_device_tensor;
+ 
+    d_A_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_A));
+    d_x_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_x));
+    d_y_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_y));
+    maskBuf_device_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ uint32_t *>(maskBuf_device));
 
     // get tiling value
     auto tiling_buf = reinterpret_cast<__gm__ uint8_t *>(tiling_para_gm);
@@ -74,7 +85,7 @@ extern "C" __global__ __aicore__ void cgemv_do_trans(
     float beta_r = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 64));
     float beta_i = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 68));
 
-    pipe_barrier(PIPE_ALL);
+    PIPE_BARRIER(ALL);
 
     ascComplex alpha{alpha_r, alpha_i};
     ascComplex beta{beta_r, beta_i};
@@ -83,38 +94,39 @@ extern "C" __global__ __aicore__ void cgemv_do_trans(
 
     uint64_t UB_NOW = 0;
 
+    AsdopsBuffer<ArchType::ASCEND_V220> buf;
     // For convinient `vgather`, we arrange the output at head of ubuf.
-    auto Ybase_r = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 4kb
+    AscendC::LocalTensor<float> Ybase_r = buf.GetBuffer<BufferType::ASCEND_UB, float>(UB_NOW);  // 4kb
     UB_NOW += 4 * 1024;
-    auto Ybase_i = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 4kb
+    AscendC::LocalTensor<float> Ybase_i = buf.GetBuffer<BufferType::ASCEND_UB, float>(UB_NOW);  // 4kb
     UB_NOW += 4 * 1024;
-    auto Ytemp = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 4kb
+    AscendC::LocalTensor<float> Ytemp = buf.GetBuffer<BufferType::ASCEND_UB, float>(UB_NOW);  // 4kb
     UB_NOW += 8 * 1024;
 
-    auto Abase_r = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 32kb = 32 * 256 * 4 Bytes
+    AscendC::LocalTensor<float> Abase_r = buf.GetBuffer<BufferType::ASCEND_UB, float>(UB_NOW);  // 32kb = 32 * 256 * 4 Bytes
     UB_NOW += 32 * 1024;
-    auto Abase_i = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 32kb
+    AscendC::LocalTensor<float> Abase_i = buf.GetBuffer<BufferType::ASCEND_UB, float>(UB_NOW);  // 32kb
     UB_NOW += 32 * 1024;
 
-    auto Xbase_r = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 1kb
+    AscendC::LocalTensor<float> Xbase_r = buf.GetBuffer<BufferType::ASCEND_UB, float>(UB_NOW);  // 1kb
     UB_NOW += 4 * 1024;
-    auto Xbase_i = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 1kb
+    AscendC::LocalTensor<float> Xbase_i = buf.GetBuffer<BufferType::ASCEND_UB, float>(UB_NOW);  // 1kb
     UB_NOW += 4 * 1024;
-    auto Xtemp = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 2kb
+    AscendC::LocalTensor<float> Xtemp = buf.GetBuffer<BufferType::ASCEND_UB, float>(UB_NOW);  // 2kb
     UB_NOW += 8 * 1024;
 
-    auto negXbase_i = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 1kb
+    AscendC::LocalTensor<float> negXbase_i = buf.GetBuffer<BufferType::ASCEND_UB, float>(UB_NOW);  // 1kb
     UB_NOW += 4 * 1024;
 
-    auto maskBuf = reinterpret_cast<__ubuf__ uint32_t *>((uintptr_t)UB_NOW);  // 4kb
+    AscendC::LocalTensor<uint32_t> maskBuf = buf.GetBuffer<BufferType::ASCEND_UB, uint32_t>(UB_NOW);  // 4kb
     UB_NOW += 8 * 1024;
 
-    auto tmpbuf_r = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 8kb
+    AscendC::LocalTensor<float> tmpbuf_r = buf.GetBuffer<BufferType::ASCEND_UB, float>(UB_NOW);  // 8kb
     UB_NOW += 8 * 1024;
-    auto tmpbuf_i = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 8kb
+    AscendC::LocalTensor<float> tmpbuf_i = buf.GetBuffer<BufferType::ASCEND_UB, float>(UB_NOW);  // 8kb
     UB_NOW += 8 * 1024;
 
-    auto tmpbuf = reinterpret_cast<__ubuf__ float *>((uintptr_t)UB_NOW);  // 64kb total 184kb
+    AscendC::LocalTensor<float> tmpbuf = buf.GetBuffer<BufferType::ASCEND_UB, float>(UB_NOW);  // 64kb total 184kb
     UB_NOW += 64 * 1024;
 
     /* 算子需要使用的变量 */
@@ -135,81 +147,83 @@ extern "C" __global__ __aicore__ void cgemv_do_trans(
     int64_t numSlide, idxSlide;
     int64_t slide_offset = 0;
 
-    auto y_gmptr = d_y;
-    auto x_gmptr = d_x;
-    auto A_gmptr = d_A;
+    AscendC::GlobalTensor<float> y_gmptr = d_y_tensor;
+    AscendC::GlobalTensor<float> x_gmptr = d_x_tensor;
+    AscendC::GlobalTensor<float> A_gmptr = d_A_tensor;
 
-    set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
+    SET_FLAG(MTE3, MTE2, EVENT_ID0);
     for (idxVert = 0; idxVert < numVert; idxVert++) {
-        // block的序号 * 每个block的AIV个数 + 当前AIV在本block内的编号（每个block有2个AIV）
-        int64_t aiv_id = get_block_idx() * get_subblockdim() + get_subblockid();
+        // block的序号
+        int64_t aiv_id = AscendC::GetBlockIdx();
         // 计算一共启用了多少个AIV单元，用于将每个loop平摊到每个AIV中
-        int64_t aiv_num = get_block_num() * get_subblockdim();
+        int64_t aiv_num = AscendC::GetBlockNum();
 
         if (idxVert % aiv_num != aiv_id)
             continue;  // 不是当前AIV负责的loop，略过
 
         // Read y
         /* considering the last task in vertical. when this task is the last task, we use substraction to get the real
-      * number of data we need to handle. NOTICE: the data is ascComplex, and we are float-oriented programming.
-      *
-      * why we padding szHorz? because for vector unit, it's recommended to applied to memories that 256Bytes
-      * aligned. For this case, we'd better make our 'A' be aligned into 256B when it would been calculated.
-      * Therefore, different from else MAXALIGN_WITH statements, we do not `*2` here, because we will use szHorz as
-      * float rather than ascComplex when vector manipulations.
-      * */
+        * number of data we need to handle. NOTICE: the data is ascComplex, and we are float-oriented programming.
+        *
+        * why we padding szHorz? because for vector unit, it's recommended to applied to memories that 256Bytes
+        * aligned. For this case, we'd better make our 'A' be aligned into 256B when it would been calculated.
+        * Therefore, different from else MAXALIGN_WITH statements, we do not `*2` here, because we will use szHorz as
+        * float rather than ascComplex when vector manipulations.
+        * */
         szVert_real = (idxVert == numVert - 1) ? N - idxVert * szVert : szVert;  // unit: ascComplex
 
-        y_gmptr = d_y + idxVert * szVert * 2 * incy;
+        y_gmptr = d_y_tensor[idxVert * szVert * 2 * incy];
 
         // since here we read cvector as fvector, for the lenBurst we fill the value as
         // `MAXALIGN_WITH(szVert_real*2,BLOCK_SIZE)/BLOCK_SIZE`.
-        wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
+        WAIT_FLAG(MTE3, MTE2, EVENT_ID0);
         ascblas_cvec_gm2ubuf(Ybase_r, Ybase_i, Ytemp, y_gmptr, szVert_real, incy);
 
-        pipe_barrier(PIPE_ALL);
+        PIPE_BARRIER(ALL);
         if (incy == 1) {
-            pipe_barrier(PIPE_V);
+            PIPE_BARRIER(V);
         } else {
-            set_flag(PIPE_S, PIPE_V, EVENT_ID0);
-            wait_flag(PIPE_S, PIPE_V, EVENT_ID0);
+            SET_FLAG(S, V, EVENT_ID0);
+            WAIT_FLAG(S, V, EVENT_ID0);
         }
         mulSComplex(Ybase_r, Ybase_i, tmpbuf_r, tmpbuf_i, MAXALIGN_WITH(szVert_real, BLOCK_SIZE) / BLOCK_SIZE, beta);
 
-        pipe_barrier(PIPE_V);
+        PIPE_BARRIER(V);
 
-        set_flag(PIPE_V, PIPE_MTE2, EVENT_ID0);
+        SET_FLAG(V, MTE2, EVENT_ID0);
         for (idxHorz = 0; idxHorz < numHorz; idxHorz++) {
             szHorz_real = (idxHorz == numHorz - 1) ? M - idxHorz * szHorz : szHorz;  // unit: ascComplex
             szHorz_real_pad = MAXALIGN_WITH(szHorz_real, VEC_MIN_SIZE);              // unit: ascComplex
-            x_gmptr = d_x + idxHorz * szHorz * 2 * incx;
-            A_gmptr = d_A + idxHorz * szHorz * 2 + idxVert * szVert * lda * 2;
+            x_gmptr = d_x_tensor[idxHorz * szHorz * 2 * incx];
+            A_gmptr = d_A_tensor[idxHorz * szHorz * 2 + idxVert * szVert * lda * 2];
 
-            wait_flag(PIPE_V, PIPE_MTE2, EVENT_ID0);
+            WAIT_FLAG(V, MTE2, EVENT_ID0);
             ascblas_matrix_gm2ubuf(tmpbuf, A_gmptr, szHorz_real * 2, szVert_real, lda * 2, szHorz_real_pad * 2);
 
-            set_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
-            wait_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
+            SET_FLAG(MTE2, V, EVENT_ID0);
+            WAIT_FLAG(MTE2, V, EVENT_ID0);
 
             split_CVector(Abase_r, Abase_i, tmpbuf, szHorz_real_pad * szVert_real);
 
             ascblas_cvec_gm2ubuf(Xbase_r, Xbase_i, Xtemp, x_gmptr, szHorz_real, incx);
 
             if (incx == 1)
-                pipe_barrier(PIPE_V);
+                PIPE_BARRIER(V);
             else {
-                set_flag(PIPE_S, PIPE_V, EVENT_ID0);
-                wait_flag(PIPE_S, PIPE_V, EVENT_ID0);
+                SET_FLAG(S, V, EVENT_ID0);
+                WAIT_FLAG(S, V, EVENT_ID0);
             }
 
-            mulSComplex(Xbase_r, Xbase_i, tmpbuf_r, tmpbuf_i, MAXALIGN_WITH(szHorz_real, BLOCK_SIZE) / BLOCK_SIZE,
-                        alpha);
-            pipe_barrier(PIPE_V);
+            mulSComplex(Xbase_r, Xbase_i, tmpbuf_r, tmpbuf_i, MAXALIGN_WITH(szHorz_real, BLOCK_SIZE) / BLOCK_SIZE, alpha);
+            PIPE_BARRIER(V);
 
-            vmuls(negXbase_i, Xbase_i, -1, MAXALIGN_WITH(szHorz_real, VEC_MIN_SIZE) / VEC_MIN_SIZE, 1, 1, 8, 8);
-            pipe_barrier(PIPE_V);
+            muls_v<ArchType::ASCEND_V220, float>(
+                negXbase_i,
+                Xbase_i,
+                -1, MAXALIGN_WITH(szHorz_real, VEC_MIN_SIZE) / VEC_MIN_SIZE, 1, 1, 8, 8);
+            PIPE_BARRIER(V);
 
-            set_flag(PIPE_V, PIPE_MTE2, EVENT_ID0);
+            SET_FLAG(V, MTE2, EVENT_ID0);
             // Do matrix multiply, A @ (alpha * x), we do this with multiple `Slide', on each of which, we'll calculate
             // `VEC_MIN_SIZE' elem.
             //
@@ -247,14 +261,16 @@ extern "C" __global__ __aicore__ void cgemv_do_trans(
                     int64_t szSlideRemain = szHorz_real - idxSlide * VEC_MIN_SIZE;
                     uint64_t mask = -1;
                     mask >>= VEC_MIN_SIZE - szSlideRemain;
-                    set_mask_norm();
-                    set_vector_mask((uint64_t)0, mask);
+                    AscendC::SetMaskNorm();
+                    SetVectorMask<float>((uint64_t)0, mask);
                 }
 
                 if (idxSlide == 0)  // The first slide we simply overwrite
                 {
-                    vmul(  // rr
-                        tmpbuf_r, Xbase_r, Abase_r,
+                    mul_v<ArchType::ASCEND_V220, float>(  // rr
+                        tmpbuf_r,
+                        Xbase_r, 
+                        Abase_r,
                         szVert_real,                    // repeat
                         1,                              // dstBlockStride
                         1,                              // src0BlockStride
@@ -263,8 +279,10 @@ extern "C" __global__ __aicore__ void cgemv_do_trans(
                         0,                              // src0RepeatStride,
                         szHorz_real_pad / BLOCK_SIZE);  // src1RepeatStride
 
-                    vmul(  // ri
-                        tmpbuf_i, Xbase_r, Abase_i,
+                    mul_v<ArchType::ASCEND_V220, float>(  // ri
+                        tmpbuf_i,
+                        Xbase_r,
+                        Abase_i,
                         szVert_real,                    // repeat
                         1,                              // dstBlockStride
                         1,                              // src0BlockStride
@@ -272,37 +290,33 @@ extern "C" __global__ __aicore__ void cgemv_do_trans(
                         8,                              // dstRepeatStride
                         0,                              // src0RepeatStride,
                         szHorz_real_pad / BLOCK_SIZE);  // src1RepeatStride
-                } else {
+                } else {                    
                     vmla(  // rr
-                        tmpbuf_r, Xbase_r + slide_offset, Abase_r + slide_offset,
-                        szVert_real,                    // repeat
-                        1,                              // dstBlockStride
-                        1,                              // src0BlockStride
-                        1,                              // src1BlockStride
-                        8,                              // dstRepeatStride
-                        0,                              // src0RepeatStride,
-                        szHorz_real_pad / BLOCK_SIZE);  // src1RepeatStride
+                    (__ubuf__ float*)Xbase_r.GetPhyAddr(),
+                    (__ubuf__ float*)Xbase_r[slide_offset].GetPhyAddr(),
+                    (__ubuf__ float*)Abase_r[slide_offset].GetPhyAddr(), szVert_real, 1, 1, 1, 8, 0,
+                    szHorz_real_pad / BLOCK_SIZE);
 
                     vmla(  // ri
-                        tmpbuf_i, Xbase_r + slide_offset, Abase_i + slide_offset,
-                        szVert_real,                    // repeat
-                        1,                              // dstBlockStride
-                        1,                              // src0BlockStride
-                        1,                              // src1BlockStride
-                        8,                              // dstRepeatStride
-                        0,                              // src0RepeatStride,
-                        szHorz_real_pad / BLOCK_SIZE);  // src1RepeatStride
+                    (__ubuf__ float*)tmpbuf_i.GetPhyAddr(),
+                    (__ubuf__ float*)Xbase_r[slide_offset].GetPhyAddr(),
+                    (__ubuf__ float*)Abase_i[slide_offset].GetPhyAddr(), szVert_real, 1, 1, 1, 8, 0,
+                    szHorz_real_pad / BLOCK_SIZE);
                 }
-                pipe_barrier(PIPE_V);
+                PIPE_BARRIER(V);
 
                 vmla(  // ii
-                    tmpbuf_r, negXbase_i + slide_offset, Abase_i + slide_offset, szVert_real, 1, 1, 1, 8, 0,
+                    (__ubuf__ float*)tmpbuf_r.GetPhyAddr(),
+                    (__ubuf__ float*)negXbase_i[slide_offset].GetPhyAddr(),
+                    (__ubuf__ float*)Abase_i[slide_offset].GetPhyAddr(), szVert_real, 1, 1, 1, 8, 0,
                     szHorz_real_pad / BLOCK_SIZE);
 
                 vmla(  // ir
-                    tmpbuf_i, Xbase_i + slide_offset, Abase_r + slide_offset, szVert_real, 1, 1, 1, 8, 0,
+                    (__ubuf__ float*)tmpbuf_i.GetPhyAddr(),
+                    (__ubuf__ float*)Xbase_i[slide_offset].GetPhyAddr(),
+                    (__ubuf__ float*)Abase_r[slide_offset].GetPhyAddr(), szVert_real, 1, 1, 1, 8, 0,
                     szHorz_real_pad / BLOCK_SIZE);
-                pipe_barrier(PIPE_V);
+                PIPE_BARRIER(V);
             }
 
             //
@@ -322,64 +336,71 @@ extern "C" __global__ __aicore__ void cgemv_do_trans(
             // if numSlide == 0, this core only have this slide as its data, in that we doesn't need to recover vector
             // mask -- because we only need `vcadd` such number of data!
             if (numSlide != 1) {
-                set_mask_norm();
-                set_vector_mask((uint64_t)0, (uint64_t)-1);
+                AscendC::SetMaskNorm();
+                SetVectorMask<float>((uint64_t)0, (uint64_t)-1);
             }
 
-            vcadd(tmpbuf_r, tmpbuf_r, szVert_real,
-                  1,  // dstRepeatStride, unit: Float
-                  1,  // srcBlockStride
-                  8,  // srcRepeatStride
-                  false);
-            vcadd(tmpbuf_i, tmpbuf_i, szVert_real,
-                  1,  // dstRepeatStride, unit: Float
-                  1,  // srcBlockStride
-                  8,  // srcRepeatStride
-                  false);
-            pipe_barrier(PIPE_V);
+            cadd_v<ArchType::ASCEND_V220, float>(
+                tmpbuf_r,
+                tmpbuf_r,
+                szVert_real,
+                1,  // dstRepeatStride, unit: Float
+                1,  // srcBlockStride
+                8);  // srcRepeatStride
+            cadd_v<ArchType::ASCEND_V220, float>(
+                tmpbuf_i,
+                tmpbuf_i,
+                szVert_real,
+                1,  // dstRepeatStride, unit: Float
+                1,  // srcBlockStride
+                8);  // srcRepeatStride
+            PIPE_BARRIER(V);
 
             // Force recover the mask.
-            set_mask_norm();
-            set_vector_mask((uint64_t)0, (uint64_t)-1);
+            AscendC::SetMaskNorm();
+            SetVectorMask<float>((uint64_t)0, (uint64_t)-1);
 
             // Because we only need to add szVert_real elements, we set mask here respectively.
-            set_mask_count();
-            set_vector_mask((uint64_t)0, (uint64_t)szVert_real);
+            AscendC::SetMaskCount();
+            SetVectorMask<float>((uint64_t)0, (uint64_t)szVert_real);
 
-            vadd(Ybase_r,   // dst
-                 Ybase_r,   // src0
-                 tmpbuf_r,  // src1
-                 1,         // repeats. 1 because szVert_real (which <= 32) elems, can be done in one repeat
-                 1,         // dstBlockStride
-                 1,         // src0BlockStride
-                 1,         // src1BlockStride
-                 8,         // dstRepeatStride
-                 8,         // src0RepeatStride
-                 8);        // src1RepeatStride
+            add_v<ArchType::ASCEND_V220, float>(
+                Ybase_r,   // dst
+                Ybase_r,   // src0
+                tmpbuf_r,  // src1
+                1,         // repeats. 1 because szVert_real (which <= 32) elems, can be done in one repeat
+                1,         // dstBlockStride
+                1,         // src0BlockStride
+                1,         // src1BlockStride
+                8,         // dstRepeatStride
+                8,         // src0RepeatStride
+                8);        // src1RepeatStride
 
-            vadd(Ybase_i, Ybase_i, tmpbuf_i, 1, 1, 1, 1, 8, 8, 8);
+            add_v<ArchType::ASCEND_V220, float>(Ybase_i, Ybase_i, tmpbuf_i, 1, 1, 1, 1, 8, 8, 8);
 
-            set_mask_norm();
-            set_vector_mask((uint64_t)0, (uint64_t)-1);
+            AscendC::SetMaskNorm();
+            SetVectorMask<float>((uint64_t)0, (uint64_t)-1);
         }
-        wait_flag(PIPE_V, PIPE_MTE2, EVENT_ID0);
+        WAIT_FLAG(V, MTE2, EVENT_ID0);
 
-        copy_gm_to_ubuf_align_b32(maskBuf, maskBuf_device, 0, 1, MAXALIGN_WITH(szVert_real * 2 * sizeof(float), 256), 0,
-                                  0, 0, 0);
+        gm_to_ub_align<ArchType::ASCEND_V220, uint32_t>(
+            maskBuf,
+            maskBuf_device_tensor,
+            0, 1, MAXALIGN_WITH(szVert_real * 2 * sizeof(uint32_t), 256), 0, 0, 0, 0);
         if (incy == 1) {
-            set_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
-            wait_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
-            pipe_barrier(PIPE_V);
+            SET_FLAG(MTE2, V, EVENT_ID0);
+            WAIT_FLAG(MTE2, V, EVENT_ID0);
+            PIPE_BARRIER(V);
         } else {
-            set_flag(PIPE_MTE2, PIPE_S, EVENT_ID0);
-            wait_flag(PIPE_MTE2, PIPE_S, EVENT_ID0);
-            set_flag(PIPE_V, PIPE_S, EVENT_ID0);
-            wait_flag(PIPE_V, PIPE_S, EVENT_ID0);
+            SET_FLAG(MTE2, S, EVENT_ID0);
+            WAIT_FLAG(MTE2, S, EVENT_ID0);
+            SET_FLAG(V, S, EVENT_ID0);
+            WAIT_FLAG(V, S, EVENT_ID0);
         }
 
         ascblas_cvec_ubuf2gm(Ybase_r, Ybase_i, maskBuf, Ytemp, y_gmptr, szVert_real, incy, false);
-        set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
+        SET_FLAG(MTE3, MTE2, EVENT_ID0);
     }
-    wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
+    WAIT_FLAG(MTE3, MTE2, EVENT_ID0);
 }
 #endif  // __DAV_C220_VEC__

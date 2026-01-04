@@ -1,8 +1,14 @@
 #include "kernel_operator.h"
+#include "../../../../include/common/common.h"
+#include "../../../../include/common/iterator.h"
+#include "../../../../include/common/simd.h"
+#include "../../../../include/common/utils.h"
 #include <type_traits>
 
-__aicore__ __inline__ __attribute__((always_inline)) void copy_vec_gm2ub(__ubuf__ float *dst, __gm__ float *src,
-                                                                         uint32_t len)
+__aicore__ __inline__ __attribute__((always_inline)) void copy_vec_gm2ub(
+    AscendC::LocalTensor<float> dst,
+    AscendC::GlobalTensor<float> src,
+    uint32_t len)
 {
     uint16_t nBurst = 1;
     uint32_t lenBurst = len * sizeof(float);
@@ -10,13 +16,16 @@ __aicore__ __inline__ __attribute__((always_inline)) void copy_vec_gm2ub(__ubuf_
     uint8_t rightPaddingNum = 0;
     uint32_t srcGap = 0;
     uint32_t dstGap = 0;
-    copy_gm_to_ubuf_align_b32(dst, src,
-                              0,  // sid
-                              nBurst, lenBurst, leftPaddingNum, rightPaddingNum, srcGap, dstGap);
+    gm_to_ub_align<ArchType::ASCEND_V220, float>(
+        dst, src,
+        0,  // sid
+        nBurst, lenBurst, leftPaddingNum, rightPaddingNum, srcGap, dstGap);
 }
 
-__aicore__ __inline__ __attribute__((always_inline)) void copy_vec_ub2gm(__gm__ float *dst, __ubuf__ float *src,
-                                                                         uint32_t len)
+__aicore__ __inline__ __attribute__((always_inline)) void copy_vec_ub2gm(
+    AscendC::GlobalTensor<float> dst,
+    AscendC::LocalTensor<float> src,
+    uint32_t len)
 {
     uint16_t nBurst = 1;
     uint32_t lenBurst = len * sizeof(float);
@@ -24,47 +33,54 @@ __aicore__ __inline__ __attribute__((always_inline)) void copy_vec_ub2gm(__gm__ 
     uint8_t rightPaddingNum = 0;
     uint32_t srcGap = 0;
     uint32_t dstGap = 0;
-    copy_ubuf_to_gm_align_b32(dst, src,
-                              0,  // sid
-                              nBurst, lenBurst, leftPaddingNum, rightPaddingNum, srcGap, dstGap);
+    ub_to_gm_align<ArchType::ASCEND_V220, float>(
+        dst, src,
+        0,  // sid
+        nBurst, lenBurst, leftPaddingNum, rightPaddingNum, srcGap, dstGap);
 }
 
 __aicore__ __inline__ __attribute__((always_inline)) void vec_single_core_compute_lower(
-    __ubuf__ float *ub_x, __ubuf__ float *ub_y, __ubuf__ float *ub_out, __gm__ float *gm_A, uint32_t ub_offset,
-    uint32_t gm_offset, uint32_t len, uint32_t event_id)
+    AscendC::LocalTensor<float> ub_x,
+    AscendC::LocalTensor<float> ub_y,
+    AscendC::LocalTensor<float> ub_out,
+    AscendC::GlobalTensor<float> gm_A,
+    uint32_t ub_offset, uint32_t gm_offset, uint32_t len, uint32_t event_id)
 {
     uint32_t repeat_num = (len + 63) / 64;
-    float temp_x = (*(__ubuf__ float *)((__ubuf__ float *)ub_x + ub_offset));
+    float temp_x = ub_x.GetValue(ub_offset);
 
-    pipe_barrier(PIPE_ALL);
-
-    vmuls(ub_out, ub_y, temp_x,
-          repeat_num,  // repeat
-          1,           // dstBlockStride
-          1,           // srcBlockStride
-          8,           // dstRepeatStride
-          8            // srcRepeatStride
+    muls_v<ArchType::ASCEND_V220, float>(
+        ub_out, ub_y, temp_x,
+        repeat_num,  // repeat
+        1,           // dstBlockStride
+        1,           // srcBlockStride
+        8,           // dstRepeatStride
+        8            // srcRepeatStride
     );
 
-    set_flag(PIPE_V, PIPE_MTE3, event_id);
-    wait_flag(PIPE_V, PIPE_MTE3, event_id);
+    SET_FLAG(V, MTE3, event_id);
+    WAIT_FLAG(V, MTE3, event_id);
 
-    copy_vec_ub2gm(gm_A + gm_offset, ub_out, len);
+    copy_vec_ub2gm(gm_A[gm_offset], ub_out, len);
 }
 
-__aicore__ __inline__ __attribute__((always_inline)) void ssyr_lower_aiv(uint32_t vec_idx, __gm__ float *x,
-                                                                         __gm__ float *y, __gm__ float *A, float alpha,
-                                                                         uint32_t n, uint32_t core_num)
+__aicore__ __inline__ __attribute__((always_inline)) void ssyr_lower_aiv(
+    uint32_t vec_idx,
+    AscendC::GlobalTensor<float> x,
+    AscendC::GlobalTensor<float> y,
+    AscendC::GlobalTensor<float> A,
+    float alpha, uint32_t n, uint32_t core_num)
 {
     if (core_num == 0) {
         core_num = 1;
     }
 
     // ub 192kb
-    auto ub_x = reinterpret_cast<__ubuf__ float *>((uintptr_t)0);                    // 47.5kb
-    auto ub_y = reinterpret_cast<__ubuf__ float *>((uintptr_t)47.5 * 1024);          // 47.5kb
-    auto ub_out_ping = reinterpret_cast<__ubuf__ float *>((uintptr_t)95.0 * 1024);   // 47.5kb
-    auto ub_out_pong = reinterpret_cast<__ubuf__ float *>((uintptr_t)142.5 * 1024);  // 47.5kb
+    AsdopsBuffer<ArchType::ASCEND_V220> buf;
+    AscendC::LocalTensor<float> ub_x = buf.GetBuffer<BufferType::ASCEND_UB, float>(0);
+    AscendC::LocalTensor<float> ub_y = buf.GetBuffer<BufferType::ASCEND_UB, float>(47.5 * 1024);          // 47.5kb
+    AscendC::LocalTensor<float> ub_out_ping = buf.GetBuffer<BufferType::ASCEND_UB, float>(95 * 1024);     // 47.5kb
+    AscendC::LocalTensor<float> ub_out_pong = buf.GetBuffer<BufferType::ASCEND_UB, float>(142.5 * 1024);  // 47.5kb
 
     uint32_t max_data_count = 12160;  // 47.5 * 1024 / 4
 
@@ -120,34 +136,35 @@ __aicore__ __inline__ __attribute__((always_inline)) void ssyr_lower_aiv(uint32_
                 uint32_t x_copy_num = vec_idx < remain_row_num ? core_compute_row_num + 1 : core_compute_row_num;
 
                 // 按当前core本轮计算涉及的行数搬入x
-                copy_vec_gm2ub(ub_x, x + x_offset + start_row_idx, x_copy_num);
+                copy_vec_gm2ub(ub_x, x[x_offset + start_row_idx], x_copy_num);
 
-                set_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
-                wait_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
-                set_flag(PIPE_MTE2, PIPE_V, EVENT_ID2);
-                wait_flag(PIPE_MTE2, PIPE_V, EVENT_ID2);
+                SET_FLAG(MTE2, V, EVENT_ID0);
+                WAIT_FLAG(MTE2, V, EVENT_ID0);
+                SET_FLAG(MTE2, V, EVENT_ID2);
+                WAIT_FLAG(MTE2, V, EVENT_ID2);
 
                 // 预先乘系数alpha
                 uint32_t repeat_num = (x_copy_num + 63) / 64;
 
-                vmuls(ub_x, ub_x, alpha,
-                      repeat_num,  // repeat
-                      1,           // dstBlockStride
-                      1,           // srcBlockStride
-                      8,           // dstRepeatStride
-                      8            // srcRepeatStride
+                muls_v<ArchType::ASCEND_V220, float>(
+                    ub_x, ub_x, alpha,
+                    repeat_num,  // repeat
+                    1,           // dstBlockStride
+                    1,           // srcBlockStride
+                    8,           // dstRepeatStride
+                    8            // srcRepeatStride
                 );
-                pipe_barrier(PIPE_V);
+                PIPE_BARRIER(V);
 
                 // y.T按max_data_count作列偏移，非对角线搬运数为max_data_count,对角线搬运数为尾块
                 uint32_t y_offset = col_block_idx * max_data_count;
                 uint32_t y_copy_num = (row_block_idx == col_block_idx) ? start_row_idx + x_copy_num : max_data_count;
-                copy_vec_gm2ub(ub_y, y + y_offset, y_copy_num);
+                copy_vec_gm2ub(ub_y, y[y_offset], y_copy_num);
 
-                pipe_barrier(PIPE_ALL);
+                PIPE_BARRIER(ALL);
 
-                set_flag(PIPE_MTE3, PIPE_V, EVENT_ID0);
-                set_flag(PIPE_MTE3, PIPE_V, EVENT_ID2);
+                SET_FLAG(MTE3, V, EVENT_ID0);
+                SET_FLAG(MTE3, V, EVENT_ID2);
                 // compute
                 if (row_block_idx == col_block_idx) {
                     // triangular
@@ -155,12 +172,12 @@ __aicore__ __inline__ __attribute__((always_inline)) void ssyr_lower_aiv(uint32_
                         auto ub_out = ping_flag ? ub_out_ping : ub_out_pong;
                         auto event_id = ping_flag ? EVENT_ID0 : EVENT_ID2;
 
-                        wait_flag(PIPE_MTE3, PIPE_V, event_id);
+                        WAIT_FLAG(MTE3, V, event_id);
                         // 按行计算 x * y.T
                         vec_single_core_compute_lower(ub_x, ub_y, ub_out, A, i, outOffset + (start_row_idx + i) * n,
                                                       start_row_idx + i + 1, event_id);
 
-                        set_flag(PIPE_MTE3, PIPE_V, event_id);
+                        SET_FLAG(MTE3, V, event_id);
                         ping_flag = 1 - ping_flag;
                     }
                 } else {
@@ -169,25 +186,29 @@ __aicore__ __inline__ __attribute__((always_inline)) void ssyr_lower_aiv(uint32_
                         auto ub_out = ping_flag ? ub_out_ping : ub_out_pong;
                         auto event_id = ping_flag ? EVENT_ID0 : EVENT_ID2;
 
-                        wait_flag(PIPE_MTE3, PIPE_V, event_id);
+                        WAIT_FLAG(MTE3, V, event_id);
 
                         vec_single_core_compute_lower(ub_x, ub_y, ub_out, A, i, outOffset + (start_row_idx + i) * n,
                                                       y_copy_num, event_id);
 
-                        set_flag(PIPE_MTE3, PIPE_V, event_id);
+                        SET_FLAG(MTE3, V, event_id);
                         ping_flag = 1 - ping_flag;
                     }
                 }
-                wait_flag(PIPE_MTE3, PIPE_V, EVENT_ID0);
-                wait_flag(PIPE_MTE3, PIPE_V, EVENT_ID2);
+                WAIT_FLAG(MTE3, V, EVENT_ID0);
+                WAIT_FLAG(MTE3, V, EVENT_ID2);
             }
         }
     }
-    pipe_barrier(PIPE_ALL);
+    PIPE_BARRIER(ALL);
 }
 
 __aicore__ __inline__ __attribute__((always_inline)) void vec_single_core_compute_upper(
-    __ubuf__ float *ub_x, __ubuf__ float *ub_y, __ubuf__ float *ub_out, __ubuf__ float *ub_mask, __gm__ float *gm_A,
+   AscendC::LocalTensor<float> ub_x,
+   AscendC::LocalTensor<float> ub_y,
+   AscendC::LocalTensor<float> ub_out,
+   AscendC::LocalTensor<float> ub_mask,
+   AscendC::GlobalTensor<float> gm_A,
     uint32_t total_n, uint32_t ub_offset, uint32_t gm_offset, uint32_t len, uint32_t event_id)
 {
     /*
@@ -201,22 +222,24 @@ __aicore__ __inline__ __attribute__((always_inline)) void vec_single_core_comput
     uint32_t ignore_num = (total_n - len) % 8;              // num of xs in ()
     uint32_t repeat_num = (aligned_len + 63) / 64;
 
-    float temp_x = (*(__ubuf__ float *)((__ubuf__ float *)ub_x + ub_offset));
+    float temp_x = ub_x.GetValue(ub_offset);
 
-    pipe_barrier(PIPE_ALL);
+    PIPE_BARRIER(ALL);
 
-    vmuls(ub_out, ub_y + offset, temp_x,
-          repeat_num,  // repeat
-          1,           // dstBlockStride
-          1,           // srcBlockStride
-          8,           // dstRepeatStride
-          8            // srcRepeatStride
+    muls_v<ArchType::ASCEND_V220, float>(
+        ub_out, ub_y[offset], temp_x,
+        repeat_num,  // repeat
+        1,           // dstBlockStride
+        1,           // srcBlockStride
+        8,           // dstRepeatStride
+        8            // srcRepeatStride
     );
 
     // compensation
     if (ignore_num > 0) {
-        pipe_barrier(PIPE_V);
-        vmul(ub_out, ub_out, ub_mask + 64 * ignore_num,
+        PIPE_BARRIER(V);
+        mul_v<ArchType::ASCEND_V220, float>(
+            ub_out, ub_out, ub_mask[64 * ignore_num],
              1,  // repeat
              1,  // dstBlkStride
              1,  // src0BlkStride
@@ -226,41 +249,45 @@ __aicore__ __inline__ __attribute__((always_inline)) void vec_single_core_comput
              8   // src1RepStride
         );
     }
-    set_flag(PIPE_V, PIPE_MTE3, event_id);
-    wait_flag(PIPE_V, PIPE_MTE3, event_id);
+    SET_FLAG(V, MTE3, event_id);
+    WAIT_FLAG(V, MTE3, event_id);
 
-    copy_vec_ub2gm(gm_A + gm_offset + offset, ub_out, len + ignore_num);
+    copy_vec_ub2gm(gm_A[gm_offset + offset], ub_out, len + ignore_num);
 }
 
-__aicore__ __inline__ __attribute__((always_inline)) void ssyr_upper_aiv(uint32_t vec_idx, __gm__ float *x,
-                                                                         __gm__ float *y, __gm__ float *A, float alpha,
-                                                                         uint32_t n, uint32_t core_num)
+__aicore__ __inline__ __attribute__((always_inline)) void ssyr_upper_aiv(
+    uint32_t vec_idx,
+    AscendC::GlobalTensor<float> x,
+    AscendC::GlobalTensor<float> y,
+    AscendC::GlobalTensor<float> A,
+    float alpha, uint32_t n, uint32_t core_num)
 {
     if (core_num == 0) {
         core_num = 1;
     }
 
     // ub 192kb
-    auto ub_x = reinterpret_cast<__ubuf__ float *>((uintptr_t)0);                    // 47.5kb
-    auto ub_y = reinterpret_cast<__ubuf__ float *>((uintptr_t)47.5 * 1024);          // 47.5kb
-    auto ub_out_ping = reinterpret_cast<__ubuf__ float *>((uintptr_t)95.0 * 1024);   // 47.5kb
-    auto ub_out_pong = reinterpret_cast<__ubuf__ float *>((uintptr_t)142.5 * 1024);  // 47.5kb
+    AsdopsBuffer<ArchType::ASCEND_V220> buf;
+    AscendC::LocalTensor<float> ub_x = buf.GetBuffer<BufferType::ASCEND_UB, float>(0);
+    AscendC::LocalTensor<float> ub_y = buf.GetBuffer<BufferType::ASCEND_UB, float>(47.5 * 1024);          // 47.5kb
+    AscendC::LocalTensor<float> ub_out_ping = buf.GetBuffer<BufferType::ASCEND_UB, float>(95 * 1024);     // 47.5kb
+    AscendC::LocalTensor<float> ub_out_pong = buf.GetBuffer<BufferType::ASCEND_UB, float>(142.5 * 1024);  // 47.5kb
 
     // only for upper compute
-    auto ub_mask = reinterpret_cast<__ubuf__ float *>((uintptr_t)(190 * 1024));  // 2 kb
+    AscendC::LocalTensor<float> ub_mask = buf.GetBuffer<BufferType::ASCEND_UB, float>(190 * 1024);       // 47.5kb
 
     uint32_t max_data_count = 12160;  // 47.5 * 1024 / 4
 
     // generate mask
-    vector_dup(ub_mask, (float)1.0, 8, 1, 1, 8, 0);
-    pipe_barrier(PIPE_ALL);
+    AscendC::Duplicate<float, false>(ub_mask, (float)1.0, 64, 8, 1, 8);
+    PIPE_BARRIER(ALL);
 
     for (uint32_t i = 0; i < 8; i++) {
         for (uint32_t j = 0; j < i; j++) {
-            *(ub_mask + i * 64 + j) = static_cast<float>(0);
+            ub_mask.SetValue(i * 64 + j, static_cast<float>(0));
         }
     }
-    pipe_barrier(PIPE_ALL);
+    PIPE_BARRIER(ALL);
 
     uint32_t row_block_num;
     uint32_t row_remain_num;
@@ -311,34 +338,35 @@ __aicore__ __inline__ __attribute__((always_inline)) void ssyr_upper_aiv(uint32_
                         (core_compute_row_num + 1) * remain_row_num + (vec_idx - remain_row_num) * core_compute_row_num;
 
                 uint32_t x_copy_num = vec_idx < remain_row_num ? core_compute_row_num + 1 : core_compute_row_num;
-                copy_vec_gm2ub(ub_x, x + x_offset + start_row_idx, x_copy_num);
+                copy_vec_gm2ub(ub_x, x[x_offset + start_row_idx], x_copy_num);
 
-                set_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
-                wait_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
-                set_flag(PIPE_MTE2, PIPE_V, EVENT_ID2);
-                wait_flag(PIPE_MTE2, PIPE_V, EVENT_ID2);
+                SET_FLAG(MTE2, V, EVENT_ID0);
+                WAIT_FLAG(MTE2, V, EVENT_ID0);
+                SET_FLAG(MTE2, V, EVENT_ID2);
+                WAIT_FLAG(MTE2, V, EVENT_ID2);
 
                 uint32_t repeat_num = (x_copy_num + 63) / 64;
 
-                vmuls(ub_x, ub_x, alpha,
-                      repeat_num,  // repeat
-                      1,           // dstBlockStride
-                      1,           // srcBlockStride
-                      8,           // dstRepeatStride
-                      8            // srcRepeatStride
+                muls_v<ArchType::ASCEND_V220, float>(
+                    ub_x, ub_x, alpha,
+                    repeat_num,  // repeat
+                    1,           // dstBlockStride
+                    1,           // srcBlockStride
+                    8,           // dstRepeatStride
+                    8            // srcRepeatStride
                 );
-                pipe_barrier(PIPE_V);
+                PIPE_BARRIER(V);
 
                 uint32_t y_offset = col_block_idx * max_data_count;
 
                 uint32_t y_copy_num = curr_compute_col_num;
 
-                copy_vec_gm2ub(ub_y, y + y_offset, y_copy_num);
+                copy_vec_gm2ub(ub_y, y[y_offset], y_copy_num);
 
-                pipe_barrier(PIPE_ALL);
+                PIPE_BARRIER(ALL);
 
-                set_flag(PIPE_MTE3, PIPE_V, EVENT_ID0);
-                set_flag(PIPE_MTE3, PIPE_V, EVENT_ID2);
+                SET_FLAG(MTE3, V, EVENT_ID0);
+                SET_FLAG(MTE3, V, EVENT_ID2);
                 // compute
                 if (row_block_idx == col_block_idx) {
                     // triangular
@@ -346,13 +374,13 @@ __aicore__ __inline__ __attribute__((always_inline)) void ssyr_upper_aiv(uint32_
                         auto ub_out = ping_flag ? ub_out_ping : ub_out_pong;
                         auto event_id = ping_flag ? EVENT_ID0 : EVENT_ID2;
 
-                        wait_flag(PIPE_MTE3, PIPE_V, event_id);
+                        WAIT_FLAG(MTE3, V, event_id);
 
                         vec_single_core_compute_upper(ub_x, ub_y, ub_out, ub_mask, A, curr_compute_col_num, i,
                                                       outOffset + (start_row_idx + i) * n,
                                                       y_copy_num - start_row_idx - i, event_id);
 
-                        set_flag(PIPE_MTE3, PIPE_V, event_id);
+                        SET_FLAG(MTE3, V, event_id);
                         ping_flag = 1 - ping_flag;
                     }
                 } else {
@@ -361,21 +389,21 @@ __aicore__ __inline__ __attribute__((always_inline)) void ssyr_upper_aiv(uint32_
                         auto ub_out = ping_flag ? ub_out_ping : ub_out_pong;
                         auto event_id = ping_flag ? EVENT_ID0 : EVENT_ID2;
 
-                        wait_flag(PIPE_MTE3, PIPE_V, event_id);
+                        WAIT_FLAG(MTE3, V, event_id);
 
                         vec_single_core_compute_lower(ub_x, ub_y, ub_out, A, i, outOffset + (start_row_idx + i) * n,
                                                       y_copy_num, event_id);
 
-                        set_flag(PIPE_MTE3, PIPE_V, event_id);
+                        SET_FLAG(MTE3, V, event_id);
                         ping_flag = 1 - ping_flag;
                     }
                 }
-                wait_flag(PIPE_MTE3, PIPE_V, EVENT_ID0);
-                wait_flag(PIPE_MTE3, PIPE_V, EVENT_ID2);
+                WAIT_FLAG(MTE3, V, EVENT_ID0);
+                WAIT_FLAG(MTE3, V, EVENT_ID2);
             }
         }
     }
-    pipe_barrier(PIPE_ALL);
+    PIPE_BARRIER(ALL);
 }
 
 extern "C" __global__ __aicore__ void ssyr(__gm__ float *__restrict__ d_x, __gm__ float *__restrict__ d_A,
@@ -388,20 +416,24 @@ extern "C" __global__ __aicore__ void ssyr(__gm__ float *__restrict__ d_x, __gm_
     float alpha = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 8));
     uint32_t coreNum = (*(__gm__ uint32_t *)((__gm__ uint8_t *)tiling_buf + 12));
 
-    set_mask_norm();
-    set_vector_mask((uint64_t)-1, (uint64_t)-1);
+    AscendC::SetMaskNorm();
+    SetVectorMask<float>((uint64_t)-1, (uint64_t)-1);
 
-    set_atomic_add();
-    set_atomic_f32();
+    AscendC::SetAtomicAdd<float>();
 
-    uint32_t vec_idx = get_block_idx() * get_subblockdim() + get_subblockid();
+    uint32_t vec_idx = AscendC::GetBlockIdx();
+
+    AscendC::GlobalTensor<float> d_x_tensor;
+    AscendC::GlobalTensor<float> d_A_tensor;
+    d_x_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_x));
+    d_A_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_A));
 
     if (uplo == 0) {
-        ssyr_lower_aiv(vec_idx, d_x, d_x, d_A, alpha, n, coreNum);
+        ssyr_lower_aiv(vec_idx, d_x_tensor, d_x_tensor, d_A_tensor, alpha, n, coreNum);
     } else {
-        ssyr_upper_aiv(vec_idx, d_x, d_x, d_A, alpha, n, coreNum);
+        ssyr_upper_aiv(vec_idx, d_x_tensor, d_x_tensor, d_A_tensor, alpha, n, coreNum);
     }
 
-    pipe_barrier(PIPE_ALL);
-    set_atomic_none();
+    PIPE_BARRIER(ALL);
+    SetAtomicnone();
 }

@@ -28,7 +28,7 @@ __aicore__ __inline__ __attribute__((overloadable, always_inline)) void init_ub(
                                                                                 AscendC::LocalTensor<float>& buf1_output,
                                                                                 AscendC::LocalTensor<float>& buf2_output)
 {
-    const int32_t BUF_SIZE = 16 * 1024;
+    const int32_t BUF_SIZE = 23 * 1024;
     AsdopsBuffer<ArchType::ASCEND_V220> buf;
     buf1_input_addr_buf = buf.GetBuffer<BufferType::ASCEND_UB, uint16_t>(0);
     buf1_output_addr_buf = buf.GetBuffer<BufferType::ASCEND_UB, uint16_t>(64);

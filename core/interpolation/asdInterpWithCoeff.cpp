@@ -63,7 +63,8 @@ int64_t *getCoeffShape(const aclTensor *coefficient)
     int64_t *coeffDims = nullptr;
     uint64_t coeffDimsNum = 0;
     auto ret = aclGetStorageShape(coefficient, &coeffDims, &coeffDimsNum);
-    if (ret != ACL_SUCCESS || *coeffDims <= 0 || coeffDims[1] < 0 || coeffDims[1] > MAX_SINGAL_NUM) {
+    if (ret != ACL_SUCCESS || *coeffDims <= 0 || coeffDimsNum != INTERP_DIMS_THREE || coeffDims[1] < 0 ||
+        coeffDims[1] > MAX_SINGAL_NUM) {
         delete[] coeffDims;
         coeffDims = nullptr;
         ASDSIP_ELOG(ErrorType::ACL_ERROR_OP_INPUT_NOT_MATCH) << "interpByCoeff get wrong coefficient tensor.";

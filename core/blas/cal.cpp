@@ -40,7 +40,7 @@ AspbStatus asdBlasCalImpl(OpParam::Cal::CalType calType, asdBlasHandle handle, C
         delete[] storageDims;
         storageDims = nullptr;
         ASDSIP_ELOG(ErrorType::ACL_ERROR_OP_INPUT_NOT_MATCH)
-            << "blas asdBlasCalImpl get wrong, x.dataSize == 0 || x.data == NULL || n <= 0.";
+            << "Input size mismatch between x and implParam.n.";
         return ErrorType::ACL_ERROR_OP_INPUT_NOT_MATCH;
     }
 
@@ -98,6 +98,8 @@ AspbStatus asdBlasSscal(asdBlasHandle handle, const int64_t n, const float &alph
     ASDSIP_ECHECK(dataType == aclDataType::ACL_FLOAT,
         "blas asdBlasSscal get wrong x tensor dtype.",
         ErrorType::ACL_ERROR_UNSUPPORTED_DATA_TYPE);
+    ASDSIP_ECHECK(
+        n > 0 && n <= UINT32_MAX, "blas asdBlasSscal get n <= 0 or n > 2^32.", ErrorType::ACL_ERROR_INVALID_PARAM);
     float alphaReal = alpha;
     float alphaImag = 0.0;
     OpParam::Cal::CalType calType = OpParam::Cal::CalType::CAL_SSCAL;
@@ -114,7 +116,7 @@ AspbStatus asdBlasCsscal(asdBlasHandle handle, const int64_t n, const float &alp
         "blas asdBlasCsscal get wrong x tensor dtype.",
         ErrorType::ACL_ERROR_UNSUPPORTED_DATA_TYPE);
     ASDSIP_ECHECK(
-        n > 0 && n <= UINT32_MAX, "blas asdBlasScasum get n <= 0 or n > 2^32.", ErrorType::ACL_ERROR_INVALID_PARAM);
+        n > 0 && n <= UINT32_MAX, "blas asdBlasCsscal get n <= 0 or n > 2^32.", ErrorType::ACL_ERROR_INVALID_PARAM);
     float alphaReal = alpha;
     float alphaImag = 0.0;
     OpParam::Cal::CalType calType = OpParam::Cal::CalType::CAL_CSSCAL;
@@ -127,12 +129,12 @@ AspbStatus asdBlasCscal(
     std::lock_guard<std::mutex> lock(blas_mtx);
     ASDSIP_ECHECK(x != nullptr, "blas cscal tensor x is null!", ErrorType::ACL_ERROR_INTERNAL_ERROR);
     aclDataType dataType = aclDataType::ACL_DT_UNDEFINED;
-    CHECK_STATUS_WITH_ACL_RETURN(aclGetDataType(x, &dataType), "asdBlasScasum: aclGetDataType");
+    CHECK_STATUS_WITH_ACL_RETURN(aclGetDataType(x, &dataType), "asdBlasCscal: aclGetDataType");
     ASDSIP_ECHECK(dataType == aclDataType::ACL_COMPLEX64,
         "blas asdBlasCscal get wrong x tensor dtype.",
         ErrorType::ACL_ERROR_UNSUPPORTED_DATA_TYPE);
     ASDSIP_ECHECK(
-        n > 0 && n <= UINT32_MAX, "blas asdBlasScasum get n <= 0 or n > 2^32.", ErrorType::ACL_ERROR_INVALID_PARAM);
+        n > 0 && n <= UINT32_MAX, "blas asdBlasCscal get n <= 0 or n > 2^32.", ErrorType::ACL_ERROR_INVALID_PARAM);
     float alphaReal = alpha.real();
     float alphaImag = alpha.imag();
     OpParam::Cal::CalType calType = OpParam::Cal::CalType::CAL_CSCAL;

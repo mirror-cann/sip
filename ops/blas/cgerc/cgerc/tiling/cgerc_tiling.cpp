@@ -101,8 +101,11 @@ AsdSip::AspbStatus CgercTiling(const LaunchParam &launchParam, KernelInfo &kerne
     tilingDataPtr->alphaReal = alphaReal;
     tilingDataPtr->alphaImag = alphaImag;
 
-    memcpy_s(tilingDataPtr->startOffset, vecCoreNum * sizeof(uint64_t), startOffset, vecCoreNum * sizeof(uint64_t));
-    memcpy_s(tilingDataPtr->calNum, vecCoreNum * sizeof(uint64_t), calNum, vecCoreNum * sizeof(uint64_t));
+    auto ret =
+        memcpy_s(tilingDataPtr->startOffset, vecCoreNum * sizeof(uint64_t), startOffset, vecCoreNum * sizeof(uint64_t));
+    ASDSIP_CHECK_WITH_NO_RETURN(ret == EOK, "startOffset memcpy_s failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
+    ret = memcpy_s(tilingDataPtr->calNum, vecCoreNum * sizeof(uint64_t), calNum, vecCoreNum * sizeof(uint64_t));
+    ASDSIP_CHECK_WITH_NO_RETURN(ret == EOK, "calNum memcpy_s failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
     delete[] startOffset;
     startOffset = nullptr;
     delete[] calNum;

@@ -7,6 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+
 #include <cstdlib>
 #include <string>
 #include <cstring>
@@ -46,7 +47,7 @@ static LogLevel GetLogLevelFromEnv()
     // LogLevel {DEBUG, INFO, WARN, ERROR } FATAL对应NULL级别，不输出日志。
     const char *env = std::getenv("ASCEND_GLOBAL_LOG_LEVEL");
     if (env == nullptr || strlen(env) > MAX_ENV_STRING_LEN) {
-        return LogLevel::WARN;
+        return LogLevel::ERROR;
     }
     std::string envLogLevel(env);
     std::transform(envLogLevel.begin(), envLogLevel.end(), envLogLevel.begin(), ::toupper);
@@ -60,12 +61,74 @@ static LogLevel GetLogLevelFromEnv()
     return levelIt != levelMap.end() ? levelIt->second : LogLevel::ERROR;
 }
 
+static std::vector<std::string> splitString(const std::string &s, char delimiter)
+{
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream tokenStream(s);
+    while (std::getline(tokenStream, token, delimiter)) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
+
+static LogLevel GetModuleLogLevelFromEnv(bool &isSet)
+{
+    /* 设置应用类日志的日志级别及各模块日志级别，仅支持调试日志。
+    格式为：export ASCEND_MODULE_LOG_LEVEL=module_name=module_level
+    module_name：为模块名，支持设置为GE、ASCENDCL、DRV、RUNTIME等，详细请参见CANN软件安装目录/include/base/log_types.h。
+    module_level：为对应模块的日志级别，支持设置为如下值。
+        0：对应DEBUG级别。
+        1：对应INFO级别。
+        2：对应WARNING级别。
+        3：对应ERROR级别，默认为ERROR级别。
+        4：对应NULL级别，不输出日志。
+        其他值为非法值。 */
+    const char *env = std::getenv("ASCEND_MODULE_LOG_LEVEL");
+    if (env == nullptr || strlen(env) > MAX_ENV_STRING_LEN) {
+        isSet = false;
+        return LogLevel::ERROR;
+    }
+    std::string envs(env);
+    std::vector<std::string> envLogLevels = splitString(envs, ':');
+    std::string envLogLevel = "-1";
+
+    for (const auto &i : envLogLevels) {
+        std::vector<std::string> key_value = splitString(i, '=');
+        if (key_value.size() >= 1) {
+            if (key_value[0] == "OP") {
+                if (key_value.size() == 2) { // 2: correct key-value pair
+                    isSet = true;
+                    envLogLevel = key_value[1];
+                }
+                break;
+            }
+        }
+    }
+
+    if (!isSet) {
+        return LogLevel::ERROR;
+    }
+
+    static std::unordered_map<std::string, LogLevel> levelMap{{"0", LogLevel::DEBUG},
+        {"1", LogLevel::INFO},
+        {"2", LogLevel::WARN},
+        {"3", LogLevel::ERROR},
+        {"4", LogLevel::FATAL}};
+    auto levelIt = levelMap.find(envLogLevel);
+    // LogLevel::FATAL对应NULL级别，不输出日志。
+    return levelIt != levelMap.end() ? levelIt->second : LogLevel::ERROR;
+}
+
 LogCoreSip::LogCoreSip()
 {
-    level_ = GetLogLevelFromEnv();
-    if (strcmp(LogLevelToString(level_), "FATAL") == 0) {
+    bool isModuleSet = false;
+    auto moduleLevel_ = GetModuleLogLevelFromEnv(isModuleSet);
+    level_ = isModuleSet ? moduleLevel_ : GetLogLevelFromEnv();
+    if (strcmp(LogLevelToString(level_).c_str(), "FATAL") == 0) {
         return;
     }
+
     if (GetLogToStdoutFromEnv()) { // print but not to file
         AddSink(std::make_shared<LogSinkStdoutSip>());
     } else if (!GetLogToStdoutFromEnv() && GetLogToFileFromEnv()) { // not print but to file

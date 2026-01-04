@@ -97,9 +97,11 @@ AsdSip::AspbStatus ColwiseMulTiling(const LaunchParam &launchParam, KernelInfo &
     tilingDataPtr->m = m;  // num of rows
     tilingDataPtr->n = n;  // num of FP32 elements each row
 
-    memcpy_s(tilingDataPtr->startOffset, sizeof(tilingDataPtr->startOffset), startOffset,
-             vecCoreNum * sizeof(uint32_t));
-    memcpy_s(tilingDataPtr->calRowNum, sizeof(tilingDataPtr->calRowNum), calRowNum, vecCoreNum * sizeof(uint32_t));
+    auto ret = memcpy_s(
+        tilingDataPtr->startOffset, sizeof(tilingDataPtr->startOffset), startOffset, vecCoreNum * sizeof(uint32_t));
+    ASDSIP_CHECK_WITH_NO_RETURN(ret == EOK, "startOffset memcpy_s failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
+    ret = memcpy_s(tilingDataPtr->calRowNum, sizeof(tilingDataPtr->calRowNum), calRowNum, vecCoreNum * sizeof(uint32_t));
+    ASDSIP_CHECK_WITH_NO_RETURN(ret == EOK, "calRowNum memcpy_s failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
 
     delete[] startOffset;
     startOffset = nullptr;

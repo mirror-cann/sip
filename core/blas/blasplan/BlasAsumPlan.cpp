@@ -11,10 +11,11 @@
 #include "include/blasplan/BlasAsumPlan.h"
 
 namespace AsdSip {
-BlasAsumPlan::BlasAsumPlan() : BlasPlan(){};
+BlasAsumPlan::BlasAsumPlan() : BlasPlan()
+{}
 
 BlasAsumPlan::~BlasAsumPlan()
 {
     BlasPlan::DestroyPlanData();
 }
-}
+}  // namespace AsdSip

@@ -17,38 +17,39 @@
 #define __aicore__ [aicore]
 #endif
 
+#include "kernel_operator.h"
+#include "../../../../include/common/common.h"
+#include "../../../../include/common/iterator.h"
+#include "../../../../include/common/simd.h"
+#include "../../../../include/common/utils.h"
 #include "../../../ascblas/ascblas_kernel_utils.h"
 using namespace fp32;
-
-#define ASSERT(a, b)    \
-    if (!(a)) {         \
-        d_A[0] = 10000; \
-        d_A[1] = (b);   \
-        ;               \
-    }
 
 constexpr int64_t BLOCK_SIZE = 32 / sizeof(float);     // == 8
 constexpr int64_t VEC_MIN_SIZE = 256 / sizeof(float);  // == 64
 
 #define MIN(a, b) a > b ? b : a
 
-__aicore__ __inline__ __attribute__((always_inline)) void split_CVector(__ubuf__ float *dst_r, __ubuf__ float *dst_i,
-                                                                        __ubuf__ float *src, int64_t num_complex)
+__aicore__ __inline__ __attribute__((always_inline)) void split_CVector(
+    AscendC::LocalTensor<float> dst_r,
+    AscendC::LocalTensor<float> dst_i,
+    AscendC::LocalTensor<float> src,
+    int64_t num_complex)
 {
     int64_t num_repeats = (num_complex * 2 + 63) / 64;  // 64 floats per repeat
 
-    vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(dst_r),  // dst
-              reinterpret_cast<__ubuf__ uint32_t *>(src),    // src0
-              nullptr,                                       // src1 -- 此处不使用
+    vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(dst_r.GetPhyAddr()),  // dst
+              reinterpret_cast<__ubuf__ uint32_t *>(src.GetPhyAddr()),    // src0
+              nullptr,                                                    // src1 -- 此处不使用
               num_repeats,
               1,   // 每次 repeat 内 block 之间的 stride；如果连续，则传 1
               1,   // patternMode，1代表使用101010...10的掩码
               8,   // 源向量的重复 stride，block 为单位；若连续，则传 8
               8);  // src1 重复 stride，block 为单位；若连续，则传 8
 
-    vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(dst_i),  // dst
-              reinterpret_cast<__ubuf__ uint32_t *>(src),    // src0
-              nullptr,                                       // src1 -- 此处不使用
+    vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(dst_i.GetPhyAddr()),  // dst
+              reinterpret_cast<__ubuf__ uint32_t *>(src.GetPhyAddr()),    // src0
+              nullptr,                                                    // src1 -- 此处不使用
               num_repeats,
               1,   // 每次 repeat 内 block 之间的 stride；如果连续，则传 1
               2,   // patternMode，2代表使用010101...01的掩码
@@ -57,38 +58,41 @@ __aicore__ __inline__ __attribute__((always_inline)) void split_CVector(__ubuf__
 }
 
 /* 这个算法假定了 tmpbuf 至少具有 X * min(VEC_MIN_SIZE, ldx) * sizeof(ascComplex) 大小的空间！ */
-__aicore__ __inline__ __attribute__((always_inline)) void ascblas_cvec_gm2ubuf(__ubuf__ float *__restrict__ dst_r,
-                                                                               __ubuf__ float *__restrict__ dst_i,
-                                                                               __ubuf__ float *__restrict__ tmpbuf,
-                                                                               __gm__ float *__restrict__ src,
-                                                                               int64_t X, /* 单位：ascComplex */
-                                                                               int64_t ldx)
+__aicore__ __inline__ __attribute__((always_inline)) void ascblas_cvec_gm2ubuf(
+    AscendC::LocalTensor<float> dst_r,
+    AscendC::LocalTensor<float> dst_i,
+    AscendC::LocalTensor<float> tmpbuf,
+    AscendC::GlobalTensor<float> src,
+    int64_t X, /* 单位：ascComplex */
+    int64_t ldx)
 {
     if (ldx == 1)  // 无间隔的情况
     {
-        copy_gm_to_ubuf_align_b32(tmpbuf,                 // 目的地址（ubuf中的地址）dst
-                                  src,                    // 源地址src
-                                  0,                      // 默认0
-                                  1,                      // 传送次数
-                                  X * 2 * sizeof(float),  // 数据大小 8 bytes
-                                  0, 0, 0, 0);
+        gm_to_ub_align<ArchType::ASCEND_V220, float>(
+            tmpbuf,                 // 目的地址（ubuf中的地址）dst
+            src,                    // 源地址src
+            0,                      // 默认0
+            1,                      // 传送次数
+            X * 2 * sizeof(float),  // 数据大小 8 bytes
+            0, 0, 0, 0);
 
-        set_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
+        SET_FLAG(MTE2, V, EVENT_ID0);
         /* 只有 X/2 个 ascComplex */
-        wait_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
+        WAIT_FLAG(MTE2, V, EVENT_ID0);
         split_CVector(dst_r, dst_i, tmpbuf, X);
     } else  // 有间隔的情况
     {
         int64_t temp_size = MIN(BLOCK_SIZE, ldx * 2);
-        ascblas_matrix_gm2ubuf(tmpbuf,       // 目的地址（ubuf中的地址）dst
-                               src,          // 源地址src
-                               temp_size,    // 需要传输矩阵的行数
-                               X,            // 需要传输矩阵的列数
-                               ldx * 2,      // 源地址矩阵同一行两元素间距离（列优先时）
-                               BLOCK_SIZE);  // 传入ub后的矩阵尺寸
-        set_flag(PIPE_MTE2, PIPE_S, EVENT_ID0);
+        ascblas_matrix_gm2ubuf(
+            tmpbuf,     // 目的地址（ubuf中的地址）dst
+            src,        // 源地址src
+            temp_size,                              // 需要传输矩阵的行数
+            X,                                      // 需要传输矩阵的列数
+            ldx * 2,                                // 源地址矩阵同一行两元素间距离（列优先时）
+            BLOCK_SIZE);                            // 传入ub后的矩阵尺寸
+        SET_FLAG(MTE2, S, EVENT_ID0);
 
-        wait_flag(PIPE_MTE2, PIPE_S, EVENT_ID0);
+        WAIT_FLAG(MTE2, S, EVENT_ID0);
         for (int64_t i = 0; i < X; i++) {
             dst_r[i] = tmpbuf[i * BLOCK_SIZE];
             dst_i[i] = tmpbuf[i * BLOCK_SIZE + 1];
@@ -97,60 +101,68 @@ __aicore__ __inline__ __attribute__((always_inline)) void ascblas_cvec_gm2ubuf(_
 }
 
 __aicore__ __inline__ __attribute__((always_inline)) void ascblas_cvec_ubuf2gm(
-    __ubuf__ float *Ybase_r, __ubuf__ float *Ybase_i, __ubuf__ uint32_t *maskBuf, __ubuf__ float *tmpbuf,
-    __gm__ float *y_gmptr, int64_t szVert_real, int64_t incy, bool atomicAdd)
+    AscendC::LocalTensor<float> Ybase_r,
+    AscendC::LocalTensor<float> Ybase_i,
+    AscendC::LocalTensor<uint32_t> maskBuf,
+    AscendC::LocalTensor<float> tmpbuf,
+    AscendC::GlobalTensor<float> y_gmptr,
+    int64_t szVert_real, int64_t incy, bool atomicAdd)
 {
     if (atomicAdd) {
-        set_atomic_f32();
-        set_atomic_add();
+        AscendC::SetAtomicAdd<float>();
     }
 
     // atomically 写回 y_gmptr 上面
     if (incy == 1) {
         int64_t nRepeats = (szVert_real * sizeof(float) * 2 + 255) / 256;
-        vgather(reinterpret_cast<__ubuf__ uint32_t *>(tmpbuf), reinterpret_cast<__ubuf__ uint32_t *>(maskBuf), 0, 8,
-                nRepeats);
-        set_flag(PIPE_V, PIPE_MTE3, EVENT_ID0);
+        AsdopsBuffer<ArchType::ASCEND_V220> buf;
+        AscendC::LocalTensor<float> mask_addr = buf.GetBuffer<BufferType::ASCEND_UB, float>(0);
+        AscendC::Gather(tmpbuf, mask_addr, maskBuf, (uint32_t)0, nRepeats * 64);
+        SET_FLAG(V, MTE3, EVENT_ID0);
 
-        wait_flag(PIPE_V, PIPE_MTE3, EVENT_ID0);
-        copy_ubuf_to_gm_align_b32(y_gmptr, tmpbuf, 0, 1, szVert_real * 2 * sizeof(float), 0, 0, 0, 0);
+        WAIT_FLAG(V, MTE3, EVENT_ID0);
+        ub_to_gm_align<ArchType::ASCEND_V220, float>(
+            y_gmptr, tmpbuf, 0, 1, szVert_real * 2 * sizeof(float), 0, 0, 0, 0);
     } else {
         for (int64_t i = 0; i < szVert_real; i++) {
             tmpbuf[i * BLOCK_SIZE] = Ybase_r[i];
             tmpbuf[i * BLOCK_SIZE + 1] = Ybase_i[i];
         }
-        set_flag(PIPE_S, PIPE_MTE3, EVENT_ID0);
+        SET_FLAG(S, MTE3, EVENT_ID0);
 
-        wait_flag(PIPE_S, PIPE_MTE3, EVENT_ID0);
-        copy_ubuf_to_gm_align_b32(y_gmptr, tmpbuf, 0, szVert_real, 2 * sizeof(float), 0, 0, 0,
-                                  (2 * incy - 2) * sizeof(float));
+        WAIT_FLAG(S, MTE3, EVENT_ID0);
+        ub_to_gm_align<ArchType::ASCEND_V220, float>(
+            y_gmptr, tmpbuf, 0, szVert_real, 2 * sizeof(float), 0, 0, 0, (2 * incy - 2) * sizeof(float));
     }
 
-    set_atomic_none();
+    SetAtomicnone();
 }
 
-__aicore__ __inline__ __attribute__((always_inline)) void mulSComplex(__ubuf__ float *src_r, __ubuf__ float *src_i,
-                                                                      __ubuf__ float *tmp_r, __ubuf__ float *tmp_i,
-                                                                      int64_t n_blocks, ascComplex beta)
+__aicore__ __inline__ __attribute__((always_inline)) void mulSComplex(
+    AscendC::LocalTensor<float> src_r,
+    AscendC::LocalTensor<float> src_i,
+    AscendC::LocalTensor<float> tmp_r,
+    AscendC::LocalTensor<float> tmp_i,
+    int64_t n_blocks, ascComplex beta)
 {
-    vmuls(tmp_r, src_r, beta.real, (n_blocks + 7) / 8, 1, 1, 8, 8);
-    vmuls(tmp_i, src_i, beta.imag, (n_blocks + 7) / 8, 1, 1, 8, 8);
-    pipe_barrier(PIPE_V);
+    muls_v<ArchType::ASCEND_V220, float>(tmp_r, src_r, beta.real, (n_blocks + 7) / 8, 1, 1, 8, 8);
+    muls_v<ArchType::ASCEND_V220, float>(tmp_i, src_i, beta.imag, (n_blocks + 7) / 8, 1, 1, 8, 8);
+    PIPE_BARRIER(V);
 
-    vsub(tmp_r, tmp_r, tmp_i, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
-    vmuls(tmp_i, src_r, beta.imag, (n_blocks + 7) / 8, 1, 1, 8, 8);
-    pipe_barrier(PIPE_V);
+    sub_v<ArchType::ASCEND_V220, float>(tmp_r, tmp_r, tmp_i, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
+    muls_v<ArchType::ASCEND_V220, float>(tmp_i, src_r, beta.imag, (n_blocks + 7) / 8, 1, 1, 8, 8);
+    PIPE_BARRIER(V);
 
-    copy_ubuf_to_ubuf(src_r, tmp_r, 0, 1, n_blocks, 0, 0);
-    pipe_barrier(PIPE_V);
+    ub_to_ub<ArchType::ASCEND_V220, float>(src_r, tmp_r, 0, 1, n_blocks, 0, 0);
+    PIPE_BARRIER(V);
 
-    vmuls(tmp_r, src_i, beta.real, (n_blocks + 7) / 8, 1, 1, 8, 8);
-    pipe_barrier(PIPE_V);
+    muls_v<ArchType::ASCEND_V220, float>(tmp_r, src_i, beta.real, (n_blocks + 7) / 8, 1, 1, 8, 8);
+    PIPE_BARRIER(V);
 
-    vadd(tmp_i, tmp_i, tmp_r, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
-    pipe_barrier(PIPE_V);
+    add_v<ArchType::ASCEND_V220, float>(tmp_i, tmp_i, tmp_r, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
+    PIPE_BARRIER(V);
 
-    copy_ubuf_to_ubuf(src_i, tmp_i, 0, 1, n_blocks, 0, 0);
+    ub_to_ub<ArchType::ASCEND_V220, float>(src_i, tmp_i, 0, 1, n_blocks, 0, 0);
 }
 
 #endif  // __ASCBLASCGEMV_UTILS_H__

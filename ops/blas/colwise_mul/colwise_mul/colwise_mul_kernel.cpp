@@ -20,8 +20,10 @@
 using namespace Mki;
 
 namespace AsdSip {
-static constexpr uint32_t COLWISEMUL_INPUT_NUM = 3;
-static constexpr uint32_t COLWISEMUL_OUT_NUM = 1;
+
+static constexpr int64_t COLWISEMUL_INPUT_NUM = 3;
+static constexpr int64_t COLWISEMUL_OUTPUT_NUM = 1;
+
 class ColwiseMulKernel : public KernelBase {
 public:
     explicit ColwiseMulKernel(const std::string &kernelName, const BinHandle *handle) noexcept
@@ -34,7 +36,7 @@ public:
         ASDSIP_CHECK(launchParam.GetParam().Type() == typeid(OpParam::ColwiseMul), "ColwiseMul: param type invalid",
                   return false);
         ASDSIP_CHECK(launchParam.GetInTensorCount() == COLWISEMUL_INPUT_NUM, "input num invalid", return false);
-        ASDSIP_CHECK(launchParam.GetOutTensorCount() == COLWISEMUL_OUT_NUM, "output num invalid", return false);  // markhere
+        ASDSIP_CHECK(launchParam.GetOutTensorCount() == COLWISEMUL_OUTPUT_NUM, "output num invalid", return false);  // markhere
 
         return true;
     }

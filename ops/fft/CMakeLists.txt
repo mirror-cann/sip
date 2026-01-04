@@ -9,7 +9,9 @@
 # ----------------------------------------------------------------------------
 
 add_subdirectory(c2c/dft)
+add_subdirectory(c2c/dft_sep)
 add_subdirectory(c2c/fft_b)
+add_subdirectory(c2c/fft_b_sep)
 add_subdirectory(c2c/fft_mix)
 add_subdirectory(c2c/fft_n)
 add_subdirectory(c2c/fft_stride)
@@ -18,6 +20,7 @@ add_subdirectory(c2r/dft)
 add_subdirectory(c2r/fft)
 add_subdirectory(r2c/dft)
 add_subdirectory(r2c/fft)
+add_subdirectory(c2c3d/ddd_sep)
 
 
 set(operations_objects ${operations_objects} ${ops_objects} PARENT_SCOPE)

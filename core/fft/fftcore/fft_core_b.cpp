@@ -187,11 +187,12 @@ AspbStatus FFTCoreB::InitIndex()
             return nullptr;
         }
 
-        if (!checkSizeToMalloc(indexMatrix.dataSize)) {
-            throw std::runtime_error("Invalid malloc size");
+        int32_t *indexMatrixHost = new(std::nothrow) int32_t[128 * 128];
+        if (indexMatrixHost == nullptr) {
+            delete indexMatrixPtr;
+            ASDSIP_LOG(ERROR) << "indexMatrixHost malloc failed: ";
+            throw std::runtime_error("indexMatrixHost malloc failed:.");
         }
-
-        int32_t *indexMatrixHost = new int32_t[128 * 128];
 
         if (n > 16384) {
             for (int64_t i = 0; i < 128 * 64; ++i) {

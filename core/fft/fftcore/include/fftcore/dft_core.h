@@ -15,8 +15,6 @@
 #include "fftcore/fft_core_base.h"
 #include "utils/aspb_status.h"
 
-using namespace AsdSip;
-
 class DFTCore : public FFTCoreBase {
 public:
     DFTCore(unsigned nDone, unsigned nDoing, unsigned nLeft, unsigned batch, AsdSip::asdFftType fftType,
@@ -35,8 +33,8 @@ private:
     void InitRadix() override;
     bool PreAllocateInDevice() override;
     void DestroyInDevice() const;
-    AspbStatus InitRotationMatrix();
-    AspbStatus InitTactic();
+    AsdSip::AspbStatus InitRotationMatrix();
+    AsdSip::AspbStatus InitTactic();
 
     std::string opName{"DftOperation"};
     std::shared_ptr<AsdSip::FFTensor> rotationMatrix;

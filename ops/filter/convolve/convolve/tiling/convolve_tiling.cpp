@@ -19,8 +19,8 @@
 namespace AsdSip {
 using namespace Mki;
 
-constexpr uint32_t BASE_COL_BLOCK = 128;
-constexpr uint32_t NUM_TWO = 2;
+constexpr uint64_t BASE_COL_BLOCK = 128;
+constexpr uint64_t NUM_TWO = 2;
 
 AsdSip::AspbStatus ConvolveTiling(const LaunchParam &launchParam, KernelInfo &kernelInfo)
 {
@@ -38,8 +38,8 @@ AsdSip::AspbStatus ConvolveTiling(const LaunchParam &launchParam, KernelInfo &ke
 
     OpParam::Convolve param = AnyCast<OpParam::Convolve>(launchParam.GetParam());
 
-    uint64_t workspaceColNum = static_cast<uint64_t>(BASE_COL_BLOCK + param.kernelLen * NUM_TWO - NUM_TWO);
-    uint64_t workspaceRowNum = static_cast<uint64_t>(workspaceColNum + param.kernelLen * NUM_TWO - NUM_TWO);
+    uint64_t workspaceColNum = BASE_COL_BLOCK + static_cast<uint64_t>(param.kernelLen) * NUM_TWO - NUM_TWO;
+    uint64_t workspaceRowNum = workspaceColNum + static_cast<uint64_t>(param.kernelLen) * NUM_TWO - NUM_TWO;
 
     tilingDataPtr->signalLen = param.signalLen;
     tilingDataPtr->kernelLen = param.kernelLen;

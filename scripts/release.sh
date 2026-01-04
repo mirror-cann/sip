@@ -112,13 +112,13 @@ EOF
     rm -rf $CODE_ROOT/output/bin/
 
     # api.h 归档
-    chmod 755 -R $CODE_ROOT/scripts/install.sh
+    chmod 750 -R $CODE_ROOT/scripts/install.sh
     cp $CODE_ROOT/scripts/install.sh $CODE_ROOT/output/
     cp $CODE_ROOT/scripts/set_env.sh $CODE_ROOT/output/
 
 
-    chmod 755 -R $CODE_ROOT/output
-    chmod 755 -R $CODE_ROOT/scripts/makeself
+    chmod 750 -R $CODE_ROOT/output
+    chmod 750 -R $CODE_ROOT/scripts/makeself
 
     ARCH=`uname -i`
 

@@ -7,106 +7,61 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-
 #include <algorithm>
 #include <mki/utils/platform/platform_info.h>
 #include "aclnn/acl_meta.h"
 #include "log/log.h"
 #include "fftoperation/transpose.h"
-#include "fftcore/fft_core.h"
+
+#include "fftcore/dft_core.h"
+#include "fftcore/fft_core_b.h"
+#include "fftcore/fft_core_n.h"
+#include "fftcore/fft_core_mix.h"
+#include "fftcore/fft_core_stride.h"
+#include "fftcore/dft_c2r_core.h"
+#include "fftcore/fft_c2r_core.h"
+#include "fftcore/dft_r2c_core.h"
+#include "fftcore/fft_r2c_core.h"
+#include "fftcore/fft_core_any.h"
+#include "fftcore/dd_core.h"
+#include "fftcore/dft_core_sep.h"
+#include "fftcore/ddd_core_sep.h"
+#include "fftcore/fft_core_b_sep.h"
+
 #include "fftplan/fft_plan_cache.h"
 #include "fftcore/select_core.h"
+#include "utils/include/utils/fft_common_func.h"
 #include "utils/sip_lock.h"
+#include "utils/assert.h"
 #include "fft_api.h"
+
+
 namespace AsdSip {
 using namespace Mki;
 using namespace AsdSip;
+
 constexpr int K_FACTOR_2 = 2;
-
 constexpr int K_LAST_DIM = -1;
-
 constexpr int K_PENULTIMATE_DIM = -2;
-
+constexpr int K_ANTEPENULTIMATE_DIM = -3;
 constexpr int K_BLOCK_SIZE = 32;
-
 constexpr int K_RADIX_2 = 2;
-
 constexpr int K_RADIX_MIX = -2;
-
 constexpr int K_RADIX_ANY = -1;
-
 constexpr int K_N_FFT_32 = 32;
-
 constexpr int K_N_FFT_128 = 128;
-
 constexpr int K_N_FFT_256 = 256;
-
 constexpr int K_N_FFT_1024 = 1024;
-
 constexpr int K_N_FFT_2048 = 2048;
-
 constexpr int K_N_FFT_4096 = 4096;
-
 constexpr int K_N_FFT_8192 = 8192;
-
 constexpr int K_N_FFT_32768 = 32768;
-
 constexpr int K_N_FFT_65536 = 65536;
-
 constexpr int K_VERTICAL_FACTOR_128 = 128;
-
 constexpr int MAX_FFT_SIZE = 1 << 27;
 
-// radixes supported by accelerated fft cores
 std::vector<int64_t> RADIX_2 = {2};
-
 std::vector<int64_t> RADIX_MIX = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47};
-
-// private functions
-int64_t GetC2RInputSize(int64_t fftSize)
-{
-    return (fftSize / K_FACTOR_2) + 1;
-}
-
-int64_t GetC2ROutputSize(int64_t fftSize)
-{
-    return fftSize;
-}
-
-int64_t GetR2CInputSize(int64_t fftSize)
-{
-    return fftSize;
-}
-
-int64_t GetR2COutputSize(int64_t fftSize)
-{
-    return (fftSize / K_FACTOR_2) + 1;
-}
-
-std::vector<int64_t> orderedFactorize(int64_t size)
-{
-    std::vector<int64_t> factors{};
-    if (size <= 0) {
-        return factors;
-    }
-
-    int64_t bound = static_cast<int64_t>(std::sqrt(size));
-    for (int64_t factor = 2; factor <= bound;) {
-        if (size % factor == 0) {
-            factors.push_back(factor);
-            size /= factor;
-            bound = static_cast<int64_t>(std::sqrt(size));
-        } else {
-            factor++;
-        }
-    }
-
-    if (size != 1) {
-        factors.push_back(size);
-    }
-
-    return factors;
-}
 
 std::vector<int64_t> deDuplicates(const std::vector<int64_t> &duplicates)
 {
@@ -332,6 +287,15 @@ std::unique_ptr<FftOperation> InitFftOpPtr(std::optional<FFTCoreType> coreTypeOp
             case FFTCoreType::kAny:
                 unique.reset(new FFTCoreAny(nDone, nDoing, nLeft, batch, fftType, forward));
                 break;
+            
+            case FFTCoreType::kDftSep:
+                unique.reset(new DFTCoreSep(nDone, nDoing, nLeft, batch, fftType, forward));
+                break;
+
+            case FFTCoreType::kFftBSep:
+                unique.reset(new FFTCoreBSep(nDone, nDoing, nLeft, batch, fftType, forward));
+                break;
+
             default:
                 throw std::runtime_error("Invalid coreType.");
                 break;
@@ -380,6 +344,34 @@ std::unique_ptr<FftOperation> InitFft2DOpPtr(std::optional<FFTCoreType> coreType
     return unique;
 }
 
+std::unique_ptr<FftOperation> InitFft3DOpPtr(std::optional<FFTCoreType> coreTypeOpt, int64_t fftSizeX, int64_t fftSizeY, int64_t fftSizeZ,
+                                             int64_t batchSize, AsdSip::asdFftType fftType, bool forward, FFTPlan &plan)
+{
+    std::unique_ptr<FftOperation> unique(nullptr);
+
+    if (coreTypeOpt) {
+        switch (coreTypeOpt.value()) {
+            case FFTCoreType::kDddSep:
+                unique.reset(new DddCoreSep(fftSizeX, fftSizeY, fftSizeZ, batchSize, fftType, forward));
+                break;
+            default:
+                break;
+        }
+
+        if (unique == nullptr) {
+            ASDSIP_LOG(ERROR) << "initialize fftcore failed, ptr is nullptr.";
+            throw std::runtime_error("ptr is nullptr.");
+        }
+        
+        if (!unique->init()) {
+            plan.markFailed();
+            ASDSIP_LOG(ERROR) << "initialize fftcore failed.";
+        }
+    }
+
+    return unique;
+}
+
 std::unique_ptr<FftOperation> getCore(const std::vector<int64_t> &uniques, unsigned nDone, unsigned nDoing,
                                       unsigned nLeft, unsigned stride, unsigned batch, asdFftType fftType, bool forward,
                                       FFTPlan &plan)
@@ -391,6 +383,12 @@ std::unique_ptr<FftOperation> getCore(const std::vector<int64_t> &uniques, unsig
     }
 
     std::optional<FFTCoreType> coreTypeOpt = std::nullopt;
+    if (fftType == asdFftType::ASCEND_FFT_C2C_SEP) {
+        if ((nDoing == 256 || nDoing == 512) && forward) {
+            return InitFftOpPtr(FFTCoreType::kFftBSep, nDone, nDoing, stride, batch, fftType, forward, plan);
+        }
+        return InitFftOpPtr(FFTCoreType::kDftSep, nDone, nDoing, stride, batch, fftType, forward, plan);
+    }
 
     // getCore from configs
     if (fftType == asdFftType::ASCEND_FFT_C2C) {
@@ -438,6 +436,18 @@ std::unique_ptr<FftOperation> GetCore2D(int64_t fftSizeX, int64_t fftSizeY, int 
     }
 
     return InitFft2DOpPtr(coreTypeOpt, fftSizeX, fftSizeY, batchSize, fftType, forward, plan);
+}
+
+
+std::unique_ptr<FftOperation> GetCore3D(int64_t fftSizeX, int64_t fftSizeY, int64_t fftSizeZ, int64_t batchSize, AsdSip::asdFftType fftType, bool forward, FFTPlan &plan)
+{
+    std::optional<FFTCoreType> coreTypeOpt = std::nullopt;
+    // currently only supports DFT 3D kernel.
+    if (fftType == asdFftType::ASCEND_FFT_C2C_SEP) {
+        coreTypeOpt = FFTCoreType::kDddSep;
+    }
+
+    return InitFft3DOpPtr(coreTypeOpt, fftSizeX, fftSizeY, fftSizeZ, batchSize, fftType, forward, plan);
 }
 
 bool commonMatchFunc(const FFTPlan &plan, const Tensor &inData)
@@ -495,6 +505,15 @@ void addFFT2DStep(FFTPlan &plan, int radixX, int radixY)
 
     step.operation =
         GetCore2D(fftSizeX, fftSizeY, radixX, radixY, plan.batchSize, plan.fftType, plan.isForward(), plan);
+}
+
+void addFFT3DStep(FFTPlan &plan, int64_t fftSizeX, int64_t fftSizeY, int64_t fftSizeZ)
+{
+    plan.steps.push_back(PlanStep{});
+    PlanStep &step = plan.steps.back();
+
+    step.operation =
+        GetCore3D(fftSizeX, fftSizeY, fftSizeZ, plan.batchSize, plan.fftType, plan.isForward(), plan);
 }
 
 void init2DSteps(FFTPlan &plan)
@@ -566,6 +585,101 @@ void init2DSteps(FFTPlan &plan)
             dimsStepTwo.push_back(fftSizeY);
             dimsStepTwo.push_back(fftSizeX);
             addFFTTransposeStep(plan, K_LAST_DIM, K_PENULTIMATE_DIM, dimsStepTwo);
+            break;
+        default:
+            break;
+    }
+
+    plan.markInitialized();
+}
+
+void addFFTC2CFirstTwoDimsStep(FFTPlan &plan, int batchSize, int64_t fftSizeX, int64_t fftSizeY, int64_t fftSizeZ)
+{
+    SVector<int64_t> dimsStepOne;
+    SVector<int64_t> dimsStepTwo;
+    SVector<int64_t> dimsStepThree;
+    SVector<int64_t> dimsStepFour;
+    bool strideTag = false;
+
+    if (Fft2dSupportVertical(batchSize, fftSizeX, fftSizeY * fftSizeZ, plan.fftType)) {
+        plan.fftStrides[0] = fftSizeY * fftSizeZ;
+        strideTag = true;
+        addFFTSteps(plan, 0, batchSize, asdFftType::ASCEND_FFT_C2C);
+    } else {
+        dimsStepOne = {batchSize, fftSizeX, fftSizeY, fftSizeZ};
+        addFFTTransposeStep(plan, K_LAST_DIM, K_ANTEPENULTIMATE_DIM, dimsStepOne);
+        addFFTSteps(plan, 0, batchSize * fftSizeY * fftSizeZ, asdFftType::ASCEND_FFT_C2C);
+    }
+    if ((fftSizeX == 1) && Fft2dSupportVertical(batchSize, fftSizeY, fftSizeZ, plan.fftType)) {
+        plan.fftStrides[1] = fftSizeZ;
+        addFFTSteps(plan, 1, batchSize * fftSizeX, asdFftType::ASCEND_FFT_C2C);
+    } else {
+        if (strideTag) {
+            dimsStepOne = {batchSize, fftSizeX, fftSizeY, fftSizeZ};
+            addFFTTransposeStep(plan, K_LAST_DIM, K_PENULTIMATE_DIM, dimsStepOne);
+            addFFTSteps(plan, 1, batchSize * fftSizeX * fftSizeZ, asdFftType::ASCEND_FFT_C2C);
+            dimsStepTwo = {batchSize, fftSizeX, fftSizeZ, fftSizeY};
+            addFFTTransposeStep(plan, K_LAST_DIM, K_PENULTIMATE_DIM, dimsStepTwo);
+        } else {
+            dimsStepTwo = {batchSize, fftSizeZ, fftSizeY, fftSizeX};
+            addFFTTransposeStep(plan, K_LAST_DIM, K_PENULTIMATE_DIM, dimsStepTwo);
+            addFFTSteps(plan, 1, batchSize * fftSizeX * fftSizeZ, asdFftType::ASCEND_FFT_C2C);
+            dimsStepThree = {batchSize, fftSizeZ, fftSizeX, fftSizeY};
+            addFFTTransposeStep(plan, K_LAST_DIM, K_PENULTIMATE_DIM, dimsStepThree);
+            dimsStepFour = {batchSize, fftSizeZ, fftSizeY, fftSizeX};
+            addFFTTransposeStep(plan, K_LAST_DIM, K_ANTEPENULTIMATE_DIM, dimsStepFour);
+        }
+    }
+}
+
+void init3DSteps(FFTPlan &plan)
+{
+    int64_t batchSize = plan.batchSize;
+    int64_t fftSizeX = plan.fftSizes[0];
+    int64_t fftSizeY = plan.fftSizes[1];
+    int64_t fftSizeZ = plan.fftSizes[2];
+
+    int radixY = ChooseRadix(plan.fftType, fftSizeY);
+    int radixZ = ChooseRadix(plan.fftType, fftSizeZ);
+
+    SVector<int64_t> dimsStepOne;
+    SVector<int64_t> dimsStepTwo;
+
+    switch (plan.fftType) {
+        case asdFftType::ASCEND_FFT_C2C_SEP:
+            plan.fftStrides = {fftSizeY * fftSizeZ, fftSizeZ, 1};
+            addFFT3DStep(plan, fftSizeX, fftSizeY, fftSizeZ);
+            break;
+        case asdFftType::ASCEND_FFT_C2R:
+            addFFTC2CFirstTwoDimsStep(plan, batchSize, fftSizeX, fftSizeY, GetC2RInputSize(fftSizeZ));
+            addFFTSteps(plan, 2, batchSize * fftSizeX * fftSizeY, asdFftType::ASCEND_FFT_C2R);
+            break;
+        case asdFftType::ASCEND_FFT_R2C:
+            addFFTSteps(plan, 2, batchSize * fftSizeX * fftSizeY, asdFftType::ASCEND_FFT_R2C);
+            addFFTC2CFirstTwoDimsStep(plan, batchSize, fftSizeX, fftSizeY, GetR2COutputSize(fftSizeZ));
+            break;
+        case asdFftType::ASCEND_FFT_C2C:
+            if (Fft2dSupportFusing(fftSizeY, fftSizeZ, radixY, radixZ, plan.fftType)) {
+                plan.batchSize = batchSize * fftSizeX;
+                plan.fftSizes = {fftSizeY, fftSizeZ};
+                radixZ = ChooseRadix(plan.fftType, fftSizeZ);
+                addFFT2DStep(plan, radixY, radixZ);
+                plan.batchSize = batchSize;
+                plan.fftSizes = {fftSizeX, fftSizeY, fftSizeZ};
+                if (Fft2dSupportVertical(batchSize, fftSizeX, fftSizeY * fftSizeZ, plan.fftType)) {
+                    plan.fftStrides[0] = fftSizeY * fftSizeZ;
+                    addFFTSteps(plan, 0, batchSize, asdFftType::ASCEND_FFT_C2C);
+                } else {
+                    dimsStepOne = {batchSize, fftSizeX, fftSizeY, fftSizeZ};
+                    addFFTTransposeStep(plan, K_LAST_DIM, K_ANTEPENULTIMATE_DIM, dimsStepOne);
+                    addFFTSteps(plan, 0, batchSize * fftSizeY * fftSizeZ, asdFftType::ASCEND_FFT_C2C);
+                    dimsStepTwo = {batchSize, fftSizeZ, fftSizeY, fftSizeX};
+                    addFFTTransposeStep(plan, K_LAST_DIM, K_ANTEPENULTIMATE_DIM, dimsStepTwo);
+                }
+                break;
+            }
+            addFFTC2CFirstTwoDimsStep(plan, batchSize, fftSizeX, fftSizeY, fftSizeZ);
+            addFFTSteps(plan, 2, batchSize * fftSizeX * fftSizeY, asdFftType::ASCEND_FFT_C2C);
             break;
         default:
             break;
@@ -697,6 +811,18 @@ AspbStatus commonParamCheck(asdFftHandle handle, int64_t fftSizeX, int64_t fftSi
     return AsdSip::ErrorType::ACL_SUCCESS;
 }
 
+AspbStatus commonParamCheck3D(asdFftHandle handle, int64_t fftSizeX, int64_t fftSizeY, int64_t fftSizeZ, int64_t batchSize)
+{
+    AspbStatus checkStatus = commonParamCheck(handle, fftSizeX, fftSizeY, batchSize);
+    if (checkStatus != AsdSip::ErrorType::ACL_SUCCESS) {
+        return checkStatus;
+    }
+    if (fftSizeZ <= 0 || fftSizeZ > MAX_FFT_SIZE) {
+        ASDSIP_LOG(ERROR) << "Invalid fftSizeZ.";
+        return ErrorType::ACL_ERROR_INVALID_PARAM;
+    }
+    return AsdSip::ErrorType::ACL_SUCCESS;
+}
 
 AspbStatus asdFftMakePlan1D(asdFftHandle handle, int64_t fftSizeX, int64_t fftSizeY, asdFftType fftType,
                             asdFftDirection direction, int64_t batchSize, int32_t dim)
@@ -769,6 +895,33 @@ AspbStatus asdFftMakePlan2D(asdFftHandle handle, int64_t fftSizeX, int64_t fftSi
     return AsdSip::ErrorType::ACL_SUCCESS;
 }
 
+AspbStatus asdFftMakePlan3D(
+    asdFftHandle handle,
+    int64_t fftSizeX,
+    int64_t fftSizeY,
+    int64_t fftSizeZ,
+    asdFftType fftType,
+    asdFftDirection direction,
+    int32_t batchSize)
+{
+    std::lock_guard<std::mutex> lock(fft_mtx);
+    AspbStatus checkStatus = commonParamCheck3D(handle, fftSizeX, fftSizeY, fftSizeZ, batchSize);
+    if (checkStatus != AsdSip::ErrorType::ACL_SUCCESS) {
+        return checkStatus;
+    }
+
+    FFTPlan &plan = FFTPlanCache::getPlan(handle);
+
+    plan.fftType = fftType;
+    plan.direction = direction;
+    plan.batchSize = batchSize;
+    plan.fftSizes = {fftSizeX, fftSizeY, fftSizeZ};
+    plan.fftStrides = {1, 1, 1};
+
+    init3DSteps(plan);
+    return AsdSip::ErrorType::ACL_SUCCESS;
+}
+
 AspbStatus asdFftGetWorkspaceSize(asdFftHandle handle, size_t &workspaceSize)
 {
     std::lock_guard<std::mutex> lock(fft_mtx);
@@ -777,14 +930,11 @@ AspbStatus asdFftGetWorkspaceSize(asdFftHandle handle, size_t &workspaceSize)
         return ErrorType::ACL_ERROR_INVALID_PARAM;
     }
     FFTPlan &plan = FFTPlanCache::getPlan(handle);
-
     workspaceSize = 0;
     if (shouldAllocTempCaches(plan)) {
         workspaceSize += computeTempCachesSize(plan);
     }
-
     workspaceSize += computeWorkspaceSize(plan);
-
     return AsdSip::ErrorType::ACL_SUCCESS;
 }
 
@@ -1072,6 +1222,115 @@ AspbStatus asdFftExecR2C(asdFftHandle handle, const aclTensor *input, const aclT
     }
 
     return asdFftExecV2(plan, input, output);
+}
+
+
+AspbStatus asdFftExecV2Separated(FFTPlan &plan, const aclTensor *inputReal, const aclTensor *inputImag,
+    const aclTensor *outputReal, const aclTensor *outputImag)
+{
+    if (!plan.isInitialized()) {
+        ASDSIP_LOG(ERROR) << "plan is not initilized.";
+        return ErrorType::ACL_ERROR_INVALID_PARAM;
+    }
+
+    if (shouldAllocTempCaches(plan) && shouldAllocWorkspace(plan) && !plan.hasWorkspace()) {
+        ASDSIP_LOG(ERROR) << "workspace has not been allocated.";
+        return AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR;
+    }
+
+    workspace::Workspace wkspace(plan.workspaceAddr);
+    wkspace.Reset();
+
+    void* inputRealData = Mki::GetStorageAddr(inputReal);
+    if (inputRealData == nullptr) {
+        ASDSIP_LOG(ERROR) << "input aclTensor data is nullptr.";
+        return AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR;
+    }
+    void* inputImagData = Mki::GetStorageAddr(inputImag);
+    if (inputImagData == nullptr) {
+        ASDSIP_LOG(ERROR) << "input aclTensor data is nullptr.";
+        return AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR;
+    }
+    void* outputRealData = Mki::GetStorageAddr(outputReal);
+    if (outputRealData == nullptr) {
+        ASDSIP_LOG(ERROR) << "output aclTensor data is nullptr.";
+        return AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR;
+    }
+    void* outputImagData = Mki::GetStorageAddr(outputImag);
+    if (outputImagData == nullptr) {
+        ASDSIP_LOG(ERROR) << "output aclTensor data is nullptr.";
+        return AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR;
+    }
+
+    if (plan.steps.size() == 1) {
+        plan.steps[0].operation->Run(inputRealData, inputImagData, outputRealData, outputImagData, plan.stream, wkspace);
+        return AsdSip::ErrorType::ACL_SUCCESS;
+    }
+    return AsdSip::ErrorType::ACL_SUCCESS;
+}
+
+
+AspbStatus asdFftExecC2CSeparated(asdFftHandle handle, const aclTensor *inputReal, const aclTensor *inputImag,
+    const aclTensor *outputReal, const aclTensor *outputImag)
+{
+    std::lock_guard<std::mutex> lock(fft_mtx);
+    if (!FFTPlanCache::doesPlanExist(handle)) {
+        ASDSIP_LOG(ERROR) << "Invalid handle.";
+        return ErrorType::ACL_ERROR_INVALID_PARAM;
+    }
+
+    int64_t *viewDimsInReal = nullptr;
+    uint64_t viewDimsNumInReal = 0;
+    CHECK_STATUS_WITH_ACL_RETURN(aclGetViewShape(inputReal, &viewDimsInReal, &viewDimsNumInReal), "aclGetViewShape");
+
+    int64_t *viewDimsInImag = nullptr;
+    uint64_t viewDimsNumInImag = 0;
+    CHECK_STATUS_WITH_ACL_RETURN(aclGetViewShape(inputImag, &viewDimsInImag, &viewDimsNumInImag), "aclGetViewShape");
+
+    int64_t *viewDimsOutReal = nullptr;
+    uint64_t viewDimsNumOutReal = 0;
+    CHECK_STATUS_WITH_ACL_RETURN(aclGetViewShape(outputReal, &viewDimsOutReal, &viewDimsNumOutReal), "aclGetViewShape");
+
+    int64_t *viewDimsOutImag = nullptr;
+    uint64_t viewDimsNumOutImag = 0;
+    CHECK_STATUS_WITH_ACL_RETURN(aclGetViewShape(outputImag, &viewDimsOutImag, &viewDimsNumOutImag), "aclGetViewShape");
+
+    if ((viewDimsNumInReal != viewDimsNumInImag) || (viewDimsNumOutReal != viewDimsNumOutImag) ||
+        (viewDimsNumInReal != viewDimsNumOutReal)) {
+            ASDSIP_ELOG(ErrorType::ACL_ERROR_OP_INPUT_NOT_MATCH) << "invalid input/output format.";
+            delete[] viewDimsInReal;
+            delete[] viewDimsInImag;
+            delete[] viewDimsOutReal;
+            delete[] viewDimsOutImag;
+            return AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR;
+        }
+    
+    bool validFlag = true;
+    for (uint64_t dim = 0; dim < viewDimsNumInReal; dim++) {
+        if ((viewDimsInReal[dim] != viewDimsInImag[dim]) || (viewDimsInReal[dim] != viewDimsOutReal[dim])
+            || (viewDimsOutReal[dim] != viewDimsOutImag[dim])) {
+            validFlag = false;
+            break;
+        }
+    }
+    
+    if (!validFlag) {
+        ASDSIP_ELOG(ErrorType::ACL_ERROR_OP_INPUT_NOT_MATCH) << "invalid input/output shape.";
+        delete[] viewDimsInReal;
+        delete[] viewDimsInImag;
+        delete[] viewDimsOutReal;
+        delete[] viewDimsOutImag;
+        return AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR;
+    }
+
+    delete[] viewDimsInReal;
+    delete[] viewDimsInImag;
+    delete[] viewDimsOutReal;
+    delete[] viewDimsOutImag;
+
+    FFTPlan &plan = FFTPlanCache::getPlan(handle);
+
+    return asdFftExecV2Separated(plan, inputReal, inputImag, outputReal, outputImag);
 }
 
 }

@@ -24,6 +24,11 @@ AspbStatus Concat(const Tensor &inTensorA, const Tensor &inTensorB, Tensor &outT
 {
     SVector<int64_t> dims = inTensorA.desc.dims;
     const SVector<int64_t> &dimsB = inTensorB.desc.dims;
+
+    ASDSIP_ECHECK(dims.size() == dimsB.size(),
+        "Input tensors A and B must have the same number of dimensions",
+        ErrorType::ACL_ERROR_INTERNAL_ERROR);
+
     int32_t dimSize = static_cast<int32_t>(dims.size());
     for (int32_t i = 0; i < dimSize; i++) {
         if (i != concatDim && dims.at(i) != dimsB.at(i)) {

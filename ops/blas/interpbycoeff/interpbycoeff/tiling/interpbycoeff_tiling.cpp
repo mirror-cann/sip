@@ -102,6 +102,9 @@ AsdSip::AspbStatus InterpByCoeffTiling(const LaunchParam &launchParam, KernelInf
     int32_t repeatNum = REPEAT_32;
     int32_t maxBaseN = static_cast<int32_t>(L0_SIZE / BASE_MATMUL_SIZE / sizeof(float)) / (param.rsNum * 2) *
                        BASE_MATMUL_SIZE;  // Complex32
+    ASDSIP_CHECK(maxBaseN != 0, "maxBaseN is 0!",
+              return AsdSip::ErrorType::ACL_ERROR_INVALID_PARAM);
+
     if (inDtype == TensorDType::TENSOR_DTYPE_COMPLEX64) {
         tilingKey = 0;
         repeatNum = REPEAT_64;
@@ -159,7 +162,7 @@ AsdSip::AspbStatus InterpByCoeffTiling(const LaunchParam &launchParam, KernelInf
     tilingDataPtr->dataType = tilingKey;
     LogTiling(*tilingDataPtr);
     auto res = InterpByCoeffTCubeTiling(tilingData, tilingKey);
-    ASDSIP_CHECK(res, "failed to execute func InterpByCoeffTCubeTiling!",
+    ASDSIP_CHECK(res, "Failed to execute func InterpByCoeffTCubeTiling!",
               return AsdSip::ErrorType::ACL_ERROR_INVALID_PARAM);
 
     uint64_t workspaceSize = static_cast<uint64_t>(L0_SIZE) * static_cast<uint64_t>(usedCubeCoreNum) * 2;

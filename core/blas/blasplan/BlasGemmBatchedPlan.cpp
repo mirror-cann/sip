@@ -113,11 +113,16 @@ AsdSip::AspbStatus BlasCgemmBatchedPlan::CreateTensor()
     ret = aclrtMemcpy(
         deviceAddr, GATHER_OFFSETS_SIZE * sizeof(uint32_t), offsets.data(), GATHER_OFFSETS_SIZE * sizeof(uint32_t),
         ACL_MEMCPY_HOST_TO_DEVICE);
+    if (ret != 0) {
+        aclrtFree(deviceAddr);
+    }
     ASDSIP_ECHECK(ret == 0, "Memcpy gather-offsets to device failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
 
     gatherOffsets = aclCreateTensor(shape, ONE, aclDataType::ACL_UINT32,
         stride, 0, aclFormat::ACL_FORMAT_ND, shape, ONE, deviceAddr);
-
+    if (gatherOffsets == nullptr) {
+        aclrtFree(deviceAddr);
+    }
     ASDSIP_ECHECK(
         gatherOffsets != nullptr, "Create gather-offsets aclTensor failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
 

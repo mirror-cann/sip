@@ -12,11 +12,11 @@
 #include <string>
 
 namespace AsdSip {
-const char* LogLevelToString(LogLevel level)
+const std::string LogLevelToString(LogLevel level)
 {
     static std::vector<std::string> levelStrs = {"FATAL", "DEBUG", "INFO", "WARN", "ERROR"};
     size_t levelInt = static_cast<size_t>(level);
-    return (levelInt < levelStrs.size() ? levelStrs[levelInt] : "UNKNOWN").c_str();
+    return levelInt < levelStrs.size() ? levelStrs[levelInt] : "UNKNOWN";
 }
 
 const int LogErrCodeToInt(ErrorType errCode)

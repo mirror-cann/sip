@@ -8,6 +8,12 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include "kernel_operator.h"
+#include "../../../../include/common/common.h"
+#include "../../../../include/common/iterator.h"
+#include "../../../../include/common/simd.h"
+#include "../../../../include/common/utils.h"
+
 #ifdef __CCE_KT_TEST__
 #define __aicore__
 #else
@@ -25,31 +31,33 @@ using namespace fp32;
  * @param [in] int64_t M: A和C的行数
  * @param [in] int64_t N: B的列数
  * @param [in] int64_t K: A的列数，B的行数
- * @param [in] __gm__ float * __restrict__ gm_A：输入矩阵A的指针
+ * @param [in] AscendC::GlobalTensor<float> gm_A：输入矩阵A的指针
  * @param [in] int64_t lda：在GM中A矩阵两列之间的距离（不需要对齐）
- * @param [in] __gm__ float * __restrict__ gm_B：输入矩阵B的指针
+ * @param [in] AscendC::GlobalTensor<float> gm_B：输入矩阵B的指针
  * @param [in] int64_t ldb：在GM中B矩阵两列之间的距离（不需要对齐）
- * @param [in] __gm__ float * __restrict__ gm_C：输入矩阵C的指针
+ * @param [in] AscendC::GlobalTensor<float> gm_C：输入矩阵C的指针
  * @param [in] int64_t ldc：在GM中C矩阵两列之间的距离（不需要对齐）
  * @param [in] int64_t batchSize：计算多少个矩阵乘法
  * @param [in] int64_t M0：每个AIC计算的矩阵的分块大小
  * @param [in] int64_t N0：每个AIC计算的矩阵的分块大小
  * @param [in] int64_t K0：每个AIC计算的矩阵的分块大小
  * @param [in] int64_t is_AIV_AIC_PIPE：是否和AIV同步。开启该选项会和AIV同步将数据写入到AIV_AIC_workspace，之后由AIV处理。
- * @param [in] __gm__ float * __restrict__ AIV_AIC_workspace：AIV和AIC同步时需要的额外GM空间
+ * @param [in] AscendC::GlobalTensor<float> AIV_AIC_workspace：AIV和AIC同步时需要的额外GM空间
  */
 __aicore__ __inline__ void ascblasSmatmul(ascblasOperation_t transA, ascblasOperation_t transB, int64_t M, int64_t N,
-                                          int64_t K, __gm__ float *__restrict__ gm_A, int64_t lda,
-                                          __gm__ float *__restrict__ gm_B, int64_t ldb, __gm__ float *__restrict__ gm_C,
-                                          int64_t ldc, int64_t batchSize, int64_t M0, int64_t N0, int64_t K0,
-                                          int64_t is_AIV_AIC_PIPE, __gm__ float *__restrict__ AIV_AIC_workspace)
+                                          int64_t K, AscendC::GlobalTensor<float> gm_A, int64_t lda,
+                                          AscendC::GlobalTensor<float> gm_B, int64_t ldb,
+                                          AscendC::GlobalTensor<float> gm_C, int64_t ldc, int64_t batchSize, int64_t M0,
+                                          int64_t N0, int64_t K0, int64_t is_AIV_AIC_PIPE,
+                                          AscendC::GlobalTensor<float> AIV_AIC_workspace)
 {
-    auto L1_base_a = reinterpret_cast<__cbuf__ float *>((uintptr_t)0);             // 128 KB
-    auto L1_base_b = reinterpret_cast<__cbuf__ float *>((uintptr_t)(128 * 1024));  // 128 KB
+    AsdopsBuffer<ArchType::ASCEND_V220> buf;
+    AscendC::LocalTensor<float> L1_base_a = buf.GetBuffer<BufferType::ASCEND_CB, float>(0);             // 128 KB
+    AscendC::LocalTensor<float> L1_base_b = buf.GetBuffer<BufferType::ASCEND_CB, float>(128 * 1024);  // 128 KB
 
-    auto L0A_base = reinterpret_cast<__ca__ float *>((uintptr_t)0);
-    auto L0B_base = reinterpret_cast<__cb__ float *>((uintptr_t)0);
-    auto L0C_base = reinterpret_cast<__cc__ float *>((uintptr_t)0);
+    AscendC::LocalTensor<float> L0A_base = buf.GetBuffer<BufferType::ASCEND_L0A, float>(0);
+    AscendC::LocalTensor<float> L0B_base = buf.GetBuffer<BufferType::ASCEND_L0B, float>(0);
+    AscendC::LocalTensor<float> L0C_base = buf.GetBuffer<BufferType::ASCEND_L0C, float>(0);
 
     if (M0 == 0)
         M0 = 128;
@@ -72,29 +80,29 @@ __aicore__ __inline__ void ascblasSmatmul(ascblasOperation_t transA, ascblasOper
     int64_t loop_ping_flag = 1;    // 控制loop循环的双循环
     int64_t k_loop_ping_flag = 1;  // 控制k_loop循环的双循环
 
-    set_flag(PIPE_FIX, PIPE_M, EVENT_ID0);  // 同步L0C的使用
-    set_flag(PIPE_FIX, PIPE_M, EVENT_ID1);  // 同步L0C的使用
+    SET_FLAG(FIX, M, EVENT_ID0);  // 同步L0C的使用
+    SET_FLAG(FIX, M, EVENT_ID1);  // 同步L0C的使用
 
-    set_flag(PIPE_MTE1, PIPE_MTE2, EVENT_ID0);  // 同步L1_buf_a的使用
-    set_flag(PIPE_MTE1, PIPE_MTE2, EVENT_ID1);  // 同步L1_buf_a的使用
-    set_flag(PIPE_MTE1, PIPE_MTE2, EVENT_ID2);  // 同步L1_buf_b的使用
-    set_flag(PIPE_MTE1, PIPE_MTE2, EVENT_ID3);  // 同步L1_buf_b的使用
+    SET_FLAG(MTE1, MTE2, EVENT_ID0);  // 同步L1_buf_a的使用
+    SET_FLAG(MTE1, MTE2, EVENT_ID1);  // 同步L1_buf_a的使用
+    SET_FLAG(MTE1, MTE2, EVENT_ID2);  // 同步L1_buf_b的使用
+    SET_FLAG(MTE1, MTE2, EVENT_ID3);  // 同步L1_buf_b的使用
 
-    set_flag(PIPE_M, PIPE_MTE1, EVENT_ID0);  // 同步L1 -> (L0A | L0B)
-    set_flag(PIPE_M, PIPE_MTE1, EVENT_ID1);  // 同步L1 -> (L0A | L0B)
+    SET_FLAG(M, MTE1, EVENT_ID0);  // 同步L1 -> (L0A | L0B)
+    SET_FLAG(M, MTE1, EVENT_ID1);  // 同步L1 -> (L0A | L0B)
 
     // 循环遍历每个分块
-    int64_t blockNum = get_block_num();
+    int64_t blockNum = AscendC::GetBlockNum();
     for (int64_t loop_idx = 0; loop_idx < loop; loop_idx++) {
         // 该循环计算L1上B分块(N0, K0)和A分块(K0, M0)的矩阵乘法并加到L0C上
 
         // 平均分配给物理核心，不是自己的任务就略过到下一项
-        if (loop_idx % blockNum != get_block_idx()) {
+        if (loop_idx % blockNum != AscendC::GetBlockIdx()) {
             continue;
         }
 
         // 定义变量全部使用双缓冲
-        auto L0C_buf = loop_ping_flag ? L0C_base + L0C_PINGPONG_BUFFER_LEN : L0C_base;
+        auto L0C_buf = loop_ping_flag ? L0C_base[L0C_PINGPONG_BUFFER_LEN] : L0C_base;
         auto LOOP_EVENT_ID = loop_ping_flag ? EVENT_ID0 : EVENT_ID1;
 
         int64_t batch_idx = loop_idx / (m_loop * n_loop);
@@ -147,28 +155,28 @@ __aicore__ __inline__ void ascblasSmatmul(ascblasOperation_t transA, ascblasOper
             int64_t k_round = ROUND(k_actual, 16);
             int64_t L0AB_k_loop = (k_actual + L0AB_K0 - 1) / L0AB_K0;
 
-            auto L1_buf_a = k_loop_ping_flag ? L1_base_a : L1_base_a + L1_PINGPONG_BUFFER_LEN;
-            auto L1_buf_b = k_loop_ping_flag ? L1_base_b : L1_base_b + L1_PINGPONG_BUFFER_LEN;
+            auto L1_buf_a = k_loop_ping_flag ? L1_base_a : L1_base_a[L1_PINGPONG_BUFFER_LEN];
+            auto L1_buf_b = k_loop_ping_flag ? L1_base_b : L1_base_b[L1_PINGPONG_BUFFER_LEN];
             auto K_LOOP_EVENT_ID = k_loop_ping_flag ? EVENT_ID0 : EVENT_ID1;
 
             // *** load matrix A to L1
-            wait_flag(PIPE_MTE1, PIPE_MTE2, K_LOOP_EVENT_ID);  // 控制 L1_buf_a 的使用
+            WAIT_FLAG(MTE1, MTE2, K_LOOP_EVENT_ID);  // 控制 L1_buf_a 的使用
             if (transA != ASCBLAS_OP_N) {
-                ascblas_matrix_gm2cbuf_ND2nZ(L1_buf_a, gm_A + offset_a, K0, M0, k_actual, m_actual, K0);
+                ascblas_matrix_gm2cbuf_ND2nZ(L1_buf_a, gm_A[offset_a], K0, M0, k_actual, m_actual, K0);
             } else {
-                ascblas_matrix_gm2cbuf_ND2nN(L1_buf_a, gm_A + offset_a, M0, K0, m_actual, k_actual, M0);
+                ascblas_matrix_gm2cbuf_ND2nN(L1_buf_a, gm_A[offset_a], M0, K0, m_actual, k_actual, M0);
             }
-            set_flag(PIPE_MTE2, PIPE_MTE1, K_LOOP_EVENT_ID);  // L1_buf_a 读取完毕，可以开始进行L1 -> L0B的拷贝了
+            SET_FLAG(MTE2, MTE1, K_LOOP_EVENT_ID);  // L1_buf_a 读取完毕，可以开始进行L1 -> L0B的拷贝了
 
             // *** load matrix B to L1
-            wait_flag(PIPE_MTE1, PIPE_MTE2, K_LOOP_EVENT_ID + 2);  // 控制 L1_buf_b 的使用
+            WAIT_FLAG(MTE1, MTE2, K_LOOP_EVENT_ID + 2);  // 控制 L1_buf_b 的使用
             if (transB != ASCBLAS_OP_N) {
-                ascblas_matrix_gm2cbuf_ND2nN(L1_buf_b, gm_B + offset_b, N0, K0, n_actual, k_actual, N0);
+                ascblas_matrix_gm2cbuf_ND2nN(L1_buf_b, gm_B[offset_b], N0, K0, n_actual, k_actual, N0);
             } else {
-                ascblas_matrix_gm2cbuf_ND2nZ(L1_buf_b, gm_B + offset_b, K0, N0, k_actual, n_actual, K0);
+                ascblas_matrix_gm2cbuf_ND2nZ(L1_buf_b, gm_B[offset_b], K0, N0, k_actual, n_actual, K0);
             }
 
-            set_flag(PIPE_MTE2, PIPE_MTE1, K_LOOP_EVENT_ID + 2);  // L1_buf_b 读取完毕，可以开始进行L1 -> L0A的拷贝了
+            SET_FLAG(MTE2, MTE1, K_LOOP_EVENT_ID + 2);  // L1_buf_b 读取完毕，可以开始进行L1 -> L0A的拷贝了
 
             for (int L0AB_k_idx = 0; L0AB_k_idx < L0AB_k_loop; L0AB_k_idx++) {
                 // 该循环计算L0AB上B分块(N0, L0AB_K0)和A分块(L0AB_K0, M0)的矩阵乘法并加到L0C上
@@ -177,108 +185,162 @@ __aicore__ __inline__ void ascblasSmatmul(ascblasOperation_t transA, ascblasOper
 
                 auto mte1_mad_ping_flag = 1 - L0AB_k_idx % 2;
                 auto mte1_mad_event_id = mte1_mad_ping_flag ? EVENT_ID0 : EVENT_ID1;
-                auto L0A_buf = L0A_base + (L0AB_k_idx % 2) * L0AB_PINGPONG_BUFFER_LEN;
-                auto L0B_buf = L0B_base + (L0AB_k_idx % 2) * L0AB_PINGPONG_BUFFER_LEN;
+                auto L0A_buf = L0A_base[(L0AB_k_idx % 2) * L0AB_PINGPONG_BUFFER_LEN];
+                auto L0B_buf = L0B_base[(L0AB_k_idx % 2) * L0AB_PINGPONG_BUFFER_LEN];
 
                 // *** load matrix A from L1 to L0B
                 if (L0AB_k_idx == 0) {
-                    wait_flag(PIPE_MTE2, PIPE_MTE1, K_LOOP_EVENT_ID);  // 等待gm -> L1结束，在读取到L0B上
+                    WAIT_FLAG(MTE2, MTE1, K_LOOP_EVENT_ID);  // 等待gm -> L1结束，在读取到L0B上
                 }
-                wait_flag(PIPE_M, PIPE_MTE1, mte1_mad_event_id);  // 当CUBE计算结束，才能拷贝到L0AB上
+                WAIT_FLAG(M, MTE1, mte1_mad_event_id);  // 当CUBE计算结束，才能拷贝到L0AB上
                 if (transA != ASCBLAS_OP_N) {
-                    auto L1_src_a = L1_buf_a + L0AB_k_idx * L0AB_K0 * M0;
+                    auto L1_src_a = L1_buf_a[L0AB_k_idx * L0AB_K0 * M0];
                     for (int i = 0; i < L0AB_k_round / CUBE_K0; i++) {
-                        load_cbuf_to_cb(L0B_buf + i * m_round * CUBE_K0, L1_src_a + i * CUBE_K0 * M0, 0,
-                                        m_round / CUBE_M0, 1, 0, 0, false, inc);
+                        AscendC::LoadData(
+                            L0B_buf[i * m_round * CUBE_K0],
+                            L1_src_a[i * CUBE_K0 * M0],
+                            AscendC::LoadData2dParams(
+                                0,                      // baseIdx
+                                m_round / CUBE_M0,      // repeat
+                                1,                      // srcStride
+                                0,                      // sid
+                                0,                      // dstStride
+                                false,                  // transpose
+                                inc                     // addr_cal_mode_t
+                            )
+                        );
                     }
                 } else {
-                    auto L1_src_a = L1_buf_a + L0AB_k_idx * L0AB_K0 * M0;
+                    auto L1_src_a = L1_buf_a[L0AB_k_idx * L0AB_K0 * M0];
                     for (int i = 0; i < m_round / CUBE_M0; i++) {
-                        load_cbuf_to_cb_transpose(L0B_buf + i * CUBE_MATRIX_SIZE, L1_src_a + i * 2 * CUBE_MATRIX_SIZE,
-                                                  0, L0AB_k_round / (2 * CUBE_K0), M0 / CUBE_M0,
-                                                  2 * m_round / CUBE_M0 - 1, inc, m_round / CUBE_M0 - 1);
+                        AscendC::LoadDataWithTranspose(
+                            L0B_buf[i * CUBE_MATRIX_SIZE],
+                            L1_src_a[i * 2 * CUBE_MATRIX_SIZE],
+                            AscendC::LoadData2dTransposeParams(
+                                0,                                    // indexID
+                                L0AB_k_round / (2 * CUBE_K0),         // repeat
+                                M0 / CUBE_M0,                         // srcStride
+                                2 * m_round / CUBE_M0 - 1,            // dstStride
+                                m_round / CUBE_M0 - 1,                // dstFracStride
+                                inc                                   // addrmode
+                            )
+                        );
                     }
                 }
 
                 if (L0AB_k_idx == L0AB_k_loop - 1) {  // L1上的数据已经读取完毕，可以进行下一次 GM -> L1 了
-                    set_flag(PIPE_MTE1, PIPE_MTE2, K_LOOP_EVENT_ID);
+                    SET_FLAG(MTE1, MTE2, K_LOOP_EVENT_ID);
                 }
 
                 // *** load matrix B from L1 to L0B
                 if (L0AB_k_idx == 0) {
-                    wait_flag(PIPE_MTE2, PIPE_MTE1, K_LOOP_EVENT_ID + 2);  // 等待gm -> L1结束，在读取到L0B上
+                    WAIT_FLAG(MTE2, MTE1, K_LOOP_EVENT_ID + 2);  // 等待gm -> L1结束，在读取到L0B上
                 }
                 if (transB != ASCBLAS_OP_N) {
-                    auto L1_src_b = L1_buf_b + L0AB_k_idx * L0AB_K0 * N0;  // 当CUBE计算结束，才能拷贝到L0AB上
+                    auto L1_src_b = L1_buf_b[L0AB_k_idx * L0AB_K0 * N0];  // 当CUBE计算结束，才能拷贝到L0AB上
                     for (int i = 0; i < n_round / CUBE_N0; i++) {
-                        load_cbuf_to_ca_transpose(L0A_buf + i * L0AB_k_round * CUBE_N0,
-                                                  L1_src_b + i * 2 * CUBE_MATRIX_SIZE, 0, L0AB_k_round / (2 * CUBE_K0),
-                                                  N0 / CUBE_N0, 1, inc, 0);
+                        AscendC::LoadDataWithTranspose(
+                            L0A_buf[i * L0AB_k_round * CUBE_N0],
+                            L1_src_b[i * 2 * CUBE_MATRIX_SIZE],
+                            AscendC::LoadData2dTransposeParams(
+                                0,                                    // indexID
+                                L0AB_k_round / (2 * CUBE_K0),         // repeat
+                                N0 / CUBE_N0,                         // srcStride
+                                1,                                    // dstStride
+                                0,                                    // dstFracStride
+                                inc                                   // addrmode
+                            )
+                        );
                     }
                 } else {
-                    auto L1_src_b = L1_buf_b + L0AB_k_idx * L0AB_K0 * N0;
+                    auto L1_src_b = L1_buf_b[L0AB_k_idx * L0AB_K0 * N0];
                     for (int i = 0; i < n_round / CUBE_N0; i++) {
-                        load_cbuf_to_ca(L0A_buf + i * L0AB_k_round * CUBE_N0, L1_src_b + i * CUBE_MATRIX_SIZE, 0,
-                                        L0AB_k_round / CUBE_K0, N0 / CUBE_N0, 0, 0, false, inc);
+                        AscendC::LoadData(
+                            L0A_buf[i * L0AB_k_round * CUBE_N0],
+                            L1_src_b[i * CUBE_MATRIX_SIZE],
+                            AscendC::LoadData2dParams(
+                                0,                      // baseIdx
+                                L0AB_k_round / CUBE_K0, // repeat
+                                N0 / CUBE_N0,           // srcStride
+                                0,                      // sid
+                                0,                      // dstStride
+                                false,                  // transpose
+                                inc                     // addr_cal_mode_t
+                            )
+                        );
                     }
                 }
                 if (L0AB_k_idx == L0AB_k_loop - 1) {  // L1上的数据已经读取完毕，可以进行下一次 GM -> L1 了
-                    set_flag(PIPE_MTE1, PIPE_MTE2, K_LOOP_EVENT_ID + 2);
+                    SET_FLAG(MTE1, MTE2, K_LOOP_EVENT_ID + 2);
                 }
 
-                set_flag(PIPE_MTE1, PIPE_M, mte1_mad_event_id);
-                wait_flag(PIPE_MTE1, PIPE_M, mte1_mad_event_id);
+                SET_FLAG(MTE1, M, mte1_mad_event_id);
+                WAIT_FLAG(MTE1, M, mte1_mad_event_id);
 
                 bool init_c = (k_idx == 0 && L0AB_k_idx == 0);  // 第一次循环直接赋值即可
                 if (init_c) {                                   // 同步L0C的写入和CUBE的计算
-                    wait_flag(PIPE_FIX, PIPE_M, LOOP_EVENT_ID);
+                    WAIT_FLAG(FIX, M, LOOP_EVENT_ID);
                 }
-                mad(L0C_buf, L0A_buf, L0B_buf, n_round, L0AB_k_actual, m_round, 0, 1, 0, init_c);
+                mad((__cc__ float *)L0C_buf.GetPhyAddr(),
+                    (__ca__ float *)L0A_buf.GetPhyAddr(),
+                    (__cb__ float *)L0B_buf.GetPhyAddr(),
+                    n_round, L0AB_k_actual, m_round, 0, 1, 0, init_c);
 
-                pipe_barrier(PIPE_M);
-                set_flag(PIPE_M, PIPE_MTE1, mte1_mad_event_id);  // CUBE计算完毕，可以进行 L1 -> L0AB 的拷贝了
+                PIPE_BARRIER(M);
+                SET_FLAG(M, MTE1, mte1_mad_event_id);  // CUBE计算完毕，可以进行 L1 -> L0AB 的拷贝了
             }
             k_loop_ping_flag = 1 - k_loop_ping_flag;  // 更换标记做双缓存
         }
 
         // CUBE计算完毕，存回到GM
-        set_flag(PIPE_M, PIPE_FIX, LOOP_EVENT_ID);
-        wait_flag(PIPE_M, PIPE_FIX, LOOP_EVENT_ID);
+        SET_FLAG(M, FIX, LOOP_EVENT_ID);
+        WAIT_FLAG(M, FIX, LOOP_EVENT_ID);
 
         // copy from L0C to gm
         // 如果需要乘alpha加C拷贝到 AIV_AIC_workspace 上便于AIV获取
         if (is_AIV_AIC_PIPE) {
-            wait_flag_dev(loop_ping_flag + 2);  // 等待AIV上 AIV_AIC_workspace 使用完毕
-            copy_matrix_cc_to_gm(AIV_AIC_workspace + (get_block_idx() * 2 + loop_ping_flag) * M0 * N0, L0C_buf, 0,
-                                 m_actual, n_actual, M0, n_round, 0, NoQuant, 0, false, true);
-            ffts_cross_core_sync(
-                PIPE_FIX, GET_FFST_MSG(2, loop_ping_flag));  // AIC已经将AB写入到AIV_AIC_workspace中，AIV可以开始读取
+            WaitFlagDev(loop_ping_flag + 2);  // 等待AIV上 AIV_AIC_workspace 使用完毕
+            l0c_to_gm<ArchType::ASCEND_V220, DataFormat::ND, float, float>(
+                AIV_AIC_workspace[(AscendC::GetBlockIdx() * 2 + loop_ping_flag) * M0 * N0],
+                L0C_buf,
+                n_actual,  // MSize
+                m_actual,  // NSize
+                n_round,   // srcStride
+                M0         // dstStride_dst_D
+            );
+            FftsCrossCoreSync<PIPE_FIX, 2>(loop_ping_flag);  // AIC已经将AB写入到AIV_AIC_workspace中，AIV可以开始读取
         } else {
             // 不需要乘alpha加C直接写入到GM
-            copy_matrix_cc_to_gm(gm_C + offset_c, L0C_buf, 0, m_actual, n_actual, ldc, n_round, 0, NoQuant, 0, false,
-                                 true);
+            l0c_to_gm<ArchType::ASCEND_V220, DataFormat::ND, float, float>(
+                gm_C[offset_c],
+                L0C_buf,
+                n_actual,  // MSize
+                m_actual,  // NSize
+                n_round,   // srcStride
+                ldc        // dstStride_dst_D
+            );
         }
 
         loop_ping_flag = 1 - loop_ping_flag;
 
-        set_flag(PIPE_FIX, PIPE_M, LOOP_EVENT_ID);
+        SET_FLAG(FIX, M, LOOP_EVENT_ID);
     }
     if (is_AIV_AIC_PIPE) {
-        wait_flag_dev(0 + 2);  // 处理最后一次AIV的set同步
-        wait_flag_dev(1 + 2);  // 处理最后一次AIV的set同步
+        WaitFlagDev(0 + 2);  // 处理最后一次AIV的set同步
+        WaitFlagDev(1 + 2);  // 处理最后一次AIV的set同步
     }
 
     // 匹配最后一次的set
-    wait_flag(PIPE_M, PIPE_MTE1, EVENT_ID0);
-    wait_flag(PIPE_M, PIPE_MTE1, EVENT_ID1);
+    WAIT_FLAG(M, MTE1, EVENT_ID0);
+    WAIT_FLAG(M, MTE1, EVENT_ID1);
 
-    wait_flag(PIPE_MTE1, PIPE_MTE2, EVENT_ID0);
-    wait_flag(PIPE_MTE1, PIPE_MTE2, EVENT_ID1);
-    wait_flag(PIPE_MTE1, PIPE_MTE2, EVENT_ID2);
-    wait_flag(PIPE_MTE1, PIPE_MTE2, EVENT_ID3);
+    WAIT_FLAG(MTE1, MTE2, EVENT_ID0);
+    WAIT_FLAG(MTE1, MTE2, EVENT_ID1);
+    WAIT_FLAG(MTE1, MTE2, EVENT_ID2);
+    WAIT_FLAG(MTE1, MTE2, EVENT_ID3);
 
-    wait_flag(PIPE_FIX, PIPE_M, EVENT_ID0);
-    wait_flag(PIPE_FIX, PIPE_M, EVENT_ID1);
+    WAIT_FLAG(FIX, M, EVENT_ID0);
+    WAIT_FLAG(FIX, M, EVENT_ID1);
 }
 
 extern "C" __global__ __aicore__ void cgemm(__gm__ uint8_t *__restrict__ ffts_addr, __gm__ float *__restrict__ d_A,
@@ -290,10 +352,10 @@ extern "C" __global__ __aicore__ void cgemm(__gm__ uint8_t *__restrict__ ffts_ad
                                             __gm__ float *__restrict__ workspace,
                                             __gm__ uint32_t *__restrict__ tiling_para_gm)
 {
-    set_ffts_base_addr((uint64_t)ffts_addr);
-    set_padding(0);
-    set_atomic_none();
-    set_nd_para(0x1);
+    SetFftsBaseAddr((uint64_t)ffts_addr);
+    SetPadding(0);
+    SetAtomicnone();
+    AscendC::SetNdParaImpl(0x1);
     // CAmodel 从tiling_para_gm解析出参数
 
     // get tiling args
@@ -314,7 +376,7 @@ extern "C" __global__ __aicore__ void cgemm(__gm__ uint8_t *__restrict__ ffts_ad
     float beta_r = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 88));
     float beta_i = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 92));
 
-    pipe_barrier(PIPE_ALL);
+    PIPE_BARRIER(ALL);
 
     ascComplex alpha{alpha_r, alpha_i};
     ascComplex beta{beta_r, beta_i};
@@ -322,36 +384,61 @@ extern "C" __global__ __aicore__ void cgemm(__gm__ uint8_t *__restrict__ ffts_ad
     ascblasOperation_t _transA = transA == 0 ? ASCBLAS_OP_N : (transA == 1 ? ASCBLAS_OP_T : ASCBLAS_OP_C);
     ascblasOperation_t g_transB = transB == 0 ? ASCBLAS_OP_N : (transB == 1 ? ASCBLAS_OP_T : ASCBLAS_OP_C);
 
-    wait_flag_dev(0);
+    AscendC::GlobalTensor<float> d_A_r_tensor;
+    AscendC::GlobalTensor<float> d_A_i_tensor;
+    AscendC::GlobalTensor<float> d_B_r_tensor;
+    AscendC::GlobalTensor<float> d_B_i_tensor;
+    AscendC::GlobalTensor<float> d_C_rr_tensor;
+    AscendC::GlobalTensor<float> d_C_ri_tensor;
+    AscendC::GlobalTensor<float> d_C_ir_tensor;
+    AscendC::GlobalTensor<float> d_C_ii_tensor;
+    AscendC::GlobalTensor<float> workspace_tensor;
+    d_A_r_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_A_r));
+    d_A_i_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_A_i));
+    d_B_r_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_B_r));
+    d_B_i_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_B_i));
+    d_C_rr_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_C_rr));
+    d_C_ri_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_C_ri));
+    d_C_ir_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_C_ir));
+    d_C_ii_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_C_ii));
+    workspace_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(workspace));
 
-    ascblasSmatmul(_transA, g_transB, M, N, K, d_A_r, lda_pad, d_B_r, ldb_pad, d_C_rr, ldc, 1, 128, 128, 128, 0,
-                   nullptr);
-    ascblasSmatmul(_transA, g_transB, M, N, K, d_A_r, lda_pad, d_B_i, ldb_pad, d_C_ri, ldc, 1, 128, 128, 128, 0,
-                   nullptr);
-    ascblasSmatmul(_transA, g_transB, M, N, K, d_A_i, lda_pad, d_B_r, ldb_pad, d_C_ir, ldc, 1, 128, 128, 128, 0,
-                   nullptr);
-    ascblasSmatmul(_transA, g_transB, M, N, K, d_A_i, lda_pad, d_B_i, ldb_pad, d_C_ii, ldc, 1, 128, 128, 128, 0,
-                   nullptr);
+    WaitFlagDev(0);
 
-    ffts_cross_core_sync(PIPE_FIX, GET_FFST_MSG(0, 1));
-    wait_flag_dev(1);
-    ffts_cross_core_sync(PIPE_FIX, GET_FFST_MSG(2, 1));
+    ascblasSmatmul(_transA, g_transB, M, N, K, d_A_r_tensor, lda_pad, d_B_r_tensor, ldb_pad, d_C_rr_tensor, ldc,
+                    1, 128, 128, 128, 0, workspace_tensor);
+    ascblasSmatmul(_transA, g_transB, M, N, K, d_A_r_tensor, lda_pad, d_B_i_tensor, ldb_pad, d_C_ri_tensor, ldc,
+                    1, 128, 128, 128, 0, workspace_tensor);
+    ascblasSmatmul(_transA, g_transB, M, N, K, d_A_i_tensor, lda_pad, d_B_r_tensor, ldb_pad, d_C_ir_tensor, ldc,
+                    1, 128, 128, 128, 0, workspace_tensor);
+    ascblasSmatmul(_transA, g_transB, M, N, K, d_A_i_tensor, lda_pad, d_B_i_tensor, ldb_pad, d_C_ii_tensor, ldc,
+                    1, 128, 128, 128, 0, workspace_tensor);
 
-    pipe_barrier(PIPE_ALL);
+    FftsCrossCoreSync<PIPE_FIX, 0>(1);
+    WaitFlagDev(1);
+    FftsCrossCoreSync<PIPE_FIX, 2>(1);
+
+    PIPE_BARRIER(ALL);
 }
 #endif
 
 #if __DAV_C220_VEC__
 
-__aicore__ __inline__ void splitMatrix(__gm__ float *dst_r, __gm__ float *dst_i, __gm__ float *src, int64_t M,
-                                       int64_t N, int64_t dst_pad, int64_t src_pad)
+__aicore__ __inline__ void splitMatrix(
+    AscendC::GlobalTensor<float> dst_r,
+    AscendC::GlobalTensor<float> dst_i,
+    AscendC::GlobalTensor<float> src,
+    int64_t M,
+    int64_t N, int64_t dst_pad, int64_t src_pad)
 {
     int64_t M0 = 128, N0 = 128;
     int64_t NUM_PER_REPEAT = 6 * 1024;
-    auto buf0 = reinterpret_cast<__ubuf__ float *>((uintptr_t)0);
-    auto buf1 = reinterpret_cast<__ubuf__ float *>((uintptr_t)96 * 1024);
-    int64_t v_block_num = get_block_num() * get_subblockdim();
-    int64_t v_id = get_block_idx() * get_subblockdim() + get_subblockid();
+
+    AsdopsBuffer<ArchType::ASCEND_V220> buf;
+    AscendC::LocalTensor<float> buf0 = buf.GetBuffer<BufferType::ASCEND_UB, float>(0);
+    AscendC::LocalTensor<float> buf1 = buf.GetBuffer<BufferType::ASCEND_UB, float>(96 * 1024);
+    int64_t v_block_num = AscendC::GetBlockNum() * AscendC::GetSubBlockNum();
+    int64_t v_id = AscendC::GetBlockIdx();
 
     int64_t m_repeats = (M + NUM_PER_REPEAT - 1) / NUM_PER_REPEAT;
     if (m_repeats == 0) {
@@ -366,12 +453,12 @@ __aicore__ __inline__ void splitMatrix(__gm__ float *dst_r, __gm__ float *dst_i,
     int64_t repeats = n_repeats * m_repeats;
     int64_t repeats_per_core = repeats / v_block_num + int(v_id < repeats % v_block_num);
 
-    set_flag(PIPE_V, PIPE_MTE2, EVENT_ID0);
-    set_flag(PIPE_MTE3, PIPE_V, EVENT_ID0);
-    set_flag(PIPE_MTE3, PIPE_V, EVENT_ID1);
-    set_flag(PIPE_V, PIPE_MTE2, EVENT_ID2);
-    set_flag(PIPE_MTE3, PIPE_V, EVENT_ID2);
-    set_flag(PIPE_MTE3, PIPE_V, EVENT_ID3);
+    SET_FLAG(V, MTE2, EVENT_ID0);
+    SET_FLAG(MTE3, V, EVENT_ID0);
+    SET_FLAG(MTE3, V, EVENT_ID1);
+    SET_FLAG(V, MTE2, EVENT_ID2);
+    SET_FLAG(MTE3, V, EVENT_ID2);
+    SET_FLAG(MTE3, V, EVENT_ID3);
     for (int64_t pi = 0; pi < repeats_per_core; pi++) {
         int64_t i = pi * v_block_num + v_id;
         int64_t c_id = i / m_repeats;
@@ -386,18 +473,19 @@ __aicore__ __inline__ void splitMatrix(__gm__ float *dst_r, __gm__ float *dst_i,
             n_len = N - c_id * n_per_repeat;
         }
 
-        auto complex_buf = (pi & 1) ? buf1 : buf0;
-        auto real_buf = complex_buf + 2 * NUM_PER_REPEAT;
-        auto imag_buf = real_buf + NUM_PER_REPEAT;
+        AscendC::LocalTensor<float> complex_buf = (pi & 1) ? buf1 : buf0;
+        AscendC::LocalTensor<float> real_buf = complex_buf[2 * NUM_PER_REPEAT];
+        AscendC::LocalTensor<float> imag_buf = real_buf[NUM_PER_REPEAT];
         auto event_id = (pi & 1) ? 2 : 0;
 
-        wait_flag(PIPE_V, PIPE_MTE2, event_id);
-        ascblas_matrix_gm2ubuf(complex_buf, src + (c_id * n_per_repeat * src_pad + r_id * NUM_PER_REPEAT) * 2,
+        WAIT_FLAG(V, MTE2, event_id);
+        ascblas_matrix_gm2ubuf(complex_buf, src[(c_id * n_per_repeat * src_pad + r_id * NUM_PER_REPEAT) * 2],
                                m_len * 2, n_len, src_pad * 2, m_round * 2);
-        set_flag(PIPE_MTE2, PIPE_V, event_id);
-        wait_flag(PIPE_MTE2, PIPE_V, event_id);
-        wait_flag(PIPE_MTE3, PIPE_V, event_id);
-        vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(real_buf), reinterpret_cast<__ubuf__ uint32_t *>(complex_buf),
+        SET_FLAG(MTE2, V, event_id);
+        WAIT_FLAG(MTE2, V, event_id);
+        WAIT_FLAG(MTE3, V, event_id);
+        vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(real_buf.GetPhyAddr()), 
+                  reinterpret_cast<__ubuf__ uint32_t *>(complex_buf.GetPhyAddr()),
                   nullptr,
                   (m_round * 2 * n_len + 63) / 64,  // repeat
                   1,                                // src0BlockStride
@@ -405,9 +493,10 @@ __aicore__ __inline__ void splitMatrix(__gm__ float *dst_r, __gm__ float *dst_i,
                   8,                                // src0RepeatStride
                   8                                 // src1RepeatStride
         );
-        set_flag(PIPE_V, PIPE_MTE3, event_id);
-        wait_flag(PIPE_MTE3, PIPE_V, event_id + 1);
-        vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(imag_buf), reinterpret_cast<__ubuf__ uint32_t *>(complex_buf),
+        SET_FLAG(V, MTE3, event_id);
+        WAIT_FLAG(MTE3, V, event_id + 1);
+        vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(imag_buf.GetPhyAddr()),
+                  reinterpret_cast<__ubuf__ uint32_t *>(complex_buf.GetPhyAddr()),
                   nullptr,
                   (m_round * 2 * n_len + 63) / 64,  // repeatb
                   1,                                // src0BlockStride
@@ -415,41 +504,43 @@ __aicore__ __inline__ void splitMatrix(__gm__ float *dst_r, __gm__ float *dst_i,
                   8,                                // src0RepeatStride
                   8                                 // src1RepeatStride
         );
-        set_flag(PIPE_V, PIPE_MTE3, event_id + 1);
-        set_flag(PIPE_V, PIPE_MTE2, event_id);
-        wait_flag(PIPE_V, PIPE_MTE3, event_id);
+        SET_FLAG(V, MTE3, event_id + 1);
+        SET_FLAG(V, MTE2, event_id);
+        WAIT_FLAG(V, MTE3, event_id);
         for (int ni = 0; ni < n_len; ++ni) {
             int n_ind = c_id * n_per_repeat + ni;
-            copy_ubuf_to_gm(dst_r + n_ind / N0 * N0 * dst_pad + n_ind % N0 * M0 + r_id * NUM_PER_REPEAT * N0,
-                            real_buf + ni * m_round, 0, (m_round + M0 - 1) / M0, M0 / NUM_ELE_PERBLOCK, 0,
-                            (M0 * N0 - M0) / NUM_ELE_PERBLOCK);
+            ub_to_gm<ArchType::ASCEND_V220, float>(
+                dst_r[n_ind / N0 * N0 * dst_pad + n_ind % N0 * M0 + r_id * NUM_PER_REPEAT * N0],
+                real_buf[ni * m_round],
+                0, (m_round + M0 - 1) / M0, M0 / NUM_ELE_PERBLOCK, 0, (M0 * N0 - M0) / NUM_ELE_PERBLOCK);
         }
-        set_flag(PIPE_MTE3, PIPE_V, event_id);
-        wait_flag(PIPE_V, PIPE_MTE3, event_id + 1);
+        SET_FLAG(MTE3, V, event_id);
+        WAIT_FLAG(V, MTE3, event_id + 1);
         for (int ni = 0; ni < n_len; ++ni) {
             int n_ind = c_id * n_per_repeat + ni;
-            copy_ubuf_to_gm(dst_i + n_ind / N0 * N0 * dst_pad + n_ind % N0 * M0 + r_id * NUM_PER_REPEAT * N0,
-                            imag_buf + ni * m_round, 0, (m_round + M0 - 1) / M0, M0 / NUM_ELE_PERBLOCK, 0,
-                            (M0 * N0 - M0) / NUM_ELE_PERBLOCK);
+            ub_to_gm<ArchType::ASCEND_V220, float>(
+                dst_i[n_ind / N0 * N0 * dst_pad + n_ind % N0 * M0 + r_id * NUM_PER_REPEAT * N0],
+                imag_buf[ni * m_round], 
+                0, (m_round + M0 - 1) / M0, M0 / NUM_ELE_PERBLOCK, 0, (M0 * N0 - M0) / NUM_ELE_PERBLOCK);
         }
-        set_flag(PIPE_MTE3, PIPE_V, event_id + 1);
+        SET_FLAG(MTE3, V, event_id + 1);
     }
-    wait_flag(PIPE_V, PIPE_MTE2, EVENT_ID0);
-    wait_flag(PIPE_MTE3, PIPE_V, EVENT_ID0);
-    wait_flag(PIPE_MTE3, PIPE_V, EVENT_ID1);
-    wait_flag(PIPE_V, PIPE_MTE2, EVENT_ID2);
-    wait_flag(PIPE_MTE3, PIPE_V, EVENT_ID2);
-    wait_flag(PIPE_MTE3, PIPE_V, EVENT_ID3);
+    WAIT_FLAG(V, MTE2, EVENT_ID0);
+    WAIT_FLAG(MTE3, V, EVENT_ID0);
+    WAIT_FLAG(MTE3, V, EVENT_ID1);
+    WAIT_FLAG(V, MTE2, EVENT_ID2);
+    WAIT_FLAG(MTE3, V, EVENT_ID2);
+    WAIT_FLAG(MTE3, V, EVENT_ID3);
 }
 __aicore__ __inline__ void ascblasCgemmPre(ascblasOperation_t transA, ascblasOperation_t transB, int64_t M, int64_t N,
-                                           int64_t K, ascComplex alpha, __gm__ float *__restrict__ d_A, int64_t lda,
-                                           __gm__ float *__restrict__ d_B, int64_t ldb, ascComplex beta,
-                                           __gm__ float *__restrict__ d_C, int64_t ldc, int64_t lda_pad,
-                                           int64_t ldb_pad, __gm__ float *__restrict__ d_A_r,
-                                           __gm__ float *__restrict__ d_A_i, __gm__ float *__restrict__ d_B_r,
-                                           __gm__ float *__restrict__ d_B_i, __gm__ float *__restrict__ d_C_rr,
-                                           __gm__ float *__restrict__ d_C_ri, __gm__ float *__restrict__ d_C_ir,
-                                           __gm__ float *__restrict__ d_C_ii, __gm__ uint8_t *__restrict__ ffts_addr)
+                                           int64_t K, ascComplex alpha, AscendC::GlobalTensor<float> d_A, int64_t lda,
+                                           AscendC::GlobalTensor<float> d_B, int64_t ldb, ascComplex beta,
+                                           AscendC::GlobalTensor<float> d_C, int64_t ldc, int64_t lda_pad,
+                                           int64_t ldb_pad, AscendC::GlobalTensor<float> d_A_r,
+                                           AscendC::GlobalTensor<float> d_A_i, AscendC::GlobalTensor<float> d_B_r,
+                                           AscendC::GlobalTensor<float> d_B_i, AscendC::GlobalTensor<float> d_C_rr,
+                                           AscendC::GlobalTensor<float> d_C_ri, AscendC::GlobalTensor<float> d_C_ir,
+                                           AscendC::GlobalTensor<float> d_C_ii, __gm__ uint8_t *__restrict__ ffts_addr)
 {
     if (transA == ASCBLAS_OP_N)
         splitMatrix(d_A_r, d_A_i, d_A, M, K, lda_pad, lda);
@@ -461,48 +552,59 @@ __aicore__ __inline__ void ascblasCgemmPre(ascblasOperation_t transA, ascblasOpe
         splitMatrix(d_B_r, d_B_i, d_B, N, K, ldb_pad, ldb);
 }
 
-__aicore__ __inline__ void mulSComplex(__ubuf__ float *src_r, __ubuf__ float *src_i, __ubuf__ float *tmp_r,
-                                       __ubuf__ float *tmp_i, int64_t n_blocks, ascComplex beta)
+__aicore__ __inline__ void mulSComplex(
+    AscendC::LocalTensor<float> src_r,
+    AscendC::LocalTensor<float> src_i,
+    AscendC::LocalTensor<float> tmp_r,
+    AscendC::LocalTensor<float> tmp_i,
+    int64_t n_blocks, ascComplex beta)
 {
-    vmuls(tmp_r, src_r, beta.real, (n_blocks + 7) / 8, 1, 1, 8, 8);
-    vmuls(tmp_i, src_i, beta.imag, (n_blocks + 7) / 8, 1, 1, 8, 8);
-    pipe_barrier(PIPE_V);
-    vsub(tmp_r, tmp_r, tmp_i, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
-    vmuls(tmp_i, src_r, beta.imag, (n_blocks + 7) / 8, 1, 1, 8, 8);
-    pipe_barrier(PIPE_V);
-    copy_ubuf_to_ubuf(src_r, tmp_r, 0, 1, n_blocks, 0, 0);
-    pipe_barrier(PIPE_V);
-    vmuls(tmp_r, src_i, beta.real, (n_blocks + 7) / 8, 1, 1, 8, 8);
-    pipe_barrier(PIPE_V);
-    vadd(tmp_i, tmp_i, tmp_r, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
-    pipe_barrier(PIPE_V);
-    copy_ubuf_to_ubuf(src_i, tmp_i, 0, 1, n_blocks, 0, 0);
+    muls_v<ArchType::ASCEND_V220, float>(tmp_r, src_r, beta.real, (n_blocks + 7) / 8, 1, 1, 8, 8);
+    muls_v<ArchType::ASCEND_V220, float>(tmp_i, src_i, beta.imag, (n_blocks + 7) / 8, 1, 1, 8, 8);
+    PIPE_BARRIER(V);
+    sub_v<ArchType::ASCEND_V220, float>(tmp_r, tmp_r, tmp_i, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
+    muls_v<ArchType::ASCEND_V220, float>(tmp_i, src_r, beta.imag, (n_blocks + 7) / 8, 1, 1, 8, 8);
+    PIPE_BARRIER(V);
+    ub_to_ub<ArchType::ASCEND_V220, float>(src_r, tmp_r, 0, 1, n_blocks, 0, 0);
+    PIPE_BARRIER(V);
+    muls_v<ArchType::ASCEND_V220, float>(tmp_r, src_i, beta.real, (n_blocks + 7) / 8, 1, 1, 8, 8);
+    PIPE_BARRIER(V);
+    add_v<ArchType::ASCEND_V220, float>(tmp_i, tmp_i, tmp_r, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
+    PIPE_BARRIER(V);
+    ub_to_ub<ArchType::ASCEND_V220, float>(src_i, tmp_i, 0, 1, n_blocks, 0, 0);
 }
 
 __aicore__ __inline__ void ascblasCgemmFinal(ascblasOperation_t transA, ascblasOperation_t transB, int64_t M, int64_t N,
-                                             int64_t K, ascComplex alpha, __gm__ float *__restrict__ d_A, int64_t lda,
-                                             __gm__ float *__restrict__ d_B, int64_t ldb, ascComplex beta,
-                                             __gm__ float *__restrict__ d_C, int64_t ldc, int64_t lda_pad,
-                                             int64_t ldb_pad, __gm__ float *__restrict__ d_A_r,
-                                             __gm__ float *__restrict__ d_A_i, __gm__ float *__restrict__ d_B_r,
-                                             __gm__ float *__restrict__ d_B_i, __gm__ float *__restrict__ d_C_rr,
-                                             __gm__ float *__restrict__ d_C_ri, __gm__ float *__restrict__ d_C_ir,
-                                             __gm__ float *__restrict__ d_C_ii, __gm__ uint8_t *__restrict__ ffts_addr)
+                                             int64_t K, ascComplex alpha, AscendC::GlobalTensor<float> d_A, int64_t lda,
+                                             AscendC::GlobalTensor<float> d_B, int64_t ldb, ascComplex beta,
+                                             AscendC::GlobalTensor<float> d_C, int64_t ldc, int64_t lda_pad,
+                                             int64_t ldb_pad, AscendC::GlobalTensor<float> d_A_r,
+                                             AscendC::GlobalTensor<float> d_A_i, AscendC::GlobalTensor<float> d_B_r,
+                                             AscendC::GlobalTensor<float> d_B_i, AscendC::GlobalTensor<float> d_C_rr,
+                                             AscendC::GlobalTensor<float> d_C_ri, AscendC::GlobalTensor<float> d_C_ir,
+                                             AscendC::GlobalTensor<float> d_C_ii, __gm__ uint8_t *__restrict__ ffts_addr)
 {
     constexpr int64_t NUM_PER_REPEAT = 6 * 1024;
-    auto complex_buf = reinterpret_cast<__ubuf__ float *>((uintptr_t)0);
-    auto complex_buf_real = reinterpret_cast<__ubuf__ float *>((uintptr_t)0);
-    auto complex_buf_imag = reinterpret_cast<__ubuf__ float *>((uintptr_t)NUM_PER_REPEAT * 1 * sizeof(float));
-    auto real_buf = reinterpret_cast<__ubuf__ float *>((uintptr_t)(NUM_PER_REPEAT * 2 * sizeof(float)));
-    auto imag_buf = reinterpret_cast<__ubuf__ float *>((uintptr_t)(NUM_PER_REPEAT * 3 * sizeof(float)));
-    auto mask_buf = reinterpret_cast<__ubuf__ uint32_t *>((uintptr_t)(NUM_PER_REPEAT * 4 * sizeof(float)));
-    auto real_tbuf = reinterpret_cast<__ubuf__ float *>((uintptr_t)(NUM_PER_REPEAT * 6 * sizeof(float)));
-    auto imag_tbuf = reinterpret_cast<__ubuf__ float *>((uintptr_t)(NUM_PER_REPEAT * 7 * sizeof(float)));
-    int v_block_num = get_block_num() * get_subblockdim();
+    AsdopsBuffer<ArchType::ASCEND_V220> buf;
+    AscendC::LocalTensor<float> complex_buf = buf.GetBuffer<BufferType::ASCEND_UB, float>(0);
+    AscendC::LocalTensor<float> complex_buf_real = buf.GetBuffer<BufferType::ASCEND_UB, float>(0);
+    AscendC::LocalTensor<float> complex_buf_imag = 
+        buf.GetBuffer<BufferType::ASCEND_UB, float>(NUM_PER_REPEAT * 1 * sizeof(float));
+    AscendC::LocalTensor<float> real_buf = 
+        buf.GetBuffer<BufferType::ASCEND_UB, float>((NUM_PER_REPEAT * 2 * sizeof(float)));
+    AscendC::LocalTensor<float> imag_buf = 
+        buf.GetBuffer<BufferType::ASCEND_UB, float>((NUM_PER_REPEAT * 3 * sizeof(float)));
+    AscendC::LocalTensor<uint32_t> mask_buf = 
+        buf.GetBuffer<BufferType::ASCEND_UB, uint32_t>((NUM_PER_REPEAT * 4 * sizeof(float)));
+    AscendC::LocalTensor<float> real_tbuf = 
+        buf.GetBuffer<BufferType::ASCEND_UB, float>((NUM_PER_REPEAT * 6 * sizeof(float)));
+    AscendC::LocalTensor<float> imag_tbuf = 
+        buf.GetBuffer<BufferType::ASCEND_UB, float>((NUM_PER_REPEAT * 7 * sizeof(float)));
+    int v_block_num = AscendC::GetBlockNum() * AscendC::GetSubBlockNum();
     if (v_block_num == 0) {
         v_block_num = 1;
     }
-    int v_id = get_block_idx() * get_subblockdim() + get_subblockid();
+    int v_id = AscendC::GetBlockIdx();
 
     int64_t m_repeats = (M + NUM_PER_REPEAT - 1) / NUM_PER_REPEAT;
     if (m_repeats == 0) {
@@ -521,12 +623,12 @@ __aicore__ __inline__ void ascblasCgemmFinal(ascblasOperation_t transA, ascblasO
     auto img_base = (uintptr_t)(NUM_PER_REPEAT * 3 * sizeof(float));
     int k = 0;
     for (int64_t j = 0; j < NUM_PER_REPEAT; j++) {
-        mask_buf[k++] = real_base + j * sizeof(float);
-        mask_buf[k++] = img_base + j * sizeof(float);
+        mask_buf.SetValue(k++, real_base + j * sizeof(float));
+        mask_buf.SetValue(k++, img_base + j * sizeof(float));
     }
 
-    pipe_barrier(PIPE_ALL);
-    set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
+    PIPE_BARRIER(ALL);
+    SET_FLAG(MTE3, MTE2, EVENT_ID0);
     for (int64_t pi = 0; pi < repeats_per_core; pi++) {
         int64_t i = pi * v_block_num + v_id;
         int64_t c_id = i / m_repeats;
@@ -541,12 +643,13 @@ __aicore__ __inline__ void ascblasCgemmFinal(ascblasOperation_t transA, ascblasO
             n_len = N - c_id * n_per_repeat;
         }
         int64_t n_blocks = (m_round * n_len + NUM_ELE_PERBLOCK - 1) / NUM_ELE_PERBLOCK;
-        wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
-        ascblas_matrix_gm2ubuf(complex_buf, d_C + (c_id * n_per_repeat * ldc + r_id * NUM_PER_REPEAT) * 2, m_len * 2,
+        WAIT_FLAG(MTE3, MTE2, EVENT_ID0);
+        ascblas_matrix_gm2ubuf(complex_buf, d_C[(c_id * n_per_repeat * ldc + r_id * NUM_PER_REPEAT) * 2], m_len * 2,
                                n_len, ldc * 2, m_round * 2);
-        set_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
-        wait_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
-        vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(real_buf), reinterpret_cast<__ubuf__ uint32_t *>(complex_buf),
+        SET_FLAG(MTE2, V, EVENT_ID0);
+        WAIT_FLAG(MTE2, V, EVENT_ID0);
+        vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(real_buf.GetPhyAddr()),
+                  reinterpret_cast<__ubuf__ uint32_t *>(complex_buf.GetPhyAddr()),
                   nullptr,
                   (m_round * 2 * n_len + 63) / 64,  // repeat
                   1,                                // src0BlockStride
@@ -554,7 +657,8 @@ __aicore__ __inline__ void ascblasCgemmFinal(ascblasOperation_t transA, ascblasO
                   8,                                // src0RepeatStride
                   8                                 // src1RepeatStride
         );
-        vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(imag_buf), reinterpret_cast<__ubuf__ uint32_t *>(complex_buf),
+        vreducev2(reinterpret_cast<__ubuf__ uint32_t *>(imag_buf.GetPhyAddr()),
+                  reinterpret_cast<__ubuf__ uint32_t *>(complex_buf.GetPhyAddr()),
                   nullptr,
                   (m_round * 2 * n_len + 63) / 64,  // repeatb
                   1,                                // src0BlockStride
@@ -563,56 +667,58 @@ __aicore__ __inline__ void ascblasCgemmFinal(ascblasOperation_t transA, ascblasO
                   8                                 // src1RepeatStride
         );
 
-        pipe_barrier(PIPE_V);
+        PIPE_BARRIER(V);
         // beta*C
         mulSComplex(real_buf, imag_buf, real_tbuf, imag_tbuf, n_blocks, beta);
 
-        set_flag(PIPE_V, PIPE_MTE2, EVENT_ID1);
-        wait_flag(PIPE_V, PIPE_MTE2, EVENT_ID1);
-        ascblas_matrix_gm2ubuf(complex_buf_real, d_C_rr + (c_id * n_per_repeat * ldc + r_id * NUM_PER_REPEAT), m_len,
+        SET_FLAG(V, MTE2, EVENT_ID1);
+        WAIT_FLAG(V, MTE2, EVENT_ID1);
+        ascblas_matrix_gm2ubuf(complex_buf_real, d_C_rr[(c_id * n_per_repeat * ldc + r_id * NUM_PER_REPEAT)], m_len,
                                n_len, ldc, m_round);
-        ascblas_matrix_gm2ubuf(complex_buf_imag, d_C_ri + (c_id * n_per_repeat * ldc + r_id * NUM_PER_REPEAT), m_len,
+        ascblas_matrix_gm2ubuf(complex_buf_imag, d_C_ri[(c_id * n_per_repeat * ldc + r_id * NUM_PER_REPEAT)], m_len,
                                n_len, ldc, m_round);
-        ascblas_matrix_gm2ubuf(imag_tbuf, d_C_ir + (c_id * n_per_repeat * ldc + r_id * NUM_PER_REPEAT), m_len, n_len,
+        ascblas_matrix_gm2ubuf(imag_tbuf, d_C_ir[(c_id * n_per_repeat * ldc + r_id * NUM_PER_REPEAT)], m_len, n_len,
                                ldc, m_round);
-        ascblas_matrix_gm2ubuf(real_tbuf, d_C_ii + (c_id * n_per_repeat * ldc + r_id * NUM_PER_REPEAT), m_len, n_len,
+        ascblas_matrix_gm2ubuf(real_tbuf, d_C_ii[(c_id * n_per_repeat * ldc + r_id * NUM_PER_REPEAT)], m_len, n_len,
                                ldc, m_round);
-        set_flag(PIPE_MTE2, PIPE_V, EVENT_ID1);
-        wait_flag(PIPE_MTE2, PIPE_V, EVENT_ID1);
+        SET_FLAG(MTE2, V, EVENT_ID1);
+        WAIT_FLAG(MTE2, V, EVENT_ID1);
         if ((transA == ASCBLAS_OP_C) != (transB == ASCBLAS_OP_C))
-            vadd(complex_buf_real, complex_buf_real, real_tbuf, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
+            add_v<ArchType::ASCEND_V220, float>(
+                complex_buf_real, complex_buf_real, real_tbuf, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
         else
-            vsub(complex_buf_real, complex_buf_real, real_tbuf, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
+            sub_v<ArchType::ASCEND_V220, float>(
+                complex_buf_real, complex_buf_real, real_tbuf, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
         if (transB == ASCBLAS_OP_C)
-            vmuls(complex_buf_imag, complex_buf_imag, -1.0f, (n_blocks + 7) / 8, 1, 1, 8, 8);
-        pipe_barrier(PIPE_V);
+            muls_v<ArchType::ASCEND_V220, float>(
+                complex_buf_imag, complex_buf_imag, -1.0f, (n_blocks + 7) / 8, 1, 1, 8, 8);
+        PIPE_BARRIER(V);
 
         if (transA == ASCBLAS_OP_C)
-            vsub(complex_buf_imag, complex_buf_imag, imag_tbuf, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
+            sub_v<ArchType::ASCEND_V220, float>(
+                complex_buf_imag, complex_buf_imag, imag_tbuf, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
         else
-            vadd(complex_buf_imag, complex_buf_imag, imag_tbuf, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
-        pipe_barrier(PIPE_V);
+            add_v<ArchType::ASCEND_V220, float>(
+                complex_buf_imag, complex_buf_imag, imag_tbuf, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
+        PIPE_BARRIER(V);
         // alpha*A*B
         mulSComplex(complex_buf_real, complex_buf_imag, real_tbuf, imag_tbuf, n_blocks, alpha);
 
         // +beta*C
-        pipe_barrier(PIPE_V);
-        vadd(real_buf, real_buf, complex_buf_real, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
-        vadd(imag_buf, imag_buf, complex_buf_imag, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
+        PIPE_BARRIER(V);
+        add_v<ArchType::ASCEND_V220, float>(real_buf, real_buf, complex_buf_real, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
+        add_v<ArchType::ASCEND_V220, float>(imag_buf, imag_buf, complex_buf_imag, (n_blocks + 7) / 8, 1, 1, 1, 8, 8, 8);
 
-        pipe_barrier(PIPE_V);
-        vgather(reinterpret_cast<__ubuf__ uint32_t *>(complex_buf), reinterpret_cast<__ubuf__ uint32_t *>(mask_buf),
-                0,                               // offsetAddr
-                8,                               // dstRepeatStride，以32Byte为单位，1个block
-                (m_round * 2 * n_len + 63) / 64  // repeat，以256Byte为单位，8个block
-        );
-        set_flag(PIPE_V, PIPE_MTE3, EVENT_ID0);
-        wait_flag(PIPE_V, PIPE_MTE3, EVENT_ID0);
-        ascblas_matrix_ubuf2gm(d_C + (c_id * n_per_repeat * ldc + r_id * NUM_PER_REPEAT) * 2, complex_buf, m_len * 2,
+        PIPE_BARRIER(V);
+        AscendC::Gather(complex_buf, complex_buf, mask_buf, (uint32_t)0, (m_round * 2 * n_len + 63) / 64 * 64);
+
+        SET_FLAG(V, MTE3, EVENT_ID0);
+        WAIT_FLAG(V, MTE3, EVENT_ID0);
+        ascblas_matrix_ubuf2gm(d_C[(c_id * n_per_repeat * ldc + r_id * NUM_PER_REPEAT) * 2], complex_buf, m_len * 2,
                                n_len, m_round * 2, ldc * 2);
-        set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
+        SET_FLAG(MTE3, MTE2, EVENT_ID0);
     }
-    wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
+    WAIT_FLAG(MTE3, MTE2, EVENT_ID0);
 }
 
 extern "C" __global__ __aicore__ void cgemm(__gm__ uint8_t *__restrict__ ffts_addr, __gm__ float *__restrict__ d_A,
@@ -624,10 +730,10 @@ extern "C" __global__ __aicore__ void cgemm(__gm__ uint8_t *__restrict__ ffts_ad
                                             __gm__ float *__restrict__ workspace,
                                             __gm__ uint32_t *__restrict__ tiling_para_gm)
 {
-    set_atomic_none();
-    set_mask_norm();
-    set_ffts_base_addr((uint64_t)ffts_addr);
-    set_vector_mask((uint64_t)-1, (uint64_t)-1);
+    SetAtomicnone();
+    AscendC::SetMaskNorm();
+    SetFftsBaseAddr((uint64_t)ffts_addr);
+    SetVectorMask<float>((uint64_t)-1, (uint64_t)-1);
 
     // get tiling args
     auto tiling_buf = reinterpret_cast<__gm__ uint8_t *>(tiling_para_gm);
@@ -647,7 +753,7 @@ extern "C" __global__ __aicore__ void cgemm(__gm__ uint8_t *__restrict__ ffts_ad
     float beta_r = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 88));
     float beta_i = (*(__gm__ float *)((__gm__ uint8_t *)tiling_buf + 92));
 
-    pipe_barrier(PIPE_ALL);
+    PIPE_BARRIER(ALL);
 
     ascComplex alpha{alpha_r, alpha_i};
     ascComplex beta{beta_r, beta_i};
@@ -655,14 +761,39 @@ extern "C" __global__ __aicore__ void cgemm(__gm__ uint8_t *__restrict__ ffts_ad
     ascblasOperation_t _transA = transA == 0 ? ASCBLAS_OP_N : (transA == 1 ? ASCBLAS_OP_T : ASCBLAS_OP_C);
     ascblasOperation_t g_transB = transB == 0 ? ASCBLAS_OP_N : (transB == 1 ? ASCBLAS_OP_T : ASCBLAS_OP_C);
 
-    ascblasCgemmPre(_transA, g_transB, M, N, K, alpha, d_A, lda, d_B, ldb, beta, d_C, ldc, lda_pad, ldb_pad, d_A_r,
-                    d_A_i, d_B_r, d_B_i, d_C_rr, d_C_ri, d_C_ir, d_C_ii, ffts_addr);
-    ffts_cross_core_sync(PIPE_MTE3, GET_FFST_MSG(0, 0));
-    wait_flag_dev(0);
-    ffts_cross_core_sync(PIPE_MTE3, GET_FFST_MSG(2, 0));
-    wait_flag_dev(1);
-    ascblasCgemmFinal(_transA, g_transB, M, N, K, alpha, d_A, lda, d_B, ldb, beta, d_C, ldc, lda_pad, ldb_pad, d_A_r,
-                      d_A_i, d_B_r, d_B_i, d_C_rr, d_C_ri, d_C_ir, d_C_ii, ffts_addr);
-    pipe_barrier(PIPE_ALL);
+    AscendC::GlobalTensor<float> d_A_tensor;
+    AscendC::GlobalTensor<float> d_B_tensor;
+    AscendC::GlobalTensor<float> d_C_tensor;
+    AscendC::GlobalTensor<float> d_A_r_tensor;
+    AscendC::GlobalTensor<float> d_A_i_tensor;
+    AscendC::GlobalTensor<float> d_B_r_tensor;
+    AscendC::GlobalTensor<float> d_B_i_tensor;
+    AscendC::GlobalTensor<float> d_C_rr_tensor;
+    AscendC::GlobalTensor<float> d_C_ri_tensor;
+    AscendC::GlobalTensor<float> d_C_ir_tensor;
+    AscendC::GlobalTensor<float> d_C_ii_tensor;
+    d_A_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_A));
+    d_B_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_B));
+    d_C_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_C));
+    d_A_r_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_A_r));
+    d_A_i_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_A_i));
+    d_B_r_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_B_r));
+    d_B_i_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_B_i));
+    d_C_rr_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_C_rr));
+    d_C_ri_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_C_ri));
+    d_C_ir_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_C_ir));
+    d_C_ii_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(d_C_ii));
+
+    ascblasCgemmPre(_transA, g_transB, M, N, K, alpha, d_A_tensor, lda, d_B_tensor, ldb, beta, d_C_tensor, ldc, lda_pad,
+                    ldb_pad, d_A_r_tensor, d_A_i_tensor, d_B_r_tensor, d_B_i_tensor, d_C_rr_tensor, d_C_ri_tensor,
+                    d_C_ir_tensor, d_C_ii_tensor, ffts_addr);
+    FftsCrossCoreSync<PIPE_MTE3, 0>(0);
+    WaitFlagDev(0);
+    FftsCrossCoreSync<PIPE_MTE3, 2>(0);
+    WaitFlagDev(1);
+    ascblasCgemmFinal(_transA, g_transB, M, N, K, alpha, d_A_tensor, lda, d_B_tensor, ldb, beta, d_C_tensor, ldc, lda_pad,
+                      ldb_pad, d_A_r_tensor, d_A_i_tensor, d_B_r_tensor, d_B_i_tensor, d_C_rr_tensor, d_C_ri_tensor,
+                      d_C_ir_tensor, d_C_ii_tensor, ffts_addr);
+    PIPE_BARRIER(ALL);
 }
 #endif

@@ -23,6 +23,12 @@ struct DftTilingData {
     int32_t m0{0};
     int32_t n0{0};
     int32_t k0{0};
+    int32_t loopTime{0};
+    int32_t batchNumPreLoop{0}; // batchNumPreCore * 40
+    int32_t batchNumPreCore{0};
+    int32_t batchTailNum{0};    // batchTailNumPreCore * 40 + batchTailCoreNum
+    int32_t batchTailNumPreCore{0};
+    int32_t batchTailCoreNum{0};
 };
 }
 #endif

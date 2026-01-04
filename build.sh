@@ -205,7 +205,7 @@ function fn_build()
         if [ ! -d "${MKI_ROOT}" ]; then
             echo "Third_party dir does not complete and ascend-boost-comm does not exit!"
             cd ${THIRD_PARTY_DIR}/
-            git clone https://gitcode.com/cann/ascend-boost-comm.git -b br_release_cann_8.3.RC1_20260322
+            git clone https://gitcode.com/cann/ascend-boost-comm.git -b br_release_cann_8.5.0_20260527
         fi
         cd $CODE_ROOT/
         rm -rf MKI_PATH
@@ -213,6 +213,15 @@ function fn_build()
         fn_build_mki
         cp -r ${THIRD_PARTY_DIR}/ascend-boost-comm/output/mki ${THIRD_PARTY_DIR}/
         cp -r ${THIRD_PARTY_DIR}/ascend-boost-comm/3rdparty/compiler ${THIRD_PARTY_DIR}/
+    fi
+
+    # check dependcy catlass
+    CATLASS_PATH="${THIRD_PARTY_DIR}/catlass"
+    if [ ! -d "${CATLASS_PATH}" ]; then
+        echo "Third_party dir catlass does not exit!"
+        cd ${THIRD_PARTY_DIR}/
+        git clone https://gitcode.com/cann/catlass.git -b master
+        cd $CODE_ROOT/
     fi
 
     cmake -B build -S . -DCURRENT_DIR="$CURRENT_DIR"

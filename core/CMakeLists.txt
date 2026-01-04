@@ -12,12 +12,14 @@ if("$ENV{TEST_TYPE}" STREQUAL "UT")
     include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/fft/fftplan/include
         ${PROJECT_SOURCE_DIR}/ops/include
         $ENV{ATB_HOME_PATH}/include
     )
 else()
     include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/fft/fftplan/include
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/ops/include
     )

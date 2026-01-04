@@ -14,14 +14,13 @@
 #include "ops.h"
 #include "fftcore/fft_core_mix_base.h"
 
-using namespace AsdSip;
 constexpr unsigned DIVTWO = 2;
 class FftC2RCore : public FftCoreMixBase {
 public:
     FftC2RCore(unsigned nDone, unsigned nDoing, unsigned nLeft, unsigned batch, AsdSip::asdFftType fftType,
                bool forward)
         : FftCoreMixBase(FFTCoreType::kFftC2R, nDone, nDoing, nLeft, batch, fftType, forward,
-                         static_cast<bool>(nDoing % DIVTWO) ? 1 : 0, nDoing % DIVTWO ? nDoing : nDoing / DIVTWO)
+                         (nDoing % DIVTWO != 0) ? 1 : 0, (nDoing % DIVTWO != 0) ? nDoing : nDoing / DIVTWO)
     {
     }
 

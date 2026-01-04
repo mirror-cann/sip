@@ -85,7 +85,7 @@ void FFTCoreN::Run(Tensor &input, Tensor &output, void *stream, workspace::Works
 void FFTCoreN::InitTilingArgs()
 {
     int n = problemDesc.nDoing;
-    int iterCount = radixVec.size();
+    int iterCount = static_cast<int>(radixVec.size());
     // initiate input and output addr of iteration, addr = 1 denote output hbm
     if (iterCount == RADIXVEC_SIZE_THREE) {
         aicInputAddr = {1, 1, 0};
@@ -268,7 +268,7 @@ AspbStatus FFTCoreN::InitIndex()
 {
     int64_t n = problemDesc.nDoing;
     int64_t tN = 1;
-    int64_t iterCount = radixVec.size();
+    int64_t iterCount = static_cast<int64_t>(radixVec.size());
     if (iterCount > CALCUL_TWO) {
         for (int64_t it = 0; it < (iterCount - CALCUL_TWO); ++it) {
             tN *= radixVec[it];
@@ -283,17 +283,17 @@ AspbStatus FFTCoreN::InitIndex()
     int64_t tilingNum = (tM / 2) * tN;
 
     std::function<AsdSip::FFTensor *()> func = [=]() -> AsdSip::FFTensor* {
-        AsdSip::FFTensor *indexMatrixPtr = new AsdSip::FFTensor;
+        AsdSip::FFTensor *indexMatrixPtr = new(std::nothrow) AsdSip::FFTensor;
+        if (indexMatrixPtr == nullptr) {
+            ASDSIP_LOG(ERROR) << "indexMatrixPtr new failed";
+            throw std::runtime_error("indexMatrixPtr new failed");
+        }
         AsdSip::FFTensor &indexMatrix = *indexMatrixPtr;
 
         indexMatrix.desc.dtype = TENSOR_DTYPE_INT32;
         indexMatrix.desc.format = TENSOR_FORMAT_ND;
         indexMatrix.desc.dims = {tilingNum};
         indexMatrix.dataSize = sizeof(int32_t) * tilingNum;
-
-        if (!checkSizeToMalloc(indexMatrix.dataSize)) {
-            throw std::runtime_error("Invalid malloc size");
-        }
 
         int32_t *indexMatrixHost = nullptr;
         try {

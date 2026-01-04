@@ -107,29 +107,29 @@ AspbStatus asdBlasStrmm(asdBlasHandle handle, asdBlasSideMode_t side, asdBlasFil
         }
 
         if (sideInt == 0 && uploInt == 0) {
-            realM = m;
-            realN = n;
-            realK = m;
+            realM = static_cast<uint32_t>(m);
+            realN = static_cast<uint32_t>(n);
+            realK = static_cast<uint32_t>(m);
             transLeft = (trans == asdBlasOperation_t::ASDBLAS_OP_N) ? 0 : 1;
             transRight = 0;
         } else if (sideInt == 1 && uploInt == 0) {
-            realM = m;
-            realN = n;
-            realK = n;
+            realM = static_cast<uint32_t>(m);
+            realN = static_cast<uint32_t>(n);
+            realK = static_cast<uint32_t>(n);
             transLeft = 0;
             transRight = (trans == asdBlasOperation_t::ASDBLAS_OP_N) ? 0 : 1;
             lessFlag = caseOneFlag;
         } else if (sideInt == 0 && uploInt == 1) {
-            realM = m;
-            realN = n;
-            realK = m;
+            realM = static_cast<uint32_t>(m);
+            realN = static_cast<uint32_t>(n);
+            realK = static_cast<uint32_t>(m);
             transLeft = (trans == asdBlasOperation_t::ASDBLAS_OP_N) ? 0 : 1;
             transRight = 0;
             lessFlag = caseTwoFlag;
         } else if (sideInt == 1 && uploInt == 1) {
-            realM = m;
-            realN = n;
-            realK = n;
+            realM = static_cast<uint32_t>(m);
+            realN = static_cast<uint32_t>(n);
+            realK = static_cast<uint32_t>(n);
             transLeft = 0;
             transRight = (trans == asdBlasOperation_t::ASDBLAS_OP_N) ? 0 : 1;
             lessFlag = caseThreeFlag;

@@ -16,7 +16,7 @@
 namespace AsdSip {
 enum class LogLevel { FATAL = 0, DEBUG, INFO, WARN, ERROR };
 
-const char *LogLevelToString(LogLevel level);
+const std::string LogLevelToString(LogLevel level);
 const int LogErrCodeToInt(ErrorType errCode);
 
 struct LogEntity {

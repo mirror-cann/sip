@@ -70,10 +70,14 @@ AspbStatus DFTCore::InitRotationMatrix()
         FFTensor *rotationMatrixPtr = new FFTensor;
         FFTensor &rotationMatrix_ = *rotationMatrixPtr;
 
-        if (!checkSizeToMalloc(sizeof(float) * outSize * inSize)) {
-            throw std::runtime_error("Invalid malloc size");
+        float *rotationMatrixHost = nullptr;
+        try {
+            rotationMatrixHost = new float[outSize * inSize];
+        } catch(std::bad_alloc& e) {
+            delete rotationMatrixPtr;
+            ASDSIP_LOG(ERROR) << "rotationMatrixHost malloc failed: ";
+            throw std::runtime_error("rotationMatrixHost malloc failed:.");
         }
-        float *rotationMatrixHost = new float[outSize * inSize];
 
         float cosTable[fftN];
         float sinTable[fftN];

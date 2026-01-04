@@ -20,7 +20,7 @@ constexpr int32_t MAX_NUM_COM_ELE_EACH_CORE = 11520;  // 复数超过这么多�
 constexpr int32_t BYTESPERBLOCK = 32;
 constexpr int32_t BYTESPERREPEAT = 256;
 constexpr int32_t F32LEN = 4;
-constexpr int32_t MAXVECTORNUM = 40;
+constexpr uint32_t MAXVECTORNUM = 40;
 
 namespace AsdSip {
 

@@ -96,13 +96,15 @@ AsdSip::AspbStatus SswapTiling(const LaunchParam &launchParam, KernelInfo &kerne
             currOffset += currCalNum;
         }
     }
-    memcpy_s(tilingDataPtr->startOffset, sizeof(tilingDataPtr->startOffset),
+    auto ret = memcpy_s(tilingDataPtr->startOffset, sizeof(tilingDataPtr->startOffset),
              startOffset, vecCoreNum * sizeof(uint32_t));
+    ASDSIP_CHECK_WITH_NO_RETURN(ret == EOK, "startOffset memcpy_s failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
     delete[] startOffset;
     startOffset = nullptr;
 
-    memcpy_s(tilingDataPtr->calNum, sizeof(tilingDataPtr->calNum),
+    ret = memcpy_s(tilingDataPtr->calNum, sizeof(tilingDataPtr->calNum),
              calNum, vecCoreNum * sizeof(uint32_t));
+    ASDSIP_CHECK_WITH_NO_RETURN(ret == EOK, "calNum memcpy_s failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
     delete[] calNum;
     calNum = nullptr;
     return AsdSip::ErrorType::ACL_SUCCESS;

@@ -27,11 +27,13 @@ static void SetTilingData(CMulTilingData &tilingDataPtr, CMulTilingData tilingDa
     tilingDataPtr.n = tilingData.n;
     tilingDataPtr.useCoreNum = tilingData.useCoreNum;
 
-    memcpy_s(tilingDataPtr.startOffset,
+    auto ret = memcpy_s(tilingDataPtr.startOffset,
         sizeof(tilingDataPtr.startOffset),
         tilingData.startOffset,
         vecCoreNum * sizeof(int64_t));
-    memcpy_s(tilingDataPtr.calNum, sizeof(tilingDataPtr.calNum), tilingData.calNum, vecCoreNum * sizeof(int64_t));
+    ASDSIP_CHECK_WITH_NO_RETURN(ret == EOK, "startOffset memcpy_s failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
+    ret = memcpy_s(tilingDataPtr.calNum, sizeof(tilingDataPtr.calNum), tilingData.calNum, vecCoreNum * sizeof(int64_t));
+    ASDSIP_CHECK_WITH_NO_RETURN(ret == EOK, "calNum memcpy_s failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
 }
 
 // Calculate tiling data value

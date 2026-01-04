@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <securec.h>
 #include "log/log.h"
+#include "utils/assert.h"
 #include "common_tiling.h"
 
 namespace AsdSip {
@@ -81,9 +82,14 @@ void SetTilingData(CommonTilingData &tilingDataPtr, CommonTilingData tilingData,
 {
     tilingDataPtr.n = tilingData.n;
     tilingDataPtr.useCoreNum = tilingData.useCoreNum;
-    memcpy_s(tilingDataPtr.startOffset, sizeof(tilingDataPtr.startOffset), tilingData.startOffset,
-             vecCoreNum * sizeof(uint32_t));
-    memcpy_s(tilingDataPtr.calNum, sizeof(tilingDataPtr.calNum), tilingData.calNum, vecCoreNum * sizeof(uint32_t));
+    auto ret = memcpy_s(tilingDataPtr.startOffset,
+        sizeof(tilingDataPtr.startOffset),
+        tilingData.startOffset,
+        vecCoreNum * sizeof(uint32_t));
+    ASDSIP_CHECK_WITH_NO_RETURN(ret == EOK, "startOffset memcpy_s failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
+    ret = memcpy_s(tilingDataPtr.calNum, sizeof(tilingDataPtr.calNum),
+             tilingData.calNum, vecCoreNum * sizeof(uint32_t));
+    ASDSIP_CHECK_WITH_NO_RETURN(ret == EOK, "calNum memcpy_s failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
 }
 
 uint32_t ConfigCommonTilingData(CommonTilingData *tilingDataPtr, uint32_t totalEleNum, uint32_t vecCoreNum)

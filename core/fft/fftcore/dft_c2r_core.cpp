@@ -73,9 +73,9 @@ AspbStatus DftC2RCore::InitRotationMatrix()
         try {
             rotation_matrix_host = new int32_t[outSize * inSize];
         } catch(std::bad_alloc& e) {
-            delete rotation_matrix_host;
-            ASDSIP_LOG(ERROR) << "rotation_matrix_host nalloc failed: " << e.what();
-            throw std::runtime_error("rotation_matrix_host nalloc failed:.");
+            delete rotation_matrix_ptr;
+            ASDSIP_LOG(ERROR) << "rotation_matrix_host malloc failed: ";
+            throw std::runtime_error("rotation_matrix_host malloc failed:.");
         }
 
         float cosTable[fftN];

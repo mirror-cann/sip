@@ -13,7 +13,7 @@
 using namespace Mki;
 
 namespace AsdSip {
-BlasCopyPlan::BlasCopyPlan() : BlasPlan(){};
+BlasCopyPlan::BlasCopyPlan() : BlasPlan() {}
 
 BlasCopyPlan::~BlasCopyPlan()
 {

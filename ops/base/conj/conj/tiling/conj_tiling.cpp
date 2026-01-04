@@ -15,7 +15,8 @@
 
 namespace AsdSip {
 using namespace Mki;
-static constexpr uint32_t FLOAT_NUM_PER_BLOCK = 8; // one block = 32B
+
+static constexpr uint32_t FLOAT_NUM_PER_BLOCK = 8;  // one block = 32B
 AsdSip::AspbStatus ConjTiling(const LaunchParam &launchParam, KernelInfo &kernelInfo)
 {
     uint32_t maxCore = static_cast<uint32_t>(PlatformInfo::Instance().GetCoreNum(CoreType::CORE_TYPE_VECTOR));

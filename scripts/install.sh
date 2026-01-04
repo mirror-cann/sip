@@ -150,13 +150,13 @@ function chmod_authority() {
         chmod 550 ${install_dir}/bin/*
     fi
     local file_rights=$([ "${install_for_all_flag}" == "y" ] && echo 555 || echo 550)
-    chmod ${file_rights} ${install_dir}/scripts/uninstall.sh
-    chmod ${file_rights} ${install_dir}/install.sh
+    chmod ${file_rights} "${install_dir}/scripts/uninstall.sh"
+    chmod ${file_rights} "${install_dir}/install.sh"
     chmod_dir ${default_install_path} "550"
     chmod_dir ${install_dir} "550"
     local path_rights=$([ "${install_for_all_flag}" == "y" ] && echo 755 || echo 750)
-    chmod ${path_rights} ${default_install_path}
-    chmod ${path_rights} ${install_dir}
+    chmod ${path_rights} "${default_install_path}"
+    chmod ${path_rights} "${install_dir}"
 }
 
 function chmod_file() { 
@@ -262,23 +262,23 @@ function check_path() {
 }
 
 function delete_file_with_authority() {
-    file_path=$1
-    dir_path=$(dirname ${file_path})
-    if [ ${dir_path} != "." ];then
-        dir_authority=$(stat -c %a ${dir_path})
-        chmod 700 ${dir_path}
+    file_path="$1"
+    dir_path=$(dirname "${file_path}")
+    if [ "${dir_path}" != "." ];then
+        dir_authority=$(stat -c %a "${dir_path}")
+        chmod 700 "${dir_path}"
         if [ -d ${file_path} ];then
-            rm -rf ${file_path}
+            rm -rf "${file_path}"
         else
-            rm -f ${file_path}
+            rm -f "${file_path}"
         fi
-        chmod ${dir_authority} ${dir_path}
+        chmod "${dir_authority}" "${dir_path}"
     else
-        chmod 700 ${file_path}
+        chmod 700 "${file_path}"
         if [ -d ${file_path} ];then
-            rm -rf ${file_path}
+            rm -rf "${file_path}"
         else
-            rm -f ${file_path}
+            rm -f "${file_path}"
         fi
     fi
 }
@@ -302,13 +302,59 @@ function delete_installed_files() {
     install_dir=$1
     csv_path=$install_dir/scripts/filelist.csv
     is_first_line=true
-    chmod 700 -R $install_dir
-    cd $install_dir
-    [ -n "$1" ] && rm -rf $1
+    chmod 700 -R "$install_dir"
+    cd "$install_dir"
+    if [ ! -f "$csv_path" ];then
+        print "INFO" "filelist.csv is not founded, uninstall by delete whole folder."
+        [ -n "$1" ] && rm -rf "$1"
+        return 0
+    fi
+    cat ${csv_path} | while read line
+    do
+        if [ ${is_first_line} == "false" ];then
+            file_path=$(echo ${line} | awk '{print $1}')
+            if [ ! -f ${file_path} ];then
+                continue
+            fi
+            delete_file_with_authority ${file_path}
+        fi
+        is_first_line=false
+    done
+
+    # 主动移除过去版本遗漏文件
+    residual_files=(
+        "include/interp_api.h"
+        "version.info"
+        "include/asdsip.h"
+        "include/base_api.h"
+        "include/blas_api.h"
+        "include/domain/rs_api.h"
+        "include/fft_api.h"
+        "include/utils/aspb_status.h"
+        "include/utils/mem_base.h"
+        "install.sh"
+        "lib/libasdsip.so"
+        "lib/libasdsip_core.so"
+        "lib/libasdsip_host.so"
+        "lib/libasdsip_static.a"
+        "lib/libmki.so"
+        "lib/libmki_static.a"
+        "scripts/filelist.csv"
+        "scripts/uninstall.sh"
+        "include/mki"
+        "include/mki_loader"
+        "include/utils"
+    )
+    for file_path in "${residual_files[@]}"; do
+        if [ -e ${file_path} ];then
+            delete_file_with_authority ${file_path}
+        fi
+    done
+
 }
 
 function delete_latest() {
-    cd ${default_install_path}
+    cd "${default_install_path}"
     if [ -d "latest" ];then
         rm -f latest
     fi
@@ -342,8 +388,9 @@ function uninstall_process() {
     if [ -d $1 ];then
         delete_empty_recursion $1
     fi
+
     if [ "$2" == "y" -a -z "$(ls $asdsip_dir)" ];then
-        rm -rf $asdsip_dir
+        rm -rf "$asdsip_dir"
     fi
     print "INFO" "Ascend-cann-asdsip $(basename $1) uninstall success!"
 }
@@ -356,16 +403,16 @@ function install_to_path() {
     uninstall_process ${install_dir}
     check_target_dir_owner ${install_dir}
     check_path
-    cd ${install_dir}
+    cd "${install_dir}"
     copy_files
-    [ -f "${default_install_path}/set_env.sh" ] && rm -rf ${default_install_path}/set_env.sh
-    mv ${install_dir}/set_env.sh ${default_install_path}
-    cd ${default_install_path}
+    [ -f "${default_install_path}/set_env.sh" ] && rm -rf "${default_install_path}/set_env.sh"
+    mv "${install_dir}/set_env.sh" "${default_install_path}"
+    cd "${default_install_path}"
     ln -snf $VERSION latest
 }
 
 function copy_files() {
-    cp -r ${sourcedir}/* $install_dir
+    cp -r ${sourcedir}/* "$install_dir"
 }
 
 function install_process() {
@@ -396,7 +443,7 @@ function check_owner() {
     local cur_owner=$(whoami)
 
     if [ "${ASCEND_HOME_PATH}" == "" ]; then
-        print "ERROR" "Check owner failed, please source cann set_env.sh first."
+        print "ERROR" "Check owner failed, please check env ASCEND_HOME_PATH is set."
         exit 1
     else
         cann_path=${ASCEND_HOME_PATH}
@@ -427,8 +474,9 @@ function check_owner() {
 function uninstall() {
     # 使用awk读取version.info文件中的version键对应的值
     VERSION_INFO_PATH=${default_install_path}/latest/version.info
-    old_version=$(grep "Ascend-cann-asdsip" $VERSION_INFO_PATH | cut -d ':' -f2)
- 
+    old_version=$(grep -E 'Ascend-cann-asdsip :' $VERSION_INFO_PATH | cut -d ':' -f2)
+    old_version=$(echo "$old_version" | sed 's/^[ 	]*//')
+
     # 输出version值
     echo "Version is: $old_version"
 
@@ -437,7 +485,7 @@ function uninstall() {
 }
 
 function check_uninstall_path() {
-    [ -f "$log_file" ] && chmod 640 ${log_file}
+    [ -f "$log_file" ] && chmod 640 "${log_file}"
     local cur_owner=$(whoami)
     if [ "${install_path_flag}" == "y" ]; then
         default_install_path="${target_dir}"
@@ -489,39 +537,39 @@ function back_up_old_version() {
         exit 1
     fi
 
-    cp -rp ${version_dir} ${back_up_dir}
-    cp -p ${default_install_path}/set_env.sh ${default_install_path}/set_env_recover.sh
+    cp -rp "${version_dir}" "${back_up_dir}"
+    cp -p "${default_install_path}/set_env.sh" "${default_install_path}/set_env_recover.sh"
     print "INFO" "back up the old Ascend-cann-asdsip version success!"
 }
 
 function recover_old_version() {
     if [ -d "${version_dir}" ]; then
         chmod -R 700 "${version_dir}"
-        rm -rf ${version_dir}
+        rm -rf "${version_dir}"
     fi
     if [ -f "${default_install_path}/set_env.sh" ]; then
-        chmod 700 ${default_install_path}/set_env.sh
-        rm -f ${default_install_path}/set_env.sh
+        chmod 700 "${default_install_path}/set_env.sh"
+        rm -f "${default_install_path}/set_env.sh"
     fi
-    mv ${back_up_dir} ${version_dir}
-    mv ${default_install_path}/set_env_recover.sh ${default_install_path}/set_env.sh
+    mv "${back_up_dir}" "${version_dir}"
+    mv "${default_install_path}/set_env_recover.sh" "${default_install_path}/set_env.sh"
     local version=$(basename ${version_dir})
-    cd ${default_install_path}
+    cd "${default_install_path}"
     ln -snf ${version} latest
     print "INFO" "recover old Ascend-cann-asdsip version success!"
 }
 
 function remove_back_up_version() {
     chmod -R 700 "${back_up_dir}"
-    rm -r ${back_up_dir}
-    chmod 700 ${default_install_path}/set_env_recover.sh
-    rm -f ${default_install_path}/set_env_recover.sh
+    rm -r "${back_up_dir}"
+    chmod 700 "${default_install_path}/set_env_recover.sh"
+    rm -f "${default_install_path}/set_env_recover.sh"
     print "INFO" "finish remove back up version!"
 }
 
 function upgrade() {
     # 先备份旧版本，再卸载旧版本，安装新版本，卸载备份版本
-    [ -f "$log_file" ] && chmod 640 ${log_file}
+    [ -f "$log_file" ] && chmod 640 "${log_file}"
     print "INFO" "Ascend-cann-asdsip uninstall start!"
     check_owner
     check_upgrade_path

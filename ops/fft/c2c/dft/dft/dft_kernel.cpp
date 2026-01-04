@@ -24,6 +24,7 @@ using Mki::BinHandle;
 using Mki::LaunchParam;
 using Mki::KernelInfo;
 using Mki::TENSOR_DTYPE_COMPLEX64;
+using Mki::TENSOR_DTYPE_COMPLEX32;
 
 constexpr uint64_t TENSOR_PERM_IDX = 1;
 
@@ -73,4 +74,31 @@ public:
     }
 };
 REG_KERNEL_BASE(DftC64Kernel);
+
+// DftC32Kernel
+class DftC32Kernel : public DftKernel {
+public:
+    explicit DftC32Kernel(const std::string &kernelName, const BinHandle *handle) noexcept
+        : DftKernel(kernelName, handle)
+    {
+    }
+
+    bool CanSupport(const LaunchParam &launchParam) const override
+    {
+        ASDSIP_CHECK(DftKernel::CanSupport(launchParam), "failed to check support", return false);
+        ASDSIP_CHECK(launchParam.GetInTensor(0).desc.dtype == TENSOR_DTYPE_COMPLEX32, "tensor dtype unsupported",
+                  return false);
+        return true;
+    }
+
+    Status InitImpl(const LaunchParam &launchParam) override
+    {
+        auto status = DftTiling(launchParam, kernelInfo_);
+        ASDSIP_CHECK(status == AsdSip::ErrorType::ACL_SUCCESS, "InitKernelInfoImpl DftTiling failed",
+                    return Status::FailStatus(ERROR_INVALID_VALUE));
+        kernelInfo_.SetHwsyncIdx(0);
+        return Status::OkStatus();
+    }
+};
+REG_KERNEL_BASE(DftC32Kernel);
 }  // namespace AsdSip

@@ -24,7 +24,11 @@ enum FFTCoreType : unsigned {
     kFftR2C,
     kFftBC2R,
     kFftBR2C,
-    kDd
+    kDd,
+    kDftSep,
+    kDdd,
+    kDddSep,
+    kFftBSep
 };
 
 #endif

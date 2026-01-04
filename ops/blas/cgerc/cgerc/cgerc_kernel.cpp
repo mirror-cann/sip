@@ -30,7 +30,7 @@ public:
         ASDSIP_CHECK(launchParam.GetParam().Type() == typeid(OpParam::Cgerc),
             "Cgerc: param type invalid", return false);
         ASDSIP_CHECK(launchParam.GetInTensorCount() == 3, "input num invalid", return false);
-        ASDSIP_CHECK(launchParam.GetOutTensorCount() == 1, "output num invalid", return false);  // markhere
+        ASDSIP_CHECK(launchParam.GetOutTensorCount() == 1, "output num invalid", return false);
 
         return true;
     }  // 校验入参出参

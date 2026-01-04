@@ -15,8 +15,6 @@
 #include "fftcore/fft_core_base.h"
 #include "utils/aspb_status.h"
 
-using namespace AsdSip;
-
 class FFTCoreB : public FFTCoreBase {
 public:
     FFTCoreB(unsigned nDone, unsigned nDoing, unsigned nLeft, unsigned batch, AsdSip::asdFftType fftType,
@@ -37,10 +35,10 @@ private:
     void DestroyInDevice() const;
 
     Mki::Any InitParam();
-    AspbStatus InitIndex();
-    AspbStatus InitWMatrix();
-    AspbStatus InitTMatrix();
-    AspbStatus InitTactic();
+    AsdSip::AspbStatus InitIndex();
+    AsdSip::AspbStatus InitWMatrix();
+    AsdSip::AspbStatus InitTMatrix();
+    AsdSip::AspbStatus InitTactic();
     std::shared_ptr<AsdSip::FFTensor> wMatrix;
     std::shared_ptr<AsdSip::FFTensor> tMatrix;
     std::shared_ptr<AsdSip::FFTensor> index;

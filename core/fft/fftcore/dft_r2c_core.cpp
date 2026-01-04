@@ -74,11 +74,6 @@ AspbStatus DftR2CCore::InitRotationMatrix()
         AsdSip::FFTensor *rotationMatrixPtr = new AsdSip::FFTensor;
         AsdSip::FFTensor &rotationMatrix_ = *rotationMatrixPtr;
 
-        if (!checkSizeToMalloc(sizeof(float) * outSize * inSize)) {
-            delete rotationMatrixPtr;
-            throw std::runtime_error("Invalid malloc size");
-        }
-
         float *rotationMatrixHost = nullptr;
         try {
             rotationMatrixHost = new float[outSize * inSize];

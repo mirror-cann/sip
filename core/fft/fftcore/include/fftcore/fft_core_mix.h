@@ -13,7 +13,6 @@
 
 #include "ops.h"
 #include "fftcore/fft_core_mix_base.h"
-#include "utils/aspb_status.h"
 
 class FftCoreMix : public FftCoreMixBase {
 public:

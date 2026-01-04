@@ -7,24 +7,22 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+#ifndef ASDOPS_DFT_SEP_TILING_DATA
+#define ASDOPS_DFT_SEP_TILING_DATA
 
-#ifndef __FFTCORE__
-#define __FFTCORE__
+#include <cstdint>
 
-#include "fftcore/dft_core.h"
-#include "fftcore/fft_core_b.h"
-#include "fftcore/fft_core_n.h"
-#include "fftcore/fft_core_mix.h"
-#include "fftcore/fft_core_stride.h"
-
-#include "fftcore/dft_c2r_core.h"
-#include "fftcore/fft_c2r_core.h"
-
-#include "fftcore/dft_r2c_core.h"
-#include "fftcore/fft_r2c_core.h"
-
-#include "fftcore/fft_core_any.h"
-
-#include "fftcore/dd_core.h"
-
+namespace AsdSip {
+struct DftSepTilingData {
+    uint32_t batchSize{0};
+    uint32_t m{0};
+    uint32_t n{0};
+    uint32_t k{0};
+    uint32_t transA{0};
+    uint32_t transB{0};
+    uint32_t m0{0};
+    uint32_t n0{0};
+    uint32_t k0{0};
+};
+}
 #endif

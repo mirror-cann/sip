@@ -130,7 +130,7 @@ AspbStatus asdBlasCswap(
 
     CHECK_STATUS_WITH_ACL_RETURN(aclGetDataType(y, &dataType), "asdBlasCswap: aclGetDataType");
     ASDSIP_ECHECK(dataType == aclDataType::ACL_COMPLEX64,
-        "blas asdBlasCswap get wrong x tensor dtype.",
+        "blas asdBlasCswap get wrong y tensor dtype.",
         ErrorType::ACL_ERROR_UNSUPPORTED_DATA_TYPE);
     ASDSIP_ECHECK(
         n > 0 && n <= UINT32_MAX, "blas asdBlasSswap get n <= 0 or n > 2^32.", ErrorType::ACL_ERROR_INVALID_PARAM);

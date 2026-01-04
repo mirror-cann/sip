@@ -14,7 +14,7 @@
 #include "log/log.h"
 #include "utils/aspb_status.h"
 
-constexpr uint32_t M0_DEFAULT_SIZE = 128;
+constexpr int64_t M0_DEFAULT_SIZE = 128;
 
 using namespace Mki;
 

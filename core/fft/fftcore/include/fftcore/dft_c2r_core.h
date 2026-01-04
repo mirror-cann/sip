@@ -16,8 +16,6 @@
 #include "fftcore/fft_core_h_base.h"
 #include "utils/aspb_status.h"
 
-using namespace AsdSip;
-
 class DftC2RCore : public FftCoreHBase {
 public:
     DftC2RCore(unsigned N_doing,
@@ -30,8 +28,8 @@ private:
     void InitRadix() override;
     bool PreAllocateInDevice() override;
     void DestroyInDevice() const;
-    AspbStatus InitRotationMatrix();
-    AspbStatus InitTactic();
+    AsdSip::AspbStatus InitRotationMatrix();
+    AsdSip::AspbStatus InitTactic();
  
     std::string opName{"DftC2ROperation"};
     std::shared_ptr<AsdSip::FFTensor> rotationMatrix;

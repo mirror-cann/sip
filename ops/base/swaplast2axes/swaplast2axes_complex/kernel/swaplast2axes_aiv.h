@@ -68,7 +68,7 @@ template <>
 __aicore__ inline void SwapLast2AxesAIV<float>::Init(GM_ADDR inTensor, GM_ADDR outTensor,
                                                      AsdSip::SwapLast2AxesTilingData *tilingdata, TPipe *pipe)
 {
-    cores = get_block_num();
+    cores = AscendC::GetBlockNum();
 
     inTensorGM.SetGlobalBuffer((__gm__ float *)inTensor);
     outTensorGM.SetGlobalBuffer((__gm__ float *)outTensor);

@@ -31,6 +31,20 @@ AsdSip::AspbStatus Reverse(const Mki::Tensor &inTensor, Mki::Tensor &outTensor, 
 AsdSip::AspbStatus Concat(const Mki::Tensor &inTensorA, const Mki::Tensor &inTensorB, Mki::Tensor &outTensor,
                           int concatDim, void *stream, uint8_t *deviceBuffer = nullptr);
 
+AsdSip::AspbStatus Mul(const Mki::Tensor &inputA, const Mki::Tensor &inTensorB, Mki::Tensor &outTensor,
+                       void *stream, uint8_t *deviceBuffer);
+
+AsdSip::AspbStatus Div(const Mki::Tensor &inTensorA, const Mki::Tensor &inTensorB, Mki::Tensor &outTensor,
+                       void *stream, uint8_t *deviceBuffer = nullptr);
+
+AsdSip::AspbStatus UnfoldGrad(const Mki::Tensor &inTensor, Mki::Tensor &outTensor, Mki::SVector<int64_t> sizes,
+                              int64_t dim, int64_t size, int64_t step, void *stream, uint8_t *deviceBuffer = nullptr);
+
+AsdSip::AspbStatus MakeComplex(const Mki::Tensor &realTensor, const Mki::Tensor &imagTensor, Mki::Tensor &outTensor,
+                               int64_t dim, void *stream, uint8_t *deviceBuffer = nullptr);
+
+AsdSip::AspbStatus Muls(const Mki::Tensor &inTensorA, float value, Mki::Tensor &outTensor,
+                        void *stream, uint8_t *deviceBuffer = nullptr);
 }
 
 #endif

@@ -27,7 +27,7 @@ static constexpr uint32_t COMPLEX_ELENUM = 2;
 
 static constexpr uint32_t FP16_DTYPE_SIZE = sizeof(float) / 2;  // 2b
 
-static uint32_t CalMaxMatNum(bool isTrans, bool dataType, int64_t m)
+static uint32_t CalMaxMatNum(bool isTrans, bool dataType, uint32_t m)
 {
     uint32_t matNum = 0;
     if (isTrans) {
@@ -92,7 +92,7 @@ void BlasCgemvBatchedPlan::SetMaskTensor()
     bool dataType = dtype == asdDataType_t::ASD_C_64F ? true : false;
     uint32_t dtypeSize = dataType ? sizeof(float) : FP16_DTYPE_SIZE;
 
-    maxMatNum = CalMaxMatNum(isTrans, dataType, m);
+    maxMatNum = CalMaxMatNum(isTrans, dataType, static_cast<uint32_t>(m));
     maxMatNum = maxMatNum > 0 ? maxMatNum : 1;
 
     uint32_t eleNumPerRepeat = BYTENUM_REPEAT / dtypeSize;

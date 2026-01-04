@@ -309,7 +309,7 @@ Status toAclTensor(const Tensor &inTensor, aclTensor *&outTensor, std::vector<in
                               << "expected stride size is [ " << shape.size() << " ],"
                               << "actually is [ " << stride.size() << " ].";
             size_t strideOrignalSize = stride.size();
-            for (auto i = strideOrignalSize; i <= shape.size(); i++) {
+            for (auto i = strideOrignalSize; i < shape.size(); i++) {
                 stride.push_back(1);
             }
             for (auto i = shape.size() - 2; i >= strideOrignalSize; i--) {

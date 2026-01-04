@@ -35,7 +35,7 @@ else
     log_file=${LOG_PATH}${LOG_NAME}
 fi
 
-chmod 640 $log_file
+chmod 640 "$log_file"
 
 function print() {
     if [ ! -f "$log_file" ]; then
@@ -61,19 +61,19 @@ function delete_file_with_authority() {
     dir_path=$(dirname ${file_path})
     if [ ${dir_path} != "." ];then
         dir_authority=$(stat -c %a ${dir_path})
-        chmod 700 ${dir_path}
+        chmod 700 "${dir_path}"
         if [ -d ${file_path} ];then
-            rm -rf ${file_path}
+            rm -rf "${file_path}"
         else
-            rm -f ${file_path}
+            rm -f "${file_path}"
         fi
-        chmod ${dir_authority} ${dir_path}
+        chmod ${dir_authority} "${dir_path}"
     else
-        chmod 700 ${file_path}
+        chmod 700 "${file_path}"
         if [ -d ${file_path} ];then
-            rm -rf ${file_path}
+            rm -rf "${file_path}"
         else
-            rm -f ${file_path}
+            rm -f "${file_path}"
         fi
     fi
 }
@@ -82,14 +82,29 @@ function delete_installed_files() {
     install_dir=$1
     csv_path=$install_dir/scripts/filelist.csv
     is_first_line=true
-    chmod 700 -R $install_dir
+    chmod 700 -R "$install_dir"
     cd $install_dir
-    [ -n "$1" ] && rm -rf $1
+    if [ ! -f "$csv_path" ];then
+        print "INFO" "filelist.csv is not founded, uninstall by delete whole folder."
+        [ -n "$1" ] && rm -rf "$1"
+        return 0
+    fi
+    cat ${csv_path} | while read line
+    do
+        if [ ${is_first_line} == "false" ];then
+            file_path=$(echo ${line} | awk '{print $1}')
+            if [ ! -f ${file_path} ];then
+                continue
+            fi
+            delete_file_with_authority ${file_path}
+        fi
+        is_first_line=false
+    done
     return 0
 }
 
 function delete_latest() {
-    cd $1/..
+    cd "$1/.."
     if [ -d "latest" -a $(readlink -f $1/../latest) == $1 ];then
         rm -f latest
     fi
@@ -135,6 +150,6 @@ function uninstall_process() {
 }
 
 
-install_path=$(cd ${CUR_DIR}/../../${VERSION};pwd)
+install_path=$(cd "${CUR_DIR}/../../${VERSION}";pwd)
 uninstall_process ${install_path}
-chmod 440 ${log_file}
+chmod 440 "${log_file}"

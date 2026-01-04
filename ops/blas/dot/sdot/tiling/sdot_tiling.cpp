@@ -98,9 +98,12 @@ AsdSip::AspbStatus SdotTiling(const LaunchParam &launchParam, KernelInfo &kernel
     tilingDataPtr->coreNum = vecCoreNum;
     tilingDataPtr->isconj = 0;
 
-    memcpy_s(tilingDataPtr->startOffset, sizeof(tilingDataPtr->startOffset), startOffset,
+    auto ret = memcpy_s(tilingDataPtr->startOffset, sizeof(tilingDataPtr->startOffset), startOffset,
              vecCoreNum * sizeof(uint32_t));
-    memcpy_s(tilingDataPtr->calNum, sizeof(tilingDataPtr->calNum), calNum, vecCoreNum * sizeof(uint32_t));
+    ASDSIP_CHECK_WITH_NO_RETURN(ret == EOK, "startOffset memcpy_s failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
+    ret = memcpy_s(tilingDataPtr->calNum, sizeof(tilingDataPtr->calNum), calNum, vecCoreNum * sizeof(uint32_t));
+    ASDSIP_CHECK_WITH_NO_RETURN(ret == EOK, "calNum memcpy_s failed.", ErrorType::ACL_ERROR_INTERNAL_ERROR);
+
     delete[] startOffset;
     startOffset = nullptr;
     delete[] calNum;

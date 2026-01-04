@@ -1,3 +1,9 @@
+#include "kernel_operator.h"
+#include "../../../../include/common/common.h"
+#include "../../../../include/common/iterator.h"
+#include "../../../../include/common/simd.h"
+#include "../../../../include/common/utils.h"
+
 #ifdef __CCE_KT_TEST__
 #define __aicore__
 #else
@@ -11,9 +17,9 @@ extern "C" __global__ __aicore__ void csrot(__gm__ uint8_t *__restrict__ ffts_ad
                                             __gm__ uint8_t *__restrict__ tiling_para_gm)
 {
     // Init
-    set_ffts_base_addr((uint64_t)ffts_addr);
-    set_padding(0);
-    set_atomic_none();
+    SetFftsBaseAddr((uint64_t)ffts_addr);
+    SetPadding(0);
+    SetAtomicnone();
 
     const int32_t elementCount = *reinterpret_cast<__gm__ int32_t *>(tiling_para_gm);
     const float cosValue = *reinterpret_cast<__gm__ float *>(tiling_para_gm + 4);
@@ -27,22 +33,18 @@ extern "C" __global__ __aicore__ void csrot(__gm__ uint8_t *__restrict__ ffts_ad
                                             __gm__ uint8_t *__restrict__ tiling_para_gm)
 {
     // Init
-    set_ffts_base_addr((uint64_t)ffts_addr);
-    set_atomic_none();
-    set_mask_norm();
-    set_vector_mask((uint64_t)-1, (uint64_t)-1);
+    SetFftsBaseAddr((uint64_t)ffts_addr);
+    SetAtomicnone();
+    AscendC::SetMaskNorm();
+    SetVectorMask<float>((uint64_t)-1, (uint64_t)-1);
 
     const int32_t elementCount = *reinterpret_cast<__gm__ int32_t *>(tiling_para_gm);
     float cosValue = *reinterpret_cast<__gm__ float *>(tiling_para_gm + 4);
     float sinValue = *reinterpret_cast<__gm__ float *>(tiling_para_gm + 8);
     float negaSinValue = 0 - sinValue;
 
-    const int16_t aic_id = get_block_idx();
-    const int16_t aiv_id_per_group = get_subblockid();
-    const int16_t group_num = get_block_num();
-    const int16_t subgroup_num = get_subblockdim();
-    const int16_t aiv_id = aic_id * subgroup_num + aiv_id_per_group;
-    int16_t aiv_num = group_num * subgroup_num;
+    const int16_t aiv_id = AscendC::GetBlockIdx();;
+    int16_t aiv_num = AscendC::GetBlockNum() * AscendC::GetSubBlockNum();
     if (aiv_num == 0) {
         aiv_num = 1;
     }
@@ -58,14 +60,21 @@ extern "C" __global__ __aicore__ void csrot(__gm__ uint8_t *__restrict__ ffts_ad
         startIndex += elementRemain;
     }
 
-    auto buf0_x = reinterpret_cast<__ubuf__ float *>((uintptr_t)0);               // 24 KB
-    auto buf0_y = reinterpret_cast<__ubuf__ float *>((uintptr_t)24 * 1024);       // 24 KB
-    auto buf0_temp1 = reinterpret_cast<__ubuf__ float *>((uintptr_t)48 * 1024);   // 24 KB
-    auto buf0_temp2 = reinterpret_cast<__ubuf__ float *>((uintptr_t)72 * 1024);   // 24 KB
-    auto buf1_x = reinterpret_cast<__ubuf__ float *>((uintptr_t)96 * 1024);       // 24 KB
-    auto buf1_y = reinterpret_cast<__ubuf__ float *>((uintptr_t)120 * 1024);      // 24 KB
-    auto buf1_temp1 = reinterpret_cast<__ubuf__ float *>((uintptr_t)144 * 1024);  // 24 KB
-    auto buf1_temp2 = reinterpret_cast<__ubuf__ float *>((uintptr_t)168 * 1024);  // 24 KB
+    AscendC::GlobalTensor<float> gm_x_tensor;
+    AscendC::GlobalTensor<float> gm_y_tensor;
+    gm_x_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(gm_x));
+    gm_y_tensor.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(gm_y));
+
+    
+    AsdopsBuffer<ArchType::ASCEND_V220> buf;
+    AscendC::LocalTensor<float> buf0_x = buf.GetBuffer<BufferType::ASCEND_UB, float>(0);               // 24 KB
+    AscendC::LocalTensor<float> buf0_y = buf.GetBuffer<BufferType::ASCEND_UB, float>(24 * 1024);       // 24 KB
+    AscendC::LocalTensor<float> buf0_temp1 = buf.GetBuffer<BufferType::ASCEND_UB, float>(48 * 1024);   // 24 KB
+    AscendC::LocalTensor<float> buf0_temp2 = buf.GetBuffer<BufferType::ASCEND_UB, float>(72 * 1024);   // 24 KB
+    AscendC::LocalTensor<float> buf1_x = buf.GetBuffer<BufferType::ASCEND_UB, float>(96 * 1024);       // 24 KB
+    AscendC::LocalTensor<float> buf1_y = buf.GetBuffer<BufferType::ASCEND_UB, float>(120 * 1024);      // 24 KB
+    AscendC::LocalTensor<float> buf1_temp1 = buf.GetBuffer<BufferType::ASCEND_UB, float>(144 * 1024);  // 24 KB
+    AscendC::LocalTensor<float> buf1_temp2 = buf.GetBuffer<BufferType::ASCEND_UB, float>(168 * 1024);  // 24 KB
 
     const int32_t maxElementSingleCount = 24 * 1024 / sizeof(float);
     int32_t loop_count = elementPerCore / maxElementSingleCount;
@@ -76,13 +85,13 @@ extern "C" __global__ __aicore__ void csrot(__gm__ uint8_t *__restrict__ ffts_ad
 
     bool flag = 0;
 
-    auto current_gm_x = gm_x + startIndex;
-    auto current_gm_y = gm_y + startIndex;
+    AscendC::GlobalTensor<float> current_gm_x = gm_x_tensor[startIndex];
+    AscendC::GlobalTensor<float> current_gm_y = gm_y_tensor[startIndex];
 
     int32_t currentElementSingleCount = maxElementSingleCount;
 
-    set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
-    set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID1);
+    SET_FLAG(MTE3, MTE2, EVENT_ID0);
+    SET_FLAG(MTE3, MTE2, EVENT_ID1);
 
     for (int32_t loop_idx = 0; loop_idx < loop_count; loop_idx++) {
         currentElementSingleCount = (loop_idx == loop_count - 1 && loop_remain > 0) ? loop_remain :
@@ -96,110 +105,100 @@ extern "C" __global__ __aicore__ void csrot(__gm__ uint8_t *__restrict__ ffts_ad
 
         auto event_id = flag ? EVENT_ID0 : EVENT_ID1;
 
-        wait_flag(PIPE_MTE3, PIPE_MTE2, event_id);
+        WAIT_FLAG(MTE3, MTE2, event_id);
         // CopyIn
-        copy_gm_to_ubuf_align_b32(buf_x,                                      //__ubuf__ void *dst,
-                                  current_gm_x,                               //__gm__ void *src,
-                                  0,                                          // uint8_t sid,
-                                  1,                                          // uint16_t nBurst,
-                                  currentElementSingleCount * sizeof(float),  // uint32_t lenBurst,
-                                  0,                                          // uint8_t leftPaddingNum,
-                                  0,                                          // uint8_t rightPaddingNum,
-                                  0,                                          // uint32_t srcGap,
-                                  0                                           // uint32_t dstGap
+        gm_to_ub_align<ArchType::ASCEND_V220, float>(
+            buf_x,                                      //__ubuf__ void *dst,
+            current_gm_x,                               //__gm__ void *src,
+            0,                                          // uint8_t sid,
+            1,                                          // uint16_t nBurst,
+            currentElementSingleCount * sizeof(float),  // uint32_t lenBurst,
+            0,                                          // uint8_t leftPaddingNum,
+            0,                                          // uint8_t rightPaddingNum,
+            0,                                          // uint32_t srcGap,
+            0                                           // uint32_t dstGap
         );
 
-        set_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
+        SET_FLAG(MTE2, V, EVENT_ID0);
 
-        copy_gm_to_ubuf_align_b32(buf_y,                                      //__ubuf__ void *dst,
-                                  current_gm_y,                               //__gm__ void *src,
-                                  0,                                          // uint8_t sid,
-                                  1,                                          // uint16_t nBurst,
-                                  currentElementSingleCount * sizeof(float),  // uint32_t lenBurst,
-                                  0,                                          // uint8_t leftPaddingNum,
-                                  0,                                          // uint8_t rightPaddingNum,
-                                  0,                                          // uint32_t srcGap,
-                                  0                                           // uint32_t dstGap
+        gm_to_ub_align<ArchType::ASCEND_V220, float>(
+            buf_y,                                      //__ubuf__ void *dst,
+            current_gm_y,                               //__gm__ void *src,
+            0,                                          // uint8_t sid,
+            1,                                          // uint16_t nBurst,
+            currentElementSingleCount * sizeof(float),  // uint32_t lenBurst,
+            0,                                          // uint8_t leftPaddingNum,
+            0,                                          // uint8_t rightPaddingNum,
+            0,                                          // uint32_t srcGap,
+            0                                           // uint32_t dstGap
         );
 
-        set_flag(PIPE_MTE2, PIPE_V, EVENT_ID1);
-        wait_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
+        SET_FLAG(MTE2, V, EVENT_ID1);
+        WAIT_FLAG(MTE2, V, EVENT_ID0);
 
         // Compute
-        vmuls(buf_temp1,           // __ubuf__ float *dst,
-              buf_x,               // __ubuf__ float *src0,
-              cosValue,            // float src1,
-              currentRepeatCount,  // uint8_t repeat,
-              1,                   // uint16_t dstBlockStride,
-              1,                   // uint16_t srcBlockStride,
-              8,                   // uint8_t dstRepeatStride,
-              8                    // uint8_t srcRepeatStride
+        muls_v<ArchType::ASCEND_V220, float>(
+            buf_temp1,           // __ubuf__ float *dst,
+            buf_x,               // __ubuf__ float *src0,
+            cosValue,            // float src1,
+            currentRepeatCount,  // uint8_t repeat,
+            1,                   // uint16_t dstBlockStride,
+            1,                   // uint16_t srcBlockStride,
+            8,                   // uint8_t dstRepeatStride,
+            8                    // uint8_t srcRepeatStride
         );
-        vmuls(buf_temp2,           // __ubuf__ float *dst,
-              buf_x,               // __ubuf__ float *src0,
-              negaSinValue,        // float src1,
-              currentRepeatCount,  // uint8_t repeat,
-              1,                   // uint16_t dstBlockStride,
-              1,                   // uint16_t srcBlockStride,
-              8,                   // uint8_t dstRepeatStride,
-              8                    // uint8_t srcRepeatStride
-        );
-
-        pipe_barrier(PIPE_V);
-
-        wait_flag(PIPE_MTE2, PIPE_V, EVENT_ID1);
-
-        vaxpy(buf_temp1,           // __ubuf__ float *dst,
-              buf_y,               // __ubuf__ float *src,
-              sinValue,            // float a,
-              currentRepeatCount,  // uint8_t repeat,
-              1,                   // uint16_t dstBlockStride,
-              1,                   // uint16_t srcBlockStride,
-              8,                   // uint16_t dstRepeatStride,
-              8                    // uint16_t srcRepeatStride
-        );
-        vaxpy(buf_temp2,           // __ubuf__ float *dst,
-              buf_y,               // __ubuf__ float *src,
-              cosValue,            // float a,
-              currentRepeatCount,  // uint8_t repeat,
-              1,                   // uint16_t dstBlockStride,
-              1,                   // uint16_t srcBlockStride,
-              8,                   // uint16_t dstRepeatStride,
-              8                    // uint16_t srcRepeatStride
+        muls_v<ArchType::ASCEND_V220, float>(\
+            buf_temp2,           // __ubuf__ float *dst,
+            buf_x,               // __ubuf__ float *src0,
+            negaSinValue,        // float src1,
+            currentRepeatCount,  // uint8_t repeat,
+            1,                   // uint16_t dstBlockStride,
+            1,                   // uint16_t srcBlockStride,
+            8,                   // uint8_t dstRepeatStride,
+            8                    // uint8_t srcRepeatStride
         );
 
-        set_flag(PIPE_V, PIPE_MTE3, event_id);
-        wait_flag(PIPE_V, PIPE_MTE3, event_id);
+        PIPE_BARRIER(V);
+
+        WAIT_FLAG(MTE2, V, EVENT_ID1);
+
+        AscendC::Axpy(buf_temp1, buf_y, sinValue, currentRepeatCount * 64);
+        AscendC::Axpy(buf_temp2, buf_y, cosValue, currentRepeatCount * 64);
+
+        SET_FLAG(V, MTE3, event_id);
+        WAIT_FLAG(V, MTE3, event_id);
 
         // CopyOut
-        copy_ubuf_to_gm_align_b32(current_gm_x,                               //__gm__ void *dst,
-                                  buf_temp1,                                  //__ubuf__ void *src,
-                                  0,                                          // uint8_t sid,
-                                  1,                                          // uint16_t nBurst,
-                                  currentElementSingleCount * sizeof(float),  // uint32_t lenBurst,
-                                  0,                                          // uint8_t leftPaddingNum,
-                                  0,                                          // uint8_t rightPaddingNum,
-                                  0,                                          // uint32_t srcGap,
-                                  0                                           // uint32_t dstGap
+        ub_to_gm_align<ArchType::ASCEND_V220, float>(
+            current_gm_x,                               //__gm__ void *dst,
+            buf_temp1,                                  //__ubuf__ void *src,
+            0,                                          // uint8_t sid,
+            1,                                          // uint16_t nBurst,
+            currentElementSingleCount * sizeof(float),  // uint32_t lenBurst,
+            0,                                          // uint8_t leftPaddingNum,
+            0,                                          // uint8_t rightPaddingNum,
+            0,                                          // uint32_t srcGap,
+            0                                           // uint32_t dstGap
         );
 
-        copy_ubuf_to_gm_align_b32(current_gm_y,                               //__gm__ void *dst,
-                                  buf_temp2,                                  //__ubuf__ void *src,
-                                  0,                                          // uint8_t sid,
-                                  1,                                          // uint16_t nBurst,
-                                  currentElementSingleCount * sizeof(float),  // uint32_t lenBurst,
-                                  0,                                          // uint8_t leftPaddingNum,
-                                  0,                                          // uint8_t rightPaddingNum,
-                                  0,                                          // uint32_t srcGap,
-                                  0                                           // uint32_t dstGap
+        ub_to_gm_align<ArchType::ASCEND_V220, float>(
+            current_gm_y,                               //__gm__ void *dst,
+            buf_temp2,                                  //__ubuf__ void *src,
+            0,                                          // uint8_t sid,
+            1,                                          // uint16_t nBurst,
+            currentElementSingleCount * sizeof(float),  // uint32_t lenBurst,
+            0,                                          // uint8_t leftPaddingNum,
+            0,                                          // uint8_t rightPaddingNum,
+            0,                                          // uint32_t srcGap,
+            0                                           // uint32_t dstGap
         );
 
-        set_flag(PIPE_MTE3, PIPE_MTE2, event_id);
-        current_gm_x += maxElementSingleCount;
-        current_gm_y += maxElementSingleCount;
+        SET_FLAG(MTE3, MTE2, event_id);
+        current_gm_x = current_gm_x[maxElementSingleCount];
+        current_gm_y = current_gm_y[maxElementSingleCount];
         flag = 1 - flag;
     }
-    wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
-    wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID1);
+    WAIT_FLAG(MTE3, MTE2, EVENT_ID0);
+    WAIT_FLAG(MTE3, MTE2, EVENT_ID1);
 }
 #endif

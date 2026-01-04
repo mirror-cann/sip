@@ -16,8 +16,6 @@
 #include <mki/tensor.h>
 #include "log/log.h"
 
-using Mki::Tensor;
-
 constexpr int K_BLOCK_SIZE = 32;
 
 namespace workspace {
@@ -25,7 +23,7 @@ namespace workspace {
 class Workspace {
 public:
     Workspace() = default;
-    Workspace(const Tensor &dataSegment);
+    Workspace(const Mki::Tensor &dataSegment);
     Workspace(void *workSpace);
     bool isInitialized() const;
     void Reset();

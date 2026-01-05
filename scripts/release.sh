@@ -70,6 +70,31 @@ function fn_build_asdops()
     bash scripts/build.sh release --use_cxx11_abi=0 --no_werror
 }
 
+function fn_init_makeself()
+{
+    if [ -d "$ASDSIP_DIR/opensource/makeself" ]; then
+        echo "makeself exist in $ASDSIP_DIR, not build it"
+        return
+    fi
+    [[ ! -d "$ASDSIP_DIR/opensource" ]] && mkdir $ASDSIP_DIR/opensource
+    cd $ASDSIP_DIR/opensource/
+    rm -rf makeself
+    git clone -b release-2.5.0 https://github.com/megastep/makeself.git
+}
+
+function fn_build_catlass()
+{
+    if [ -d "$THIRD_PARTY_DIR/catlass" ]; then
+        echo "catlass already exists in $THIRD_PARTY_DIR, skip cloning"
+        return 0
+    fi
+    [[ ! -d "$THIRD_PARTY_DIR" ]] && mkdir $THIRD_PARTY_DIR
+    cd $THIRD_PARTY_DIR
+    branch=master
+    echo "current branch for catlass: $branch"
+    git clone --branch $branch --depth 1 https://gitee.com/ascend/catlass.git
+}
+
 function config_asdsip_version()
 {
     if [ -z "$VERSION" ]; then
@@ -118,7 +143,7 @@ EOF
 
 
     chmod 750 -R $CODE_ROOT/output
-    chmod 750 -R $CODE_ROOT/scripts/makeself
+    chmod 750 -R $CODE_ROOT/opensource/makeself
 
     ARCH=`uname -i`
 
@@ -136,7 +161,7 @@ EOF
     sed -i "s!LOG_PATH_PLACEHOLDER!${LOG_PATH}!" $OUTPUT_DIR/scripts/uninstall.sh
     sed -i "s!LOG_NAME_PLACEHOLDER!${LOG_NAME}!" $OUTPUT_DIR/scripts/uninstall.sh
 
-    $CODE_ROOT/scripts/makeself/makeself.sh --header $CODE_ROOT/scripts/makeself/makeself-header.sh \
+    $CODE_ROOT/opensource/makeself/makeself.sh --header $CODE_ROOT/opensource/makeself/makeself-header.sh \
         --help-header $CODE_ROOT/scripts/help.info --pigz --complevel 4 --nomd5 --sha256 --chown \
         $CODE_ROOT/output $RELEASE_DIR/$ARCH/Ascend-cann-SIP_${VERSION}_linux-${ARCH}.run ASCEND_SIP_RUN_PACKAGE ./install.sh \
 
@@ -237,10 +262,12 @@ function fn_main()
     case "${arg1}" in
         "pack")
             config_asdsip_version
+            fn_init_makeself
             fn_make_run_package
             ;;
         "compile")
             fn_build_mki
+            fn_build_catlass
             fn_build
             ;;
     esac

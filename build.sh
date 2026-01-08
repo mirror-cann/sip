@@ -77,7 +77,7 @@ EOF
 
     chmod 755 -R $CODE_ROOT/output
 
-    ARCH=`uname -i`
+    ARCH=`uname -m`
 
     mkdir -p $OUTPUT_DIR/scripts
     cp $CODE_ROOT/scripts/install.sh $OUTPUT_DIR
@@ -205,7 +205,7 @@ function fn_build()
         if [ ! -d "${MKI_ROOT}" ]; then
             echo "Third_party dir does not complete and ascend-boost-comm does not exit!"
             cd ${THIRD_PARTY_DIR}/
-            git clone https://gitcode.com/cann/ascend-boost-comm.git -b br_release_cann_8.5.0_20260527
+            git clone https://gitcode.com/cann/ascend-boost-comm.git -b master
         fi
         cd $CODE_ROOT/
         rm -rf MKI_PATH

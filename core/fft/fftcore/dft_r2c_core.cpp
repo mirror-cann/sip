@@ -9,6 +9,7 @@
  */
 
 #include <mki/utils/rt/rt.h>
+#include <mki/utils/platform/platform_info.h>
 #include "utils/assert.h"
 #include "log/log.h"
 #include "ops.h"
@@ -16,42 +17,47 @@
 #include "utils/aspb_status.h"
 #include "fftcore/fft_core_common_func_utils.h"
 #include "dft_r2c.h"
+#include "base_inner_api.h"
 #include "fftcore/dft_r2c_core.h"
 
 constexpr int64_t K_SIZE_OF_COMPLEX64 = sizeof(float) * 2;
 constexpr double K_PI = 3.14159265358979323846;
 constexpr double K_2PI = 2 * K_PI;
+constexpr size_t MATMUL_WORKSIZE = 64;
 
 using namespace AsdSip;
 
 size_t DftR2CCore::EstimateWorkspaceSize()
 {
+    if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910_95) {
+        ASDSIP_LOG(INFO) << "ASCEND_910_95 aclnnMatmul workspace size.";
+        return MATMUL_WORKSIZE;
+    }
     const KernelInfo &kernelInfo = kernel->GetKernelInfo();
     return getAlignedSize(kernelInfo.GetTotalScratchSize());
 }
 
-void DftR2CCore::Run(Tensor &input, Tensor &output, void *stream, workspace::Workspace &workspace)
+void DftR2CCore::Run(void *input, void *output, void *stream, workspace::Workspace &workspace)
 {
-    const KernelInfo &kernelInfo = kernel->GetKernelInfo();
-    // set workspace
-    size_t bufferSize = kernelInfo.GetTotalScratchSize();
-    runInfo.SetScratchDeviceAddr((uint8_t *)workspace.allocate(bufferSize));
-
-    runInfo.SetStream(stream);
-    launchParam.GetInTensor(0).data = input.data;
-    launchParam.GetOutTensor(0).data = output.data;
-
-    output.dataSize = launchParam.GetOutTensor(0).dataSize;
-    output.desc = input.desc;
-    output.desc.dtype = launchParam.GetOutTensor(0).desc.dtype;
-    *(output.desc.dims.end() - 1) = *(launchParam.GetOutTensor(0).desc.dims.end() - 1);
-
-    kernel->Run(launchParam, runInfo);
-
-    workspace.recycleLast();
-
-    ASDSIP_LOG(INFO) << "DftR2CCore run success.";
-    return;
+    if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910B) {
+        FftOperation::Run(input, output, stream, workspace);
+        ASDSIP_LOG(INFO) << "ASCEND_910B DftR2CCore run success.";
+    } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910_95) {
+        Tensor inTensor;
+        Tensor outTensor;
+        TensorDType dtype = TENSOR_DTYPE_FLOAT;
+        SVector<int64_t> inShape {problemDesc.batch};
+        inShape.push_back(problemDesc.nDoing);
+        inTensor.dataSize = problemDesc.batch * problemDesc.nDoing * sizeof(float);
+        inTensor.desc = {dtype, TENSOR_FORMAT_ND, inShape, {}, 0};
+        inTensor.data = input;
+        outTensor.data = output;
+        uint8_t *deviceBuffer = (uint8_t *)workspace.allocate(ASYNC_WORKSPACE_SIZE);
+        int64_t M = inTensor.desc.dims[0];
+        int64_t K = inTensor.desc.dims[1];
+        int64_t N = (*rotationMatrix).desc.dims[1];
+        MatMul(inTensor, *rotationMatrix, outTensor, M, K, N, stream, deviceBuffer);
+    }
 }
 
 void DftR2CCore::DestroyInDevice() const
@@ -130,6 +136,10 @@ bool DftR2CCore::PreAllocateInDevice()
 
 AspbStatus DftR2CCore::InitTactic()
 {
+    if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910_95) {
+        ASDSIP_LOG(INFO) << "ASCEND_910_95 DftR2CCore aclnnMatmul.";
+        return AsdSip::ErrorType::ACL_SUCCESS;
+    }
     OpParam::DftR2C param = {problemDesc.nDoing, problemDesc.batch, 1 - int(problemDesc.forward)};
     ASDSIP_LOG(DEBUG) << "OpDesc info: " << param.ToString();
 

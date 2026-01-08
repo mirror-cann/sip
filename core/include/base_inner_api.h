@@ -25,6 +25,9 @@ AsdSip::AspbStatus AsStrided(const Mki::Tensor &inTensor, Mki::Tensor &outTensor
                              Mki::SVector<int64_t> stride, void *stream, int64_t offset = 0,
                              uint8_t *deviceBuffer = nullptr);
 
+AsdSip::AspbStatus Slice(const Mki::Tensor &inTensor, Mki::Tensor &outTensor, int64_t dim, int64_t start,
+                         int64_t end, int64_t step, void *stream, uint8_t *deviceBuffer = nullptr);
+
 AsdSip::AspbStatus Reverse(const Mki::Tensor &inTensor, Mki::Tensor &outTensor, Mki::SVector<int64_t> axis,
                            void *stream, uint8_t *deviceBuffer = nullptr);
 

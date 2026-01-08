@@ -174,15 +174,19 @@ void getC2RCore(std::optional<FFTCoreType> &coreTypeOpt, int radix, unsigned nDo
         ASDSIP_LOG(DEBUG) << "C2RCore backward.";
     }
 
-    if (Mki::PlatformInfo::Instance().GetPlatformType() != Mki::PlatformType::ASCEND_910B) {
-        return;
-    }
-
-    if (nDoing <= K_N_FFT_1024) {
-        coreTypeOpt = FFTCoreType::kDftC2R;
-    } else {
-        if (radix == K_RADIX_MIX) {
-            coreTypeOpt = FFTCoreType::kFftC2R;
+    if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910B) {
+        if (nDoing <= K_N_FFT_1024) {
+            coreTypeOpt = FFTCoreType::kDftC2R;
+        } else {
+            if (radix == K_RADIX_MIX) {
+                coreTypeOpt = FFTCoreType::kFftC2R;
+            }
+        }
+    } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910_95) {
+        if (nDoing <= K_N_FFT_1024) {
+            coreTypeOpt = FFTCoreType::kDftC2R;
+        } else {
+            return;
         }
     }
     return;
@@ -196,15 +200,19 @@ void getR2CCore(std::optional<FFTCoreType> &coreTypeOpt, int radix, unsigned nDo
         ASDSIP_LOG(DEBUG) << "C2CCore backward.";
     }
     
-    if (Mki::PlatformInfo::Instance().GetPlatformType() != Mki::PlatformType::ASCEND_910B) {
-        return;
-    }
-
-    if (nDoing <= K_N_FFT_1024) {
-        coreTypeOpt = FFTCoreType::kDftR2C;
-    } else {
-        if (radix == K_RADIX_MIX) {
-            coreTypeOpt = FFTCoreType::kFftR2C;
+    if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910B) {
+        if (nDoing <= K_N_FFT_1024) {
+            coreTypeOpt = FFTCoreType::kDftR2C;
+        } else {
+            if (radix == K_RADIX_MIX) {
+                coreTypeOpt = FFTCoreType::kFftR2C;
+            }
+        }
+    } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910_95) {
+        if (nDoing <= K_N_FFT_1024) {
+            coreTypeOpt = FFTCoreType::kDftR2C;
+        } else {
+            return;
         }
     }
     return;

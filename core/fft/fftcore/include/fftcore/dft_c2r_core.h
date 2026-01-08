@@ -23,7 +23,8 @@ public:
         : FftCoreHBase(FFTCoreType::kDftC2R, N_doing, batch, fft_type, forward) {}
     ~DftC2RCore() override { DestroyInDevice();}
     size_t EstimateWorkspaceSize() override;
-    void Run(Tensor& input, Tensor& output, void *stream, workspace::Workspace& workspace) override;
+    void Run(Tensor& input, Tensor& output, void *stream, workspace::Workspace& workspace) override {}
+    void Run(void *input, void *output, void *stream, workspace::Workspace &workspace) override;
 private:
     void InitRadix() override;
     bool PreAllocateInDevice() override;

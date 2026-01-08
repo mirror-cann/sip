@@ -15,6 +15,7 @@
 #include <complex>
 
 #include <mki/utils/rt/rt.h>
+#include <mki/utils/platform/platform_info.h>
 #include <mki/utils/SVector/SVector.h>
 #include "utils/assert.h"
 #include "log/log.h"
@@ -319,13 +320,42 @@ void FFTCoreAny::Run(Mki::Tensor &inTensor, Mki::Tensor &outTensor, void *stream
         tmpC2r.data = buffer + tmpPing.dataSize * DOUBLE_SIZE_OF_DATASIZE;
         tmpC2r.dataSize = tmpPing.dataSize * DOUBLE_SIZE_OF_DATASIZE;
 
-        Conj(self, tmpPing, stream, deviceBuffer);
-
+        if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910B) {
+            Conj(self, tmpPing, stream, deviceBuffer);
+        } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910_95) {
+            tmpPing.desc.dims = self.desc.dims;
+        }
         tmpPing.desc.dims.push_back(TENSOR_TWO_DIMENSION);
         auto doubleSizeSelf = CalNumel(tmpPing.desc.dims, 0, tmpPing.desc.dims.size());
         tmpPing.desc = {TENSOR_DTYPE_FLOAT, TENSOR_FORMAT_ND, tmpPing.desc.dims, {}, 0};
         tmpPing.dataSize = static_cast<size_t>(doubleSizeSelf);
 
+        if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910_95) {
+            Mki::Tensor selfConj = inTensor;
+            selfConj.desc.dims.push_back(TENSOR_TWO_DIMENSION);
+            selfConj.desc = {TENSOR_DTYPE_FLOAT, TENSOR_FORMAT_ND, selfConj.desc.dims, {}, 0};
+
+            Tensor conjReal;
+            Tensor conjImag;
+            conjReal.desc.dims = self.desc.dims;
+            conjReal.desc.dims.push_back(1);
+            conjReal.desc = {TENSOR_DTYPE_FLOAT, TENSOR_FORMAT_ND, conjReal.desc.dims, {}, 0};
+            conjImag.desc = {TENSOR_DTYPE_FLOAT, TENSOR_FORMAT_ND, conjReal.desc.dims, {}, 0};
+
+            conjReal.data = tmpC2r.data;
+            conjReal.dataSize = selfConj.dataSize / 2;
+            conjImag.data = static_cast<void*>(static_cast<uint8_t*>(tmpC2r.data) + selfConj.dataSize / 2);
+            conjImag.dataSize = selfConj.dataSize / 2;
+
+            Slice(selfConj, conjImag, selfConj.desc.dims.size() - 1,
+                  1, TENSOR_TWO_DIMENSION, 1, stream, deviceBuffer);
+            
+            Muls(conjImag, float(-1.0), conjReal, stream, deviceBuffer);
+
+            Slice(selfConj, conjImag, selfConj.desc.dims.size() - 1,
+                  0, 1, 1, stream, deviceBuffer);
+            Concat(conjImag, conjReal, tmpPing, selfConj.desc.dims.size() - 1, stream, deviceBuffer);
+        }
         auto stridePing = GetStride(tmpPing);
         auto asStridedShape = tmpPing.desc.dims;
 

@@ -27,8 +27,8 @@ public:
         DestroyInDevice();
     }
     size_t EstimateWorkspaceSize() override;
-    void Run(Tensor &input, Tensor &output, void *stream, workspace::Workspace &workspace) override;
-
+    void Run(Tensor &input, Tensor &output, void *stream, workspace::Workspace &workspace) override {}
+    void Run(void *input, void *output, void *stream, workspace::Workspace &workspace) override;
 private:
     std::string opName{"DftR2COperation"};
     std::shared_ptr<AsdSip::FFTensor> rotationMatrix;

@@ -327,6 +327,14 @@ function fn_main()
             fn_build
             fn_build_coverage
             ;;
+        "smoke_pr")
+            fn_build
+            bash $CODE_ROOT/scripts/build_test.sh example_test
+            ;;
+        "smoke_all")
+            fn_build
+            bash $CODE_ROOT/scripts/build_test.sh default
+            ;;
         --clean)
             [[ -d "$OUTPUT_DIR" ]] && rm -rf $OUTPUT_DIR
             [[ -d "$THIRD_PARTY_DIR" ]] && rm -rf $THIRD_PARTY_DIR
@@ -359,7 +367,7 @@ export COMPILE_OPTIONS="-DNO_WERROR=ON"
 export USE_VERBOSE=OFF
 export USE_CXX11_ABI="OFF"
 MSSANITIZER_SWITCH=OFF
-BUILD_OPTION_LIST="ops_unit ut st ft --dev --clean --help"
+BUILD_OPTION_LIST="ops_unit ut st ft smoke_pr smoke_all --dev --clean --help"
 BUILD_CONFIGURE_LIST=("--output=.*" "--use_cxx11_abi=0" "--use_cxx11_abi=1 --verbose --mssanitizer")
 
 fn_main "$@"

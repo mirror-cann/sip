@@ -227,6 +227,26 @@ function fn_init_cann_env()
     set -e
 }
 
+function bep_env_init() {
+    # bep 消除二进制
+    local bep_env_config=$ASDSIP_DIR/scripts/bep_env.conf
+    # 检查BepKit预置环境
+    local bep_sh=$(which bep_env.sh)
+    echo "has bep sh :${bep_sh}"
+    # 执行bep脚本
+    if [ ! -d "${SECBEPKIT_HOME}" ] && [ ! -f "$bep_sh" ]; then
+        echo "BepKit is uninstalled, Please install the tool and configure the env var \$SECBEPKIT_HOME"
+    else
+        source ${SECBEPKIT_HOME}/bep_env.sh -s $bep_env_config
+        if [ $? -ne 0 ]; then
+            echo "build bep failed!"
+            exit 1
+        else
+            echo "build bep success."
+        fi
+    fi
+}
+
 function fn_main()
 {
     if [[ "$1" == "pack" ]]; then
@@ -274,6 +294,7 @@ function fn_main()
 }
 
 set -e
+
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 cd $SCRIPT_DIR
 cd ..
@@ -290,4 +311,5 @@ VERSION="8.0.0"
 LOG_PATH="/var/log/cann_asdsip_log/"
 LOG_NAME="cann_asdsip_install.log"
 
+bep_env_init
 fn_main "$@"

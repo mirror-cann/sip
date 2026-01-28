@@ -45,7 +45,7 @@ AspbStatus Slice(const Tensor &inTensor, Tensor &outTensor, int64_t dim, int64_t
     }
 
     auto ret = aclnnSliceGetWorkspaceSize(inAclTensor, dim, start, end, step,
-                outAclTensor, &workspaceSize, &executor);
+        outAclTensor, &workspaceSize, &executor);
     if (ret != ::ACL_SUCCESS) {
         ASDSIP_LOG(ERROR) << "aclnnSliceGetWorkspaceSize failed. ERROR: " << ret;
         aclDestroyTensor(inAclTensor);

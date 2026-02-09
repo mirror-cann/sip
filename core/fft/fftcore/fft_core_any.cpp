@@ -322,7 +322,7 @@ void FFTCoreAny::Run(Mki::Tensor &inTensor, Mki::Tensor &outTensor, void *stream
 
         if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910B) {
             Conj(self, tmpPing, stream, deviceBuffer);
-        } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910_95) {
+        } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
             tmpPing.desc.dims = self.desc.dims;
         }
         tmpPing.desc.dims.push_back(TENSOR_TWO_DIMENSION);
@@ -330,7 +330,7 @@ void FFTCoreAny::Run(Mki::Tensor &inTensor, Mki::Tensor &outTensor, void *stream
         tmpPing.desc = {TENSOR_DTYPE_FLOAT, TENSOR_FORMAT_ND, tmpPing.desc.dims, {}, 0};
         tmpPing.dataSize = static_cast<size_t>(doubleSizeSelf);
 
-        if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910_95) {
+        if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
             Mki::Tensor selfConj = inTensor;
             selfConj.desc.dims.push_back(TENSOR_TWO_DIMENSION);
             selfConj.desc = {TENSOR_DTYPE_FLOAT, TENSOR_FORMAT_ND, selfConj.desc.dims, {}, 0};

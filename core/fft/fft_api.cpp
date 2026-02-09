@@ -182,7 +182,7 @@ void getC2RCore(std::optional<FFTCoreType> &coreTypeOpt, int radix, unsigned nDo
                 coreTypeOpt = FFTCoreType::kFftC2R;
             }
         }
-    } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910_95) {
+    } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
         if (nDoing <= K_N_FFT_1024) {
             coreTypeOpt = FFTCoreType::kDftC2R;
         } else {
@@ -208,7 +208,7 @@ void getR2CCore(std::optional<FFTCoreType> &coreTypeOpt, int radix, unsigned nDo
                 coreTypeOpt = FFTCoreType::kFftR2C;
             }
         }
-    } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910_95) {
+    } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
         if (nDoing <= K_N_FFT_1024) {
             coreTypeOpt = FFTCoreType::kDftR2C;
         } else {

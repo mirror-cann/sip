@@ -29,8 +29,8 @@ using namespace AsdSip;
 
 size_t DftR2CCore::EstimateWorkspaceSize()
 {
-    if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910_95) {
-        ASDSIP_LOG(INFO) << "ASCEND_910_95 aclnnMatmul workspace size.";
+    if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
+        ASDSIP_LOG(INFO) << "ASCEND_950 aclnnMatmul workspace size.";
         return MATMUL_WORKSIZE;
     }
     const KernelInfo &kernelInfo = kernel->GetKernelInfo();
@@ -42,7 +42,7 @@ void DftR2CCore::Run(void *input, void *output, void *stream, workspace::Workspa
     if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910B) {
         FftOperation::Run(input, output, stream, workspace);
         ASDSIP_LOG(INFO) << "ASCEND_910B DftR2CCore run success.";
-    } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910_95) {
+    } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
         Tensor inTensor;
         Tensor outTensor;
         TensorDType dtype = TENSOR_DTYPE_FLOAT;
@@ -136,8 +136,8 @@ bool DftR2CCore::PreAllocateInDevice()
 
 AspbStatus DftR2CCore::InitTactic()
 {
-    if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910_95) {
-        ASDSIP_LOG(INFO) << "ASCEND_910_95 DftR2CCore aclnnMatmul.";
+    if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
+        ASDSIP_LOG(INFO) << "ASCEND_950 DftR2CCore aclnnMatmul.";
         return AsdSip::ErrorType::ACL_SUCCESS;
     }
     OpParam::DftR2C param = {problemDesc.nDoing, problemDesc.batch, 1 - int(problemDesc.forward)};

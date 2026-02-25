@@ -22,6 +22,8 @@ namespace AsdSip {
 constexpr int32_t INDEX_TWO = 2;
 constexpr int32_t INDEX_THREE = 3;
 constexpr int32_t INDEX_FOUR = 4;
+constexpr int32_t MAX_CORE_910B = 20;
+
 using namespace Mki;
 inline AsdSip::AspbStatus InitFftAllMixTiling(const LaunchParam &launchParam, KernelInfo &kernelInfo)
 {
@@ -52,7 +54,9 @@ inline AsdSip::AspbStatus InitFftAllMixTiling(const LaunchParam &launchParam, Ke
             maxCore = 1;
         }
     }
-
+    if (maxCore > MAX_CORE_910B) {
+        maxCore = MAX_CORE_910B;
+    }
     kernelInfo.SetBlockDim(maxCore);
     kernelInfo.GetScratchSizes().push_back(param.workspace_input_size + param.workspace_output_size +
                                            param.workspace_sync_size + param.workspace_c2c_output_size +

@@ -30,7 +30,7 @@ Ascend Signal Processing Boost（昇腾信号处理加速库，下文简称为Si
 
 ## 3.  环境构建
 ### 3.1  快速安装CANN软件
-本节提供快速安装CANN软件的示例命令，更多安装步骤请参考[详细安装指南](#详细安装指南)。
+本节提供快速安装CANN软件的示例命令，更多安装步骤请参考CANN官网的[CANN软件安装指南](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/850/softwareinst/instg/instg_0000.html)。
 
 #### 3.1.1  安装前准备
 本项目源码编译用到的依赖如下，请注意版本要求。

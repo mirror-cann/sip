@@ -24,22 +24,22 @@ swapLast2Axes：交换Tensor的最后两维。
   $$
 示例：
   - 示例一：
-输入“inTensor”为：
-[[[1.+0.j, 2.+0.j, 3.+0.j]]]
-调用swapLast2Axes算子后，输出“outTensor”为：
+输入“inTensor”为：\
+[[[1.+0.j, 2.+0.j, 3.+0.j]]]\
+调用swapLast2Axes算子后，输出“outTensor”为：\
 [[[1.+0.j], [2.+0.j], [3.+0.j]]]
   - 示例二：
-输入“inTensor”为：
-[[[ 0.+0.j, 1.+0.j, 2.+0.j], 
-[ 3.+0.j, 4.+0.j, 5.+0.j]],
-[[ 6.+0.j, 7.+0.j, 8.+0.j], 
-[ 9.+0.j, 10.+0.j, 11.+0.j]]]
+输入“inTensor”为：\
+[[[ 0.+0.j, 1.+0.j, 2.+0.j], \
+[ 3.+0.j, 4.+0.j, 5.+0.j]],\
+[[ 6.+0.j, 7.+0.j, 8.+0.j], \
+[ 9.+0.j, 10.+0.j, 11.+0.j]]]\
 调用swapLast2Axes算子后，输出“outTensor”为：
-[[[ 0.+0.j, 3.+0.j], 
-[ 1.+0.j, 4.+0.j], 
-[ 2.+0.j, 5.+0.j]],
-[[ 6.+0.j, 9.+0.j], 
-[ 7.+0.j, 10.+0.j], 
+[[[ 0.+0.j, 3.+0.j], \
+[ 1.+0.j, 4.+0.j], \
+[ 2.+0.j, 5.+0.j]],\
+[[ 6.+0.j, 9.+0.j], \
+[ 7.+0.j, 10.+0.j], \
 [ 8.+0.j, 11.+0.j]]]
 
 ## 函数原型
@@ -63,31 +63,22 @@ AsdSip::AspbStatus swapLast2Axes(
 
 - **参数说明**：
 
-  <table style="undefined;table-layout: fixed; width: 1115px"><colgroup>
+  <table style="undefined;table-layout: fixed; width: 621px"><colgroup>
     <col style="width: 210px">
     <col style="width: 120px">
-    <col style="width: 271px">
-    <col style="width: 223px">
-    <col style="width: 101px">
-    <col style="width: 190px">
+    <col style="width: 300px">
     </colgroup>
     <thead>
       <tr>
         <th>参数名</th>
         <th>输入/输出</th>
         <th>描述</th>
-        <th>数据类型</th>
-        <th>数据格式</th>
-        <th>维度(shape)</th>
       </tr></thead>
     <tbody>
     <tr>
       <td>size（size_t *）</td>
       <td>输入/输出</td>
       <td>swapLast2Axes算子所需要的workspace。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
     </tr>
   </tbody>
   </table>
@@ -96,56 +87,39 @@ AsdSip::AspbStatus swapLast2Axes(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1115px"><colgroup>
+  <table style="undefined;table-layout: fixed; width: 621px"><colgroup>
     <col style="width: 210px">
     <col style="width: 120px">
-    <col style="width: 271px">
-    <col style="width: 223px">
-    <col style="width: 101px">
-    <col style="width: 190px">
+    <col style="width: 300px">
   </colgroup>
   <thead>
       <tr>
         <th>参数名</th>
         <th>输入/输出</th>
         <th>描述</th>
-        <th>数据类型</th>
-        <th>数据格式</th>
-        <th>维度(shape)</th>
       </tr></thead>
   <tbody>
     <tr>
       <td>inTensor（aclTensor *）</td>
       <td>输入</td>
-      <td>表示输入的张量数据，对应公式中的'inTensor'。
-      输入的最大元素数为3600000000 ([60000, 60000]以内)。</td>
-      <td>COMPLEX64</td>
-      <td>ND</td>
-      <td>2或者3</td>
+      <td><ul><li>表示输入的张量数据，对应公式中的'inTensor'。</li><li>输入的最大元素数为3600000000 ([60000, 60000]以内)。</li><li>数据类型仅支持COMPLEX64，数据格式支持ND。</li>
+      <li>输入shape限制为2或3。</li></ul>
+      </td>
     </tr>
     <tr>
       <td>outTensor（aclTensor *）</td>
       <td>输出</td>
-      <td>表示输出的张量数据，对应公式中的'outTensor'。</td>
-      <td>COMPLEX64</td>
-      <td>ND</td>
-      <td>2或者3</td>
+      <td><ul><li>表示输出的张量数据，对应公式中的'outTensor'。</li><li>数据类型仅支持COMPLEX64，数据类型需要与inTensor的数据类型一致。</li><li>如果inTensor的shape为[k，x，y]，outTensor的shape为[k，y，x]。<li>数据格式支持ND。</li></li></ul></td>
     </tr>
     <tr>
       <td>workspaceSize（void *）</td>
       <td>输入</td>
       <td>swapLast2Axes算子所需要的workspace。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
     </tr>
     <tr>
       <td>stream(void *)</td>
       <td>输入</td>
       <td>npu执行流。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
     </tr>
   </tbody>
   </table>
@@ -154,9 +128,7 @@ AsdSip::AspbStatus swapLast2Axes(
 
 ## 约束说明
 
-- 确定性计算：
-  - 算子输入shape若为[k，x，y]，则算子输出shape为[k，y，x]。
-  - 算子实际计算时，不支持ND高维度运算（不支持维度>3的运算）。
+  算子实际计算时，不支持ND高维度运算（不支持维度>3的运算）。
 
 ## 调用示例
 

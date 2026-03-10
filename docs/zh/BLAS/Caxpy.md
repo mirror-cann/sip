@@ -1,4 +1,4 @@
-# swapLast2Axes
+# Caxpy
 
 ## 产品支持情况
 
@@ -14,76 +14,40 @@
 
 ## 功能说明
 
-- 接口功能：
-swapLast2AxesGetWorkspaceSize：计算swapLast2Axes算子所需的workspace大小。
-swapLast2Axes：交换Tensor的最后两维。
+- 接口功能：\
+asdBlasMakeCaxpyPlan：初始化该句柄对应的Caxpy算子配置。\
+asdBlasCaxpy：实现复数向量乘以一个复数标量后，再加上一个复数向量。
 - 计算公式：
-
   $$
-  outTensor_{bij} = inTensor_{bij}\\
+  y= alpha * x + y\\ 
   $$
-示例：
-  - 示例一：
-输入“inTensor”为：\
-[[[1.+0.j, 2.+0.j, 3.+0.j]]]\
-调用swapLast2Axes算子后，输出“outTensor”为：\
-[[[1.+0.j], [2.+0.j], [3.+0.j]]]
-  - 示例二：
-输入“inTensor”为：\
-[[[ 0.+0.j, 1.+0.j, 2.+0.j], \
-[ 3.+0.j, 4.+0.j, 5.+0.j]],\
-[[ 6.+0.j, 7.+0.j, 8.+0.j], \
-[ 9.+0.j, 10.+0.j, 11.+0.j]]]\
-调用swapLast2Axes算子后，输出“outTensor”为：
-[[[ 0.+0.j, 3.+0.j], \
-[ 1.+0.j, 4.+0.j], \
-[ 2.+0.j, 5.+0.j]],\
-[[ 6.+0.j, 9.+0.j], \
-[ 7.+0.j, 10.+0.j], \
-[ 8.+0.j, 11.+0.j]]]
-
+  示例：\
+输入“x”为：\
+[3.0 + 4.0j, 4.0 + 4.0j]\
+输入“alpha”为：\
+[ 3.0 + 4.0j]\
+输入“y”为：\
+[3.0 + 4.0j, 4.0 + 4.0j]\
+调用“asdBlasCaxpy”算子后，输出“y”为：\
+[-4.0 + 28.0j, 0.0 + 32.0j]
+ 
 ## 函数原型
 
-若需使用“swapLast2Axes”算子，必须先调用“swapLast2AxesGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“swapLast2Axes”接口执行计算。
-
 ```Cpp
-AsdSip::AspbStatus swapLast2AxesGetWorkspaceSize(
-  size_t *size)
+AspbStatus asdBlasMakeCaxpyPlan(asdBlasHandle handle)
+```
+```Cpp
+AspbStatus asdBlasCaxpy(
+  asdBlasHandle              handle, 
+  const int64_t              n, 
+  const std::complex<float> *alpha, 
+  aclTensor*                 x,
+  int64_t                    incx, 
+  aclTensor*                 y, 
+  int64_t                    incy)
 ```
 
-```Cpp
-AsdSip::AspbStatus swapLast2Axes(
-  const aclTensor *    inTensor, 
-  aclTensor *          outTensor, 
-  void *               stream,
-  void *               workspace = nullptr)
-```
-
-## swapLast2AxesGetWorkspaceSize
-
-- **参数说明**：
-
-  <table style="undefined;table-layout: fixed; width: 880px"><colgroup>
-    <col style="width: 250px">
-    <col style="width: 120px">
-    <col style="width: 510px">
-    </colgroup>
-    <thead>
-      <tr>
-        <th>参数名</th>
-        <th>输入/输出</th>
-        <th>描述</th>
-      </tr></thead>
-    <tbody>
-    <tr>
-      <td>size（size_t *）</td>
-      <td>输入/输出</td>
-      <td>swapLast2Axes算子所需要的workspace。</td>
-    </tr>
-  </tbody>
-  </table>
-
-## swapLast2Axes
+## asdBlasMakeCaxpyPlan
 
 - **参数说明：**
 
@@ -100,40 +64,75 @@ AsdSip::AspbStatus swapLast2Axes(
       </tr></thead>
   <tbody>
     <tr>
-      <td>inTensor（aclTensor *）</td>
+      <td>handle（asdBlasHandle）</td>
       <td>输入</td>
-      <td><ul><li>表示输入的张量数据，对应公式中的'inTensor'。</li><li>输入的最大元素数为3600000000 ([60000, 60000]以内)。</li><li>数据类型仅支持COMPLEX64，数据格式支持ND。</li>
-      <li>输入shape限制为2或3。</li></ul>
-      </td>
+      <td>算子的句柄</td>
     </tr>
-    <tr>
-      <td>outTensor（aclTensor *）</td>
-      <td>输出</td>
-      <td><ul><li>表示输出的张量数据，对应公式中的'outTensor'。</li><li>数据类型仅支持COMPLEX64，数据类型需要与inTensor的数据类型一致。</li><li>如果inTensor的shape为[k，x，y]，outTensor的shape为[k，y，x]。<li>数据格式支持ND。</li></li></ul></td>
-    </tr>
-    <tr>
-      <td>workspaceSize（void *）</td>
-      <td>输入</td>
-      <td>swapLast2Axes算子所需要的workspace。</td>
-    </tr>
-    <tr>
-      <td>stream(void *)</td>
-      <td>输入</td>
-      <td>npu执行流。</td>
-    </tr>
-  </tbody>
-  </table>
+    </table>
 
+## asdBlasCaxpy
+
+- **参数说明：**
+
+  <table style="undefined;table-layout: fixed; width: 880px"><colgroup>
+    <col style="width: 250px">
+    <col style="width: 120px">
+    <col style="width: 510px">
+  </colgroup>
+  <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+      </tr></thead>
+  <tbody>
+    <tr>
+      <td>handle（asdBlasHandle）</td>
+      <td>输入</td>
+      <td>算子的句柄</td>
+    </tr>
+    <tr>
+      <td>x（int64_t）</td>
+      <td>输入</td>
+      <td><ul><li>输入向量，对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
+    </tr>
+    <tr>
+      <td>n（int64_t）</td>
+      <td>输入</td>
+      <td>向量中复数元素的个数。</td>
+    </tr>
+    <tr>
+      <td>y（aclTensor*）</td>
+      <td>输入/输出</td>
+      <td><ul><li>输入向量，对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
+    </tr>
+    <tr>
+      <td>incx（int64_t）</td>
+      <td>输入</td>
+      <td>向量x相邻元素间的内存地址偏移量（当前约束为1）。</td>
+    </tr>
+    <tr>
+      <td>incy（int64_t）</td>
+      <td>输入</td>
+      <td>向量y相邻元素间的内存地址偏移量（当前约束为1）。</td>
+    </tr>
+    <tr>
+      <td>alpha（std::complex<float> *）</td>
+      <td>输入</td>
+      <td><ul><li>对应公式中的alpha，输入的复数标量。</li><li>数据类型支持COMPLEX64</li></ul></td>
+    </tr>
+    </table>
 
 
 ## 约束说明
 
-  算子实际计算时，不支持ND高维度运算（不支持维度>3的运算）。
+- 输入的元素个数n当前覆盖支持[1，6.71e+06]。
+- 算子输入shape为[n]、[n]，输出shape为[n]。
+- 算子实际计算时，不支持ND高维度运算（不支持维度≥3的运算）。
 
 ## 调用示例
 
 示例代码如下，该样例旨在提供快速上手、开发和调试算子的最小化实现，其核心目标是使用最精简的代码展示算子的核心功能，而非提供生产级的安全保障。不推荐用户直接将示例代码作为业务代码，若用户将示例代码应用在自身的真实业务场景中且发生了安全问题，则需用户自行承担。
-
 ```Cpp
 #include <iostream>
 #include <vector>
@@ -189,7 +188,7 @@ template <typename T>
 int CreateAclTensor(const std::vector<T> &hostData, const std::vector<int64_t> &shape, void **deviceAddr,
     aclDataType dataType, aclTensor **tensor)
 {
-    auto size = GetShapeSize(shape) * sizeof(T) * 2;
+    auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
     CHECK_RET(ret == ::ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
@@ -216,87 +215,99 @@ int CreateAclTensor(const std::vector<T> &hostData, const std::vector<int64_t> &
     return 0;
 }
 
-void printTensor(const float *tensorData, size_t row, size_t col)
+void printTensor(std::vector<std::complex<float>> tensorData, int64_t tensorSize)
 {
-    for (size_t r = 0; r < row; ++r) {
-        for (size_t c = 0; c < col; ++c) {
-            size_t index = (r * col + c) * 2;
-            std::cout << "(" << int(tensorData[index]) << ", " << int(tensorData[index + 1]) << ") ";
-        }
-        std::cout << "\n";
+    for (int64_t i = 0; i < tensorSize; i++) {
+        std::cout << tensorData[i] << " ";
     }
+    std::cout << std::endl;
 }
 
 int main(int argc, char **argv)
 {
+
     int deviceId = 0;
 
     aclrtStream stream;
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ::ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-    int64_t row = 3;
-    int64_t col = 2;
-    const int64_t tensorSize = row * col * 2;
+    int64_t vecSize = 8;
+    int64_t resultSize = 8;
+    std::complex<float> alpha = {-2.0f, -4.0f};
 
-    std::vector<float> tensorInData;
-    tensorInData.reserve(tensorSize);
-    for (int64_t i = 0; i < tensorSize; i++) {
-        tensorInData[i] = 0.0 + i;
+    std::vector<std::complex<float>> tensorInVecData;
+    tensorInVecData.reserve(vecSize);
+    for (int i = 0; i < vecSize; i++) {
+        tensorInVecData.push_back({(float)(1.0 + i), (float)(2.0 + i)});
     }
-    std::vector<float> tensorOutData;
-    tensorOutData.reserve(tensorSize);
 
-    std::vector<int64_t> inShape = {row, col};
-    std::vector<int64_t> outShape = {col, row};
-    aclTensor *input = nullptr;
-    aclTensor *output = nullptr;
-    void *inputDeviceAddr = nullptr;
-    void *outputDeviceAddr = nullptr;
-    ret = CreateAclTensor(tensorInData, inShape, &inputDeviceAddr, aclDataType::ACL_COMPLEX64, &input);
-    CHECK_RET(ret == ::ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(tensorOutData, outShape, &outputDeviceAddr, aclDataType::ACL_COMPLEX64, &output);
+    std::vector<std::complex<float>> tensorResultData;
+    tensorResultData.reserve(resultSize);
+
+    for (int i = 0; i < vecSize; i++) {
+        tensorResultData.push_back({(float)(0.0), (float)(0.0)});
+    }
+
+    std::cout << "alpha = " << alpha << std::endl;
+    std::cout << "------- input vec -------" << std::endl;
+    printTensor(tensorInVecData, vecSize);
+
+    std::vector<int64_t> vecShape = {vecSize};
+    std::vector<int64_t> resultShape = {resultSize};
+
+    aclTensor *inVec = nullptr;
+    aclTensor *outResult = nullptr;
+    void *inpVecDeviceAddr = nullptr;
+    void *outResultDeviceAddr = nullptr;
+
+    ret = CreateAclTensor<std::complex<float>>(
+        tensorInVecData, vecShape, &inpVecDeviceAddr, aclDataType::ACL_COMPLEX64, &inVec);
     CHECK_RET(ret == ::ACL_SUCCESS, return ret);
 
-    void *workspace = nullptr;
+    ret = CreateAclTensor<std::complex<float>>(
+        tensorResultData, resultShape, &outResultDeviceAddr, aclDataType::ACL_COMPLEX64, &outResult);
+    CHECK_RET(ret == ::ACL_SUCCESS, return ret);
+
+    asdBlasHandle handle;
+    asdBlasCreate(handle);
+
     size_t lwork = 0;
-    swapLast2AxesGetWorkspaceSize(lwork);
+    void *buffer = nullptr;
+    asdBlasMakeCaxpyPlan(handle);
+    asdBlasGetWorkspaceSize(handle, lwork);
     std::cout << "lwork = " << lwork << std::endl;
     if (lwork > 0) {
-        ret = aclrtMalloc(&workspace, static_cast<int64_t>(lwork), ACL_MEM_MALLOC_HUGE_FIRST);
+        ret = aclrtMalloc(&buffer, static_cast<int64_t>(lwork), ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ::ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
     }
+    asdBlasSetWorkspace(handle, buffer);
+    asdBlasSetStream(handle, stream);
 
-    ASD_STATUS_CHECK(swapLast2Axes(input, output, stream, workspace));
+    ASD_STATUS_CHECK(asdBlasCaxpy(handle, vecSize, alpha, inVec, 1, outResult, 1));
 
-    ret = aclrtSynchronizeStream(stream);
-    CHECK_RET(ret == ::ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+    asdBlasSynchronize(handle);
+    asdBlasDestroy(handle);
 
-    ret = aclrtMemcpy(tensorOutData.data(),
-        tensorSize * sizeof(float),
-        outputDeviceAddr,
-        tensorSize * sizeof(float),
+    ret = aclrtMemcpy(tensorResultData.data(),
+        resultSize * sizeof(std::complex<float>),
+        outResultDeviceAddr,
+        resultSize * sizeof(std::complex<float>),
         ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ::ACL_SUCCESS, LOG_PRINT("copy output tensor from device to host failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ::ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
 
-    std::cout << "row = " << row << ", col = " << col << std::endl;
-    std::cout << "------- Input ------- " << std::endl;
-    printTensor(tensorInData.data(), row, col);
+    std::cout << "------- result -------" << std::endl;
+    printTensor(tensorResultData, resultSize);
 
-    std::cout << "------- Output -------" << std::endl;
-    printTensor(tensorOutData.data(), col, row);
-    std::cout << "Execute successfully." << std::endl;
+    aclDestroyTensor(inVec);
+    aclDestroyTensor(outResult);
+    aclrtFree(inpVecDeviceAddr);
+    aclrtFree(outResultDeviceAddr);
 
-    aclrtFree(inputDeviceAddr);
-    aclrtFree(outputDeviceAddr);
-    aclDestroyTensor(input);
-    aclDestroyTensor(output);
-    if (lwork > 0) {
-        aclrtFree(workspace);
-    }
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();
     return 0;
 }
 ```
+

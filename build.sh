@@ -220,7 +220,7 @@ function fn_build()
     if [ ! -d "${CATLASS_PATH}" ]; then
         echo "Third_party dir catlass does not exit!"
         cd ${THIRD_PARTY_DIR}/
-        git clone https://gitcode.com/cann/catlass.git -b master
+        git clone https://gitcode.com/cann/catlass.git -b 9.0.0-beta.1
         cd $CODE_ROOT/
     fi
 

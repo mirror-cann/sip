@@ -90,7 +90,7 @@ function fn_build_catlass()
     fi
     [[ ! -d "$THIRD_PARTY_DIR" ]] && mkdir $THIRD_PARTY_DIR
     cd $THIRD_PARTY_DIR
-    branch=master
+    branch=9.0.0-beta.1
     echo "current branch for catlass: $branch"
     git clone --branch $branch --depth 1 https://gitee.com/ascend/catlass.git
 }

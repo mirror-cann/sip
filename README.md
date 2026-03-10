@@ -36,6 +36,7 @@ Ascend Signal Processing Boost（昇腾信号处理加速库，下文简称为Si
 本项目源码编译用到的依赖如下，请注意版本要求。
 
    - python >= 3.7.0
+   - pyyaml
    - gcc >= 7.3.0
    - cmake >= 3.16.0
    - pigz（安装后可提升打包速度，建议版本 >= 2.4）
@@ -88,6 +89,13 @@ source /usr/local/Ascend/cann/set_env.sh
     source output/set_env.sh
     ```
     特别说明：
+    - `Ascend-cann-SIP_${version}_linux_${arch}.run`是编译后通过makeself打包的包含算子执行所需文件的可执行产物，用户可以通过以下命令执行run包将包含算子信息的文件安装到指定目录；
+        ```bash
+        # 确保安装包具有可执行权限
+        chmod +x Ascend-cann-SIP_${version}_linux_${arch}.run
+        # 安装命令
+        ./Ascend-cann-SIP_${version}_linux_${arch}.run --install --install-path=${install_path}
+        ```
     - 上述编译方式仅支持编译通过git下载的加速库，以zip压缩包方式下载的加速库不支持该编译方式；
     - 由于编译过程需要联网下载依赖库，因此编译环境需要联网；
     - 该编译过程包括获取ascend-boost-comm（昇腾分布式通信加速库）组件并编译该组件，和编译信号加速库两个步骤。更多命令介绍可查看SiP仓库`build.sh`文件。

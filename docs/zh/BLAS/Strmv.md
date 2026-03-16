@@ -1,4 +1,4 @@
-# Cgerc
+# Strmv
 
 ## 产品支持情况
 
@@ -15,71 +15,53 @@
 ## 功能说明
 
 - 接口功能：\
-asdBlasMakeCgercPlan：初始化该句柄对应的Cgerc算子配置。\
-asdBlasCgerc：复数向量乘以另一个复数向量的共轭转置后，加在一个矩阵上。
-- 计算公式：
+asdBlasMakeStrmvPlan：初始化该句柄对应的Strmv算子配置。\
+asdBlasStrmv：单精度，用于计算一个三角矩阵与一个向量的矩阵乘法
+- 计算公式：\
+ 矩阵向量乘积：
   $$
-  A= alpha * x *y^H + A\\ 
+  x = A * x
   $$
+
+  转置矩阵向量乘积
+  $$
+  x = A^T * x
+  $$
+
   示例：\
-输入“x”为：\
-[1.0 + 1.0j, 2.0 + 2.0j]\
-输入“alpha”为：\
-1.0 + 1.0j\
-输入“y”为：\
-[1.0 + 1.0j, 1.0 + 2.0j]\
-输入“A”为：\
-[ [2.0 + 3.0j, 3.0 + 4.0j], \
-  [3.0 + 3.0j, 4.0 + 4.0j] ]\
-调用“asdBlasCgerc”算子后，输出“A”为：\
-[ [4.0 + 5.0j, 7.0 + 6.0j], 
-  [7.0 + 7.0j, 12.0 + 8.0j] ]
- 
+  输入“A”为：\
+ [   [ 1, 2 ], 
+    [ 3, 4 ]  ]\
+  输入“x”为：\
+ [1,2]\
+  输入“uplo”为：U，输入“trans”为：T，输入“diag”为：N。\
+输入“n”为：2，输入“lda”为：2，输入“incx”为：1。\
+调用“asdBlasStrmv”算子后，输出“x”为：\
+[7,10]
+
 ## 函数原型
 
 ```Cpp
-AspbStatus asdBlasMakeCgercPlan(
-  asdBlasHandle handle)
+AspbStatus asdBlasMakeStrmvPlan(
+  asdBlasHandle           handle, 
+  asdBlasFillMode_t       uplo, 
+  asdBlasOperation_t      trans, 
+  int64_t                 n)
 
 ```
 ```Cpp
-AspbStatus asdBlasCgerc(
-  asdBlasHandle               handle, 
-  const int64_t               m, 
-  const int64_t               n, 
-  const std::complex<float> * alpha,
-  aclTensor *                 x, 
-  const int64_t               incx, 
-  aclTensor *                 y, 
-  const int64_t               incy, 
-  aclTensor *                 A,
-  const int64_t               lda)
+AspbStatus asdBlasStrmv(
+  asdBlasHandle         handle, 
+  asdBlasFillMode_t     uplo, 
+  asdBlasOperation_t    trans, 
+  asdBlasDiagType_t     diag,
+  const int64_t         n, 
+  aclTensor*            A, 
+  const int64_t         lda, 
+  aclTensor*            x, 
+  const int64_t         incx)
 ```
-
-## asdBlasMakeCgercPlan
-
-- **参数说明：**
-
-  <table style="undefined;table-layout: fixed; width: 880px"><colgroup>
-    <col style="width: 250px">
-    <col style="width: 120px">
-    <col style="width: 510px">
-  </colgroup>
-  <thead>
-      <tr>
-        <th>参数名</th>
-        <th>输入/输出</th>
-        <th>描述</th>
-      </tr></thead>
-  <tbody>
-    <tr>
-      <td>handle（asdBlasHandle）</td>
-      <td>输入</td>
-      <td>算子的句柄</td>
-    </tr>
-    </table>
-
-## asdBlasCgerc
+## asdBlasMakeStrmvPlan
 
 - **参数说明：**
 
@@ -101,67 +83,103 @@ AspbStatus asdBlasCgerc(
       <td>算子的句柄</td>
     </tr>
     <tr>
-      <td>x（int64_t）</td>
+      <td>uplo（asdBlasFillMode_t）</td>
       <td>输入</td>
-      <td><ul><li>输入向量，对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m]。</li></ul></td>
+      <td>指定矩阵A的存储格式。<ul><li>ASDBLAS_FILL_MODE_LOWER:下三角</li><li>ASDBLAS_FILL_MODE_UPPER:上三角</li></ul></td>
     </tr>
     <tr>
-      <td>m（int64_t）</td>
+      <td>trans（asdBlasOperation_t）</td>
       <td>输入</td>
-      <td>表示x向量中复数元素的个数，矩阵A的行数。</td>
+      <td>指定是否对矩阵A进行转置。<ul><li>ASDBLAS_OP_N:不转置</li><li>ASDBLAS_OP_T:转置</li></ul></td>
     </tr>
     <tr>
       <td>n（int64_t）</td>
       <td>输入</td>
-      <td>表示y向量中复数元素的个数，矩阵A的列数。</td>
+      <td>矩阵A的行数和列数，向量x的元素个数。</td>
+    </tr>
+    </table>
+
+## asdBlasStrmv
+- **参数说明：**
+
+  <table style="undefined;table-layout: fixed; width: 880px"><colgroup>
+    <col style="width: 250px">
+    <col style="width: 120px">
+    <col style="width: 510px">
+  </colgroup>
+  <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+      </tr></thead>
+  <tbody>
+    <tr>
+      <td>handle（asdBlasHandle）</td>
+      <td>输入</td>
+      <td>算子的句柄</td>
     </tr>
     <tr>
-      <td>y（aclTensor*）</td>
+      <td>uplo（asdBlasFillMode_t）</td>
       <td>输入</td>
-      <td><ul><li>输入向量，对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
+      <td>指定矩阵A的存储格式。<ul><li>ASDBLAS_FILL_MODE_LOWER:下三角</li><li>ASDBLAS_FILL_MODE_UPPER:上三角</li></ul></td>
     </tr>
     <tr>
-      <td>incx（int64_t）</td>
+      <td>diag（asdBlasDiagType_t）</td>
       <td>输入</td>
-      <td>向量x相邻元素间的内存地址偏移量（当前约束为1）。</td>
+      <td>指定是否假定矩阵A的对角线元素为1。<ul><li>ASDBLAS_DIAG_NON_UNIT:不假定为1</li><li>ASDBLAS_DIAG_UNIT:假定为1</li></ul></td>
     </tr>
     <tr>
-      <td>incy（int64_t）</td>
+      <td>trans（asdBlasOperation_t）</td>
       <td>输入</td>
-      <td>向量y相邻元素间的内存地址偏移量（当前约束为1）。</td>
+      <td>指定是否对矩阵A进行转置。<ul><li>ASDBLAS_OP_N:不转置</li><li>ASDBLAS_OP_T:转置</li></ul></td>
+    </tr>
+    <tr>
+      <td>n（int64_t）</td>
+      <td>输入</td>
+      <td>矩阵A的行数和列数，向量x的元素个数。</td>
     </tr>
     <tr>
       <td>A（aclTensor *）</td>
+      <td>输入/输出</td>
+      <td><ul><li>对应公式中的'A'。</li><li>数据类型支持FLOAT32。</li><li>数据格式支持ND。</li>
+      <li>shape为[n，n]</li></ul></td>
+    </tr>
+    <tr>
+      <td>x（aclTensor *）</td>
       <td>输入</td>
-      <td><ul><li>输入向量，对应公式中的'A'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m，n]。</li></ul></td>
+      <td><ul><li>对应公式中的'x'。</li><li>数据类型支持FLOAT32。</li><li>数据格式支持ND。</li>
+      <li>shape为[n]</li></ul></td>
     </tr>
     <tr>
       <td>lda（int64_t）</td>
       <td>输入</td>
-      <td>表示矩阵A的第一个维度大小（当前约束为m）。</td>
+      <td>表示张量A中元素的间隔。</td>
     </tr>
     <tr>
-      <td>alpha（std::complex<float> *）</td>
+      <td>incx（int64_t）</td>
       <td>输入</td>
-      <td><ul><li>公式中的alpha，输入的复数标量。</li><li>数据类型支持COMPLEX64。</li></ul></td>
+      <td>表示向量x中元素的间隔。
+
+</td>
     </tr>
     </table>
 
 
 ## 约束说明
 
-- 输入的元素个数m，n当前覆盖支持[1，8192]。
-- 算子输入shape为[m]、[n]、[m，n]，输出shape为[m，n]。
-- 算子实际计算时，不支持ND高维度运算（不支持维度≥3的运算）。
+  - 输入的元素个数n当前覆盖支持[1，8192]。
+  - 算子输入shape为[n，n]、[n]，输出shape为[n]。
+  - 算子实际计算时，不支持ND高维度运算（不支持维度≥3的运算）。
 
 ## 调用示例
 
 示例代码如下，该样例旨在提供快速上手、开发和调试算子的最小化实现，其核心目标是使用最精简的代码展示算子的核心功能，而非提供生产级的安全保障。不推荐用户直接将示例代码作为业务代码，若用户将示例代码应用在自身的真实业务场景中且发生了安全问题，则需用户自行承担。
+- **asdBlasStrmv**
 ```Cpp
 #include <iostream>
 #include <vector>
 #include "asdsip.h"
-#include <complex>
 #include "acl/acl.h"
 #include "acl_meta.h"
 
@@ -173,8 +191,6 @@ using namespace AsdSip;
         if (err_ != AsdSip::ErrorType::ACL_SUCCESS) {                                      \
             std::cout << "Execute failed." << std::endl; \
             exit(-1);                                                        \
-        } else {                                                             \
-            std::cout << "Execute successfully." << std::endl;               \
         }                                                                    \
     } while (0)
 
@@ -242,14 +258,12 @@ int CreateAclTensor(const std::vector<T> &hostData, const std::vector<int64_t> &
     return 0;
 }
 
-void printTensor(const std::complex<float> *tensorData, int64_t rows, int64_t cols)
+void printTensor(std::vector<std::complex<float>> tensorData, int64_t tensorSize)
 {
-    for (int64_t i = 0; i < rows; i++) {
-        for (int64_t j = 0; j < cols; j++) {
-            std::cout << tensorData[i * cols + j] << " ";
-        }
-        std::cout << std::endl;
+    for (int64_t i = 0; i < tensorSize; i++) {
+        std::cout << tensorData[i] << " ";
     }
+    std::cout << std::endl;
 }
 
 int main(int argc, char **argv)
@@ -260,58 +274,59 @@ int main(int argc, char **argv)
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ::ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-    int64_t m = 3;
-    int64_t n = 3;
-    int64_t lda = m;
-    int incx = 1;
-    int incy = 1;
-    std::complex<float> alpha = std::complex<float>(1.0f, 0.0f);
+    int64_t n = 4;
+    int64_t incx = 1;
+    asdBlasFillMode_t uplo = asdBlasFillMode_t::ASDBLAS_FILL_MODE_UPPER;
+    asdBlasOperation_t trans = asdBlasOperation_t::ASDBLAS_OP_N;
+    asdBlasDiagType_t diag = asdBlasDiagType_t::ASDBLAS_DIAG_NON_UNIT;
 
-    int64_t aSize = m * n;
-    int64_t xSize = m;
-    int64_t ySize = n;
-    std::vector<std::complex<float>> tensorInAData;
-    tensorInAData.reserve(aSize);
-    std::vector<std::complex<float>> tensorInXData;
-    tensorInXData.reserve(xSize);
-    std::vector<std::complex<float>> tensorInYData;
-    tensorInYData.reserve(ySize);
+    const int64_t tensorASize = n * n;
+    const int64_t tensorXSize = n;
 
-    for (int64_t i = 0; i < m; i++) {
-        for (int64_t j = 0; j < n; j++) {
-            tensorInAData[i * n + j] = std::complex<float>(-1.0f, -1.0f);
+    std::vector<float> tensorInAData;
+    tensorInAData.reserve(tensorASize);
+    for (int64_t i = 0; i < n; i++) {
+        for (int64_t j = 0; j < i + 1; j++) {
+            tensorInAData[n * i + j] = 1.0 + i * n + j;
+        }
+        for (int64_t j = i + 1; j < n; j++) {
+            tensorInAData[n * i + j] = 0.0;
         }
     }
-    for (int64_t i = 0; i < m; i++) {
-        tensorInXData[i] = std::complex<float>(1.0 + 1.0 * i, -1.0 - 1.0 * i);
-    }
+
+    std::vector<float> tensorInXData;
+    tensorInXData.reserve(tensorXSize);
     for (int64_t i = 0; i < n; i++) {
-        tensorInYData[i] = std::complex<float>(1.0 + 1.0 * i, -1.0 - 1.0 * i);
+        tensorInXData[i] = 1.0;
     }
 
-    std::cout << "alpha = " << alpha << std::endl;
-    std::cout << "------- input TensorInA -------" << std::endl;
-    printTensor(tensorInAData.data(), m, n);
-    std::cout << "------- input TensorInX -------" << std::endl;
-    printTensor(tensorInXData.data(), 1, m);
-    std::cout << "------- input TensorInY -------" << std::endl;
-    printTensor(tensorInYData.data(), 1, n);
+    std::cout << "uplo = " << static_cast<int32_t>(uplo) << std::endl;
+    std::cout << "trans = " << static_cast<int32_t>(trans) << std::endl;
+    std::cout << "diag = " << static_cast<int32_t>(diag) << std::endl;
+    std::cout << "------- input A -------" << std::endl;
+    for (int64_t i = 0; i < n; i++) {
+        for (int64_t j = 0; j < n; j++)
+            std::cout << tensorInAData[i * n + j] << " ";
+        std::cout << std::endl;
+    }
+    std::cout << "------- input X -------" << std::endl;
+    for (int64_t i = 0; i < n; i++) {
+        std::cout << tensorInXData[i] << " ";
+    }
+    std::cout << std::endl;
 
-    std::vector<int64_t> xShape = {xSize};
-    std::vector<int64_t> yShape = {ySize};
-    std::vector<int64_t> aShape = {m, n};
-    aclTensor *inputX = nullptr;
-    aclTensor *inputY = nullptr;
+    std::vector<int64_t> aShape = {tensorASize};
+    std::vector<int64_t> xShape = {tensorXSize};
+
     aclTensor *inputA = nullptr;
-    void *inputXDeviceAddr = nullptr;
-    void *inputYDeviceAddr = nullptr;
+    aclTensor *inputX = nullptr;
     void *inputADeviceAddr = nullptr;
-    ret = CreateAclTensor(tensorInXData, xShape, &inputXDeviceAddr, aclDataType::ACL_COMPLEX64, &inputX);
+    void *inputXDeviceAddr = nullptr;
+
+    ret = CreateAclTensor(tensorInAData, aShape, &inputADeviceAddr, aclDataType::ACL_FLOAT, &inputA);
     CHECK_RET(ret == ::ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(tensorInYData, yShape, &inputYDeviceAddr, aclDataType::ACL_COMPLEX64, &inputY);
-    CHECK_RET(ret == ::ACL_SUCCESS, return ret);
-    CHECK_RET(ret == ::ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(tensorInAData, aShape, &inputADeviceAddr, aclDataType::ACL_COMPLEX64, &inputA);
+
+    ret = CreateAclTensor(tensorInXData, xShape, &inputXDeviceAddr, aclDataType::ACL_FLOAT, &inputX);
     CHECK_RET(ret == ::ACL_SUCCESS, return ret);
 
     asdBlasHandle handle;
@@ -319,7 +334,7 @@ int main(int argc, char **argv)
 
     size_t lwork = 0;
     void *buffer = nullptr;
-    asdBlasMakeCgercPlan(handle);
+    asdBlasMakeStrmvPlan(handle, uplo, trans, n);
     asdBlasGetWorkspaceSize(handle, lwork);
     std::cout << "lwork = " << lwork << std::endl;
     if (lwork > 0) {
@@ -329,27 +344,29 @@ int main(int argc, char **argv)
     asdBlasSetWorkspace(handle, buffer);
     asdBlasSetStream(handle, stream);
 
-    ASD_STATUS_CHECK(asdBlasCgerc(handle, m, n, alpha, inputX, incx, inputY, incy, inputA, lda));
+    ASD_STATUS_CHECK(asdBlasStrmv(handle, uplo, trans, diag, n, inputA, n, inputX, incx));
 
     asdBlasSynchronize(handle);
     asdBlasDestroy(handle);
 
-    ret = aclrtMemcpy(tensorInAData.data(),
-        aSize * sizeof(std::complex<float>),
-        inputADeviceAddr,
-        aSize * sizeof(std::complex<float>),
+    ret = aclrtMemcpy(tensorInXData.data(),
+        tensorXSize * sizeof(float),
+        inputXDeviceAddr,
+        tensorXSize * sizeof(float),
         ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ::ACL_SUCCESS, LOG_PRINT("copy tensor A from device to host failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ::ACL_SUCCESS, LOG_PRINT("copy tensor x from device to host failed. ERROR: %d\n", ret); return ret);
 
-    std::cout << "------- output TensorInA -------" << std::endl;
-    printTensor(tensorInAData.data(), m, n);
+    std::cout << "------- output X -------" << std::endl;
+    for (int64_t i = 0; i < n; i++) {
+        std::cout << tensorInXData[i] << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "Execute successfully." << std::endl;
 
-    aclDestroyTensor(inputX);
-    aclDestroyTensor(inputY);
     aclDestroyTensor(inputA);
-    aclrtFree(inputXDeviceAddr);
-    aclrtFree(inputYDeviceAddr);
+    aclDestroyTensor(inputX);
     aclrtFree(inputADeviceAddr);
+    aclrtFree(inputXDeviceAddr);
 
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
@@ -357,4 +374,3 @@ int main(int argc, char **argv)
     return 0;
 }
 ```
-

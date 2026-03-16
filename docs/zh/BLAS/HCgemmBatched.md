@@ -1,4 +1,4 @@
-# Cgemm
+# HCgemmBatched
 
 ## 产品支持情况
 
@@ -15,63 +15,56 @@
 ## 功能说明
 
 - 接口功能：\
-asdBlasMakeCgemmPlan：初始化该句柄对应的Cgemm算子配置。\
-asdBlasCgemm：矩阵乘法运算中的一种，用于计算两个复数矩阵的乘积。
+asdBlasMakeHCgemmBatchedPlan：初始化该句柄对应的算子配置。\
+asdBlasHCgemmBatched：用于计算复数矩阵的乘积。
 - 计算公式：
   $$
-  C= alpha * op(A)*op(B) + beta * C\\
-  其中，op(X)= X / op(X) = X^T /  op(X) = X^H 
+  C= alpha * op(A[i])*op(B[i]) + beta * C[i]
   $$
   示例：\
-输入“inTensorA”为：\
+输入“inTensorA[i]”为：\
 [   [ 1+i, 1+2i ],
     [ 1+3i, 1+4i ]  ]\
-输入“inTensorB”为：\
+  输入“inTensorB[i]”为：\
 [   [ 2+i, 2+2i ],
     [ 2+3i, 2+4i ]  ]\
-输入“inTensorC”为：\
+输入“inTensorC[i]”为：\
 [   [ 3+i, 3+2i ],
     [ 3+3i, 3+4i ]  ]\
 输入“transa”为： N，输入“transb”为：T。\
 输入“m”为：2，输入“n”为： 2，输入“k”为：2，输入“alpha”为：1+i，“beta”为：2+2i。\
 输入“lda”为： 2，输入“ldb”为：2，输入“ldc”为：2。\
-调用“Cgemm”算子后，输出“outTensor”为：\
+输入“batchCount”为：1。\
+调用“asdBlasHCgemmBatched”算子后，输出“C”为：\
 [   [ -15+19i, -27+19i ],
     [ -37+21i, -57+13i ]  ]
  
 ## 函数原型
 
 ```Cpp
-AspbStatus asdBlasMakeCgemmPlan(
-  asdBlasHandle      handle, 
-  asdBlasOperation_t transa, 
-  asdBlasOperation_t transb, 
-  int64_t            m,
-  int64_t            n, 
-  int64_t            k, 
-  int64_t            lda, 
-  int64_t            ldb, 
-  int64_t            ldc)
+AspbStatus asdBlasMakeHCgemmBatchedPlan(
+  asdBlasHandle handle)
 ```
 ```Cpp
-AspbStatus asdBlasCgemm(
-  asdBlasHandle             handle, 
-  asdBlasOperation_t        transa, 
-  asdBlasOperation_t        transb, 
-  const int64_t             m,
-  const int64_t             n, 
-  const int64_t             k, 
-  const std::complex<float> *alpha, 
-  aclTensor *               A,
-  const int64_t             lda, 
-  aclTensor *               B, 
-  const int64_t             ldb, 
-  const std::complex<float> *beta,
-  aclTensor *               C, 
-  const int64_t             ldc)
+AspbStatus asdBlasHCgemmBatched(
+  asdBlasHandle                     handle, 
+  asdBlasOperation_t                transa, 
+  asdBlasOperation_t                transb, 
+  const int64_t                     m,
+  const int64_t                     n, 
+  const int64_t                     k, 
+  const std::complex<op::fp16_t> &  alpha, 
+  aclTensor *                       A,
+  const int64_t                     lda, 
+  aclTensor *                       B, 
+  const int64_t                     ldb, 
+  const std::complex<op::fp16_t> &  beta,
+  aclTensor *                       C, 
+  const int64_t                     ldc, 
+  const int64_t                     batchCount)
 ```
 
-## asdBlasMakeCgemmPlan
+## asdBlasMakeHCgemmBatchedPlan
 
 - **参数说明：**
 
@@ -92,34 +85,10 @@ AspbStatus asdBlasCgemm(
       <td>输入</td>
       <td>算子的句柄</td>
     </tr>
-    <tr>
-      <td>transa（asdBlasOperation_t）</td>
-      <td>输入</td>
-      <td>指定矩阵A是否需要转置。<ul><li>ASDBLAS_OP_N：不转置</li><li>ASDBLAS_OP_T：转置</li><li>ASDBLAS_OP_C：共轭转置</li></ul></td>
-    </tr>
-    <tr>
-      <td>transb（asdBlasOperation_t）</td>
-      <td>输入</td>
-      <td>指定矩阵B是否需要转置。<ul><li>ASDBLAS_OP_N：不转置</li><li>ASDBLAS_OP_T：转置</li><li>ASDBLAS_OP_C：共轭转置</li></ul></td>
-    </tr>
-    <tr>
-      <td>m（int64_t）</td>
-      <td>输入</td>
-      <td>矩阵A和C的行数。</td>
-    </tr>
-    <tr>
-      <td>n（int64_t）</td>
-      <td>输入</td>
-      <td>矩阵B和C的列数。</td>
-    </tr>
-    <tr>
-      <td>k（int64_t）</td>
-      <td>输入</td>
-      <td>矩阵A和B的公共维度。</td>
-    </tr>
+    
     </table>
 
-## asdBlasCgemm
+## asdBlasHCgemmBatched
 
 - **参数说明：**
 
@@ -143,71 +112,79 @@ AspbStatus asdBlasCgemm(
     <tr>
       <td>transa（asdBlasOperation_t）</td>
       <td>输入</td>
-      <td>指定矩阵A是否需要转置。<ul><li>ASDBLAS_OP_N：不转置</li><li>ASDBLAS_OP_T：转置</li><li>ASDBLAS_OP_C：共轭转置</li></ul></td>
+      <td>指定矩阵A是否需要转置，取值必须为ASDBLAS_OP_N。</td>
     </tr>
     <tr>
       <td>transb（asdBlasOperation_t）</td>
       <td>输入</td>
-      <td>指定矩阵B是否需要转置。<ul><li>ASDBLAS_OP_N：不转置</li><li>ASDBLAS_OP_T：转置</li><li>ASDBLAS_OP_C：共轭转置</li></ul></td>
+      <td>指定矩阵B是否需要转置，取值必须为ASDBLAS_OP_N。</td>
     </tr>
     <tr>
       <td>m（int64_t）</td>
       <td>输入</td>
-      <td>矩阵C的行数。</td>
+      <td>矩阵C的行数，取值范围为：{1-32}。</td>
     </tr>
     <tr>
       <td>n（int64_t）</td>
       <td>输入</td>
-      <td>矩阵C的列数。</td>
+      <td>矩阵C的列数，取值范围为：{1-32}。</td>
     </tr>
     <tr>
       <td>k（ int64_t）</td>
       <td>输入</td>
-      <td>矩阵A和B的公共维度。</td>
+      <td>矩阵A和B的公共维度，取值范围为：{1-32}。</td>
     </tr>
     <tr>
       <td>lda（ int64_t）</td>
       <td>输入</td>
-      <td>矩阵A左右相邻元素间的内存地址偏移量（当前约束为m）。</td>
+      <td>A左右相邻元素间的内存地址偏移量，取值和k相等。</td>
     </tr>
     <tr>
       <td>ldb（ int64_t）</td>
       <td>输入</td>
-      <td>矩阵B左右相邻元素间的内存地址偏移量（当前约束为k）。</td>
+      <td>B左右相邻元素间的内存地址偏移量，取值和n相等。</td>
     </tr>
     <tr>
       <td>ldc（ int64_t）</td>
       <td>输入</td>
-      <td>矩阵C左右相邻元素间的内存地址偏移量（当前约束为m）。</td>
+      <td>C左右相邻元素间的内存地址偏移量，取值和n相等。</td>
     </tr>
     <tr>
       <td>A（aclTensor *）</td>
       <td>输入</td>
-      <td><ul><li>输入的矩阵，对应公式中的'A'</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li></ul></td>
+      <td><ul><li>输入的矩阵，对应公式中的'A'</li><li>数据类型支持COMPLEX32。</li><li>数据格式支持ND。</li><li>shape为[batchCount, m, k]。</li></ul></td>
     </tr>
     <tr>
       <td>B（aclTensor *）</td>
       <td>输入</td>
-      <td><ul><li>输入的矩阵，对应公式中的'B'</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li></ul></td>
+      <td><ul><li>输入的矩阵，对应公式中的'B'</li><li>数据类型支持COMPLEX32。</li><li>数据格式支持ND。</li><li>shape为[batchCount, k, n]。</li></ul></td>
     </tr>
     <tr>
       <td>C（aclTensor *）</td>
-      <td>输入/输出</td>
-      <td><ul><li>输入/输出的矩阵，对应公式中的'c'</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m，n]。</li></ul></td>
+      <td>输出</td>
+      <td><ul><li>对应公式中的'C'</li><li>数据类型支持COMPLEX32。</li><li>数据格式支持ND。</li><li>shape为[batchCount, m, n]。</li></ul></td>
     </tr>
     <tr>
-      <td>alpha（std::complex<float> *）</td>
+      <td>alpha（std::complex<op::fp16_t> &）</td>
       <td>输入</td>
-      <td>对应公式中的alpha，复数标量，用于乘以矩阵乘法的结果。</td>
+      <td>对应公式中的alpha，复数标量，用于乘以矩阵乘法的结果，取值必须为1+0j。</td>
+    </tr>
+    <tr>
+      <td>beta（std::complex<op::fp16_t> &）</td>
+      <td>输入</td>
+      <td>对应公式中的beta，复数标量，用于乘以矩阵C。取值必须为 0+0j。。</td>
+    </tr>
+    <tr>
+      <td>batchCount（int64_t）</td>
+      <td>输入</td>
+      <td>批次数量。取值范围为{12 - 26208}。</td>
     </tr>
     </table>
 
 
 ## 约束说明
-
-- 输入的元素个数m，n，k当前覆盖支持[1，8192]。
-- 算子输入数据为列主序，输入shape为[m，k]、[k，n]、[m，n]，输出shape为[m，n]。
-- 算子实际计算时，不支持ND高维度运算（不支持维度≥3的运算）。
+- 算子实际计算时，只支持3维ND运算。
+- 算子输入数据为行主序，输入shape为[batchCount, m，k,]、[batchCount, k，n]、[batchCount, m，n]，输出shape为[batchCount, m，n]。
 
 ## 调用示例
 
@@ -219,13 +196,14 @@ AspbStatus asdBlasCgemm(
 #include "acl/acl.h"
 #include "acl_meta.h"
 
+
 using namespace AsdSip;
 
 #define ASD_STATUS_CHECK(err)                                                \
     do {                                                                     \
         AsdSip::AspbStatus err_ = (err);                                     \
-        if (err_ != AsdSip::ErrorType::ACL_SUCCESS) {                                      \
-            std::cout << "Execute failed." << std::endl; \
+        if (err_ != AsdSip::ErrorType::ACL_SUCCESS) {                        \
+            std::cout << "Execute failed." << std::endl;                     \
             exit(-1);                                                        \
         } else {                                                             \
             std::cout << "Execute successfully." << std::endl;               \
@@ -296,11 +274,15 @@ int CreateAclTensor(const std::vector<T> &hostData, const std::vector<int64_t> &
     return 0;
 }
 
-void printTensor(std::vector<std::complex<float>> tensorData, int64_t rows, int64_t cols)
+void printTensor(std::vector<std::complex<op::fp16_t>> tensorData, int64_t batch, int64_t rows, int64_t cols)
 {
-    for (int64_t i = 0; i < rows; i++) {
-        for (int64_t j = 0; j < cols; j++) {
-            std::cout << tensorData[i * cols + j] << " ";
+    for (int64_t b = 0; b < batch; b++) {
+        for (int64_t i = 0; i < rows; i++) {
+            for (int64_t j = 0; j < cols; j++) {
+                auto data = tensorData[b * rows * cols + i * cols + j];
+                std::cout << "(" << (float)data.real() << "," << (float)data.imag() << ")" << " ";
+            }
+            std::cout << std::endl;
         }
         std::cout << std::endl;
     }
@@ -314,43 +296,44 @@ int main(int argc, char **argv)
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ::ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
+    int batch = 2;
     int m = 3;
     int k = 3;
     int n = 3;
     asdBlasOperation_t transA = asdBlasOperation_t::ASDBLAS_OP_N;
     asdBlasOperation_t transB = asdBlasOperation_t::ASDBLAS_OP_N;
-    std::complex<float> alpha = std::complex<float>(1.0f, 1.0f);
-    std::complex<float> beta = std::complex<float>(2.0f, 2.0f);
+    std::complex<op::fp16_t> alpha = std::complex<op::fp16_t>(1.0f, 0.0f);
+    std::complex<op::fp16_t> beta = std::complex<op::fp16_t>(0.0f, 0.0f);
 
-    int64_t lda = m;
-    int64_t ldb = k;
-    int64_t ldc = m;
+    int64_t lda = k;
+    int64_t ldb = n;
+    int64_t ldc = n;
 
-    const int64_t tensorASize = m * k;
-    const int64_t tensorBSize = k * n;
-    const int64_t tensorCSize = m * n;
+    const int64_t tensorASize = batch * m * k;
+    const int64_t tensorBSize = batch * k * n;
+    const int64_t tensorCSize = batch * m * n;
 
-    std::vector<std::complex<float>> tensorInAData;
+    std::vector<std::complex<op::fp16_t>> tensorInAData;
     tensorInAData.reserve(tensorASize);
     for (int i = 0; i < tensorASize; i++) {
-        tensorInAData.push_back(std::complex<float>(1.0f, i + 0.0f));
+        tensorInAData.push_back(std::complex<op::fp16_t>(1.0f, i + 0.0f));
     }
 
-    std::vector<std::complex<float>> tensorInBData;
+    std::vector<std::complex<op::fp16_t>> tensorInBData;
     tensorInBData.reserve(tensorBSize);
     for (int i = 0; i < tensorBSize; i++) {
-        tensorInBData.push_back(std::complex<float>(1.0f, i + 0.0f));
+        tensorInBData.push_back(std::complex<op::fp16_t>(1.0f, i + 0.0f));
     }
 
-    std::vector<std::complex<float>> tensorInCData;
+    std::vector<std::complex<op::fp16_t>> tensorInCData;
     tensorInCData.reserve(tensorCSize);
     for (int i = 0; i < tensorCSize; i++) {
-        tensorInCData.push_back(std::complex<float>(1.0f, i + 0.0f));
+        tensorInCData.push_back(std::complex<op::fp16_t>(1.0f, i + 0.0f));
     }
 
-    std::vector<int64_t> matAShape = {m, k};
-    std::vector<int64_t> matBShape = {k, n};
-    std::vector<int64_t> matCShape = {m, n};
+    std::vector<int64_t> matAShape = {batch, m, k};
+    std::vector<int64_t> matBShape = {batch, k, n};
+    std::vector<int64_t> matCShape = {batch, m, n};
 
     aclTensor *matA = nullptr;
     aclTensor *matB = nullptr;
@@ -359,31 +342,30 @@ int main(int argc, char **argv)
     void *matBDeviceAddr = nullptr;
     void *matCDeviceAddr = nullptr;
 
-    ret = CreateAclTensor<std::complex<float>>(
-        tensorInAData, matAShape, &matADeviceAddr, aclDataType::ACL_COMPLEX64, &matA);
+    ret = CreateAclTensor<std::complex<op::fp16_t>>(
+        tensorInAData, matAShape, &matADeviceAddr, aclDataType::ACL_COMPLEX32, &matA);
     CHECK_RET(ret == ::ACL_SUCCESS, return ret);
 
-    ret = CreateAclTensor<std::complex<float>>(
-        tensorInBData, matBShape, &matBDeviceAddr, aclDataType::ACL_COMPLEX64, &matB);
+    ret = CreateAclTensor<std::complex<op::fp16_t>>(
+        tensorInBData, matBShape, &matBDeviceAddr, aclDataType::ACL_COMPLEX32, &matB);
     CHECK_RET(ret == ::ACL_SUCCESS, return ret);
 
-    ret = CreateAclTensor<std::complex<float>>(
-        tensorInCData, matCShape, &matCDeviceAddr, aclDataType::ACL_COMPLEX64, &matC);
+    ret = CreateAclTensor<std::complex<op::fp16_t>>(
+        tensorInCData, matCShape, &matCDeviceAddr, aclDataType::ACL_COMPLEX32, &matC);
     CHECK_RET(ret == ::ACL_SUCCESS, return ret);
-
-    std::cout << "alpha = " << alpha << std::endl;
-    std::cout << "beta = " << beta << std::endl;
+    std::cout << "alpha = " << "(" << (float) alpha.real() << "," << (float) alpha.imag() << ")" << std::endl;
+    std::cout << "beta = " << "(" << (float) beta.real() << "," << (float) beta.imag() << ")" << std::endl;
     std::cout << "------- input TensorInA -------" << std::endl;
-    printTensor(tensorInAData, m, k);
+    printTensor(tensorInAData, batch, m, k);
     std::cout << "------- input TensorInB -------" << std::endl;
-    printTensor(tensorInBData, k, n);
+    printTensor(tensorInBData, batch, k, n);
 
     asdBlasHandle handle;
     asdBlasCreate(handle);
 
     size_t lwork = 0;
     void *buffer = nullptr;
-    asdBlasMakeCgemmPlan(handle, transA, transB, m, n, k, lda, ldb, ldc);
+    asdBlasMakeHCgemmBatchedPlan(handle);
     asdBlasGetWorkspaceSize(handle, lwork);
     std::cout << "lwork = " << lwork << std::endl;
     if (lwork > 0) {
@@ -393,20 +375,20 @@ int main(int argc, char **argv)
     asdBlasSetWorkspace(handle, buffer);
     asdBlasSetStream(handle, stream);
 
-    ASD_STATUS_CHECK(asdBlasCgemm(handle, transA, transB, m, n, k, alpha, matA, lda, matB, ldb, beta, matC, ldc));
+    ASD_STATUS_CHECK(asdBlasHCgemmBatched(handle, transA, transB, m, n, k, alpha, matA, lda, matB, ldb, beta, matC, ldc, batch));
 
     asdBlasSynchronize(handle);
     asdBlasDestroy(handle);
 
     ret = aclrtMemcpy(tensorInCData.data(),
-        tensorCSize * sizeof(std::complex<float>),
+        tensorCSize * sizeof(std::complex<op::fp16_t>),
         matCDeviceAddr,
-        tensorCSize * sizeof(std::complex<float>),
+        tensorCSize * sizeof(std::complex<op::fp16_t>),
         ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ::ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
 
     std::cout << "------- output TensorInC -------" << std::endl;
-    printTensor(tensorInCData, m, n);
+    printTensor(tensorInCData, batch, m, n);
 
     aclDestroyTensor(matA);
     aclDestroyTensor(matB);

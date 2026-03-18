@@ -103,6 +103,10 @@ AspbStatus asdBlasHCmatinvBatched(
     </tr>
     </table>
 
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+
 ## asdBlasHCmatinvBatched
 
 - **参数说明：**
@@ -159,9 +163,11 @@ AspbStatus asdBlasHCmatinvBatched(
       <td>输入</td>
       <td>复数矩阵求逆中的矩阵数量。</td>
     </tr>
-
     </table>
+    
+- **返回值**：
 
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 ## 约束说明
 

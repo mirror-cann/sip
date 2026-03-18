@@ -75,7 +75,9 @@ AspbStatus asdBlasComplexMatDot(
       <td>算子的句柄</td>
     </tr>
     </table>
+- **返回值**：
 
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 ## asdBlasComplexMatDot
 
 - **参数说明：**
@@ -123,7 +125,9 @@ AspbStatus asdBlasComplexMatDot(
       <td><ul><li>输入向量，对应公式中的'result'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m,n]。</li></ul></td>
     </tr>
     </table>
+- **返回值**：
 
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 ## 约束说明
 

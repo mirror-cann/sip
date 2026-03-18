@@ -86,6 +86,10 @@ AspbStatus asdBlasStrmm(
     </tr>
     </table>
 
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+
 ## asdBlasSsyr2
 - **参数说明：**
 
@@ -175,7 +179,10 @@ AspbStatus asdBlasStrmm(
       <td>表示张量C中元素的间隔（当前约束为m）。</td>
     </tr>
     </table>
+    
+- **返回值**：
 
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 ## 约束说明
 

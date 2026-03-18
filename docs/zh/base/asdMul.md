@@ -12,6 +12,7 @@
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 
 
+
 ## 功能说明
 
 - 接口功能：支持向量逐元素乘积(Hadamard)能力，返回一个和输入同样形状大小的复数矩阵。
@@ -21,7 +22,7 @@
   result=A \odot\ B =(A)_{ij}(B)_{ij}
   $$
 
-- 示例：
+    示例：
 
   输入“A”为：
 [ [ 1+1i, 1+1i ],\
@@ -44,7 +45,6 @@ AspbStatus asdMul(
   void *         stream, 
   void *         workspace = nullptr)
 ```
-
 ## asdMul
 
 - **参数说明：**
@@ -97,7 +97,9 @@ AspbStatus asdMul(
   </tbody>
   </table>
 
+- **返回值**：
 
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 ## 约束说明
 

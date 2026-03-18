@@ -99,6 +99,10 @@ AspbStatus asdBlasStrmv(
     </tr>
     </table>
 
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+
 ## asdBlasStrmv
 - **参数说明：**
 
@@ -159,11 +163,12 @@ AspbStatus asdBlasStrmv(
     <tr>
       <td>incx（int64_t）</td>
       <td>输入</td>
-      <td>表示向量x中元素的间隔。
-
-</td>
+      <td>表示向量x中元素的间隔。</td>
     </tr>
     </table>
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。    
 
 
 ## 约束说明

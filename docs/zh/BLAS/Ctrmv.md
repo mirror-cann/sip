@@ -95,6 +95,9 @@ AspbStatus asdBlasCtrmv(
       <td>矩阵A的阶数，向量x的维度。</td>
     </tr>
     </table>
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 ## asdBlasCtrmv
 
@@ -160,7 +163,9 @@ AspbStatus asdBlasCtrmv(
       <td>向量x中元素的步长。</td>
     </tr>
     </table>
+- **返回值**：
 
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 
 ## 约束说明

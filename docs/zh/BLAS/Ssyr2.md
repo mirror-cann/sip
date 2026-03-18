@@ -77,6 +77,10 @@ AspbStatus asdBlasSsyr2(
     </tr>
     </table>
 
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+
 ## asdBlasSsyr2
 - **参数说明：**
 
@@ -146,7 +150,10 @@ AspbStatus asdBlasSsyr2(
       <td>y相邻元素间的内存地址偏移量（当前约束为1）。</td>
     </tr>
     </table>
+    
+- **返回值**：
 
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 ## 约束说明
 

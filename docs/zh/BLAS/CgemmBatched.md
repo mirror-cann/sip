@@ -85,8 +85,10 @@ AspbStatus asdBlasCgemmBatched(
       <td>输入</td>
       <td>算子的句柄</td>
     </tr>
-    
     </table>
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 ## asdBlasHCgemmBatched
 
@@ -180,6 +182,10 @@ AspbStatus asdBlasCgemmBatched(
       <td>批次数量。取值范围为{12 - 26208}。</td>
     </tr>
     </table>
+    
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 
 ## 约束说明

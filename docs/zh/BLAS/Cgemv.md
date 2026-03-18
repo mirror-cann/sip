@@ -111,6 +111,9 @@ AspbStatus asdBlasCgemv(
       <td>向量y的步长。</td>
     </tr>
     </table>
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 ## asdBlasCgemv
 
@@ -188,6 +191,9 @@ AspbStatus asdBlasCgemv(
       <td>向量y的步长（当前约束为1）。</td>
     </tr>
     </table>
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 
 ## 约束说明

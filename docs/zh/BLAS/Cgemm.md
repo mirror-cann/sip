@@ -118,6 +118,9 @@ AspbStatus asdBlasCgemm(
       <td>矩阵A和B的公共维度。</td>
     </tr>
     </table>
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 ## asdBlasCgemm
 
@@ -201,6 +204,9 @@ AspbStatus asdBlasCgemm(
       <td>对应公式中的alpha，复数标量，用于乘以矩阵乘法的结果。</td>
     </tr>
     </table>
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 
 ## 约束说明

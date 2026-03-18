@@ -89,6 +89,9 @@ AspbStatus asdBlasIsamax(
     </tr>
     </table>
 
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 ## asdBlasIsamax & asdBlasIcamax
 - **参数说明：**
 
@@ -130,7 +133,9 @@ AspbStatus asdBlasIsamax(
       <td><ul><li>表示输出的结果，对应公式中的'result'。</li><li>数据类型支持INT32，只包含一个元素。</li><li>数据格式支持ND。</li><li>shape为[1]。</li><ul></td>
     </tr>
     </table>
+- **返回值**：
 
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 ## 约束说明
 

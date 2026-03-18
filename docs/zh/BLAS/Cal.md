@@ -109,6 +109,9 @@ AspbStatus asdBlasCscal(
       <td>算子的句柄。</td>
     </tr>
     </table>
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 ## asdBlasSscal & asdBlasCsscal & asdBlasCscal
 
@@ -153,6 +156,9 @@ AspbStatus asdBlasCscal(
       <td>向量的缩放因子。</td>
     </tr>
     </table>
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 
 

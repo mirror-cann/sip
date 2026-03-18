@@ -92,6 +92,10 @@ AspbStatus asdBlasScnrm2(
     </tr>
     </table>
 
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+
 ## asdBlasSnrm2 & asdBlasScnrm2
 - **参数说明：**
 
@@ -134,6 +138,9 @@ AspbStatus asdBlasScnrm2(
     </tr>
     </table>
 
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 ## 约束说明
 

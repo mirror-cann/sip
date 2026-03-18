@@ -82,7 +82,9 @@ AspbStatus asdBlasCsrot(
       <td>算子的句柄。</td>
     </tr>
     </table>
+- **返回值**：
 
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 ## asdBlasCsrot
 
 - **参数说明：**
@@ -142,7 +144,9 @@ AspbStatus asdBlasCsrot(
       <td>旋转矩阵的正弦值指针。</td>
     </tr>
     </table>
+- **返回值**：
 
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 
 ## 约束说明

@@ -78,6 +78,9 @@ AspbStatus asdBlasCgerc(
       <td>算子的句柄</td>
     </tr>
     </table>
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 ## asdBlasCgerc
 
@@ -146,7 +149,9 @@ AspbStatus asdBlasCgerc(
       <td><ul><li>公式中的alpha，输入的复数标量。</li><li>数据类型支持COMPLEX64。</li></ul></td>
     </tr>
     </table>
+- **返回值**：
 
+  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 ## 约束说明
 

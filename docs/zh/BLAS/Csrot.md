@@ -25,8 +25,8 @@ asdBlasCsrot：对输入复向量组（x，y）进行旋转。
   c & s\\-s & c\end{bmatrix}*\begin{bmatrix}
   x\\y\end{bmatrix}
   $$
-  x[i]= c*x[i]+s*y[i],y[i]= -s*x[i]+c*y[i]\
-  其中c为旋转角度余弦值，s为旋转角度正弦值，x和y是复数向量。\
+  其中，x[i]= c\*x[i]+s\*y[i],y[i]= -s\*x[i]+c\*y[i]\
+  c为旋转角度余弦值，s为旋转角度正弦值，x和y是复数向量。\
   示例：
 输入“x”为：\
 [3.0 + 4.0j, 2.0 + 1.0j]\
@@ -37,8 +37,8 @@ $\frac{\sqrt{3}}{2}$\
 输入“s”为：\
 0.5\
 调用asdBlasCsrot算子后，输出“x”为：\
-[3.098076+3.9641016j, 3.232051+2.3660254j]
-调用asdBlasCsrot算子后，输出“x”为：\
+[3.098076+3.9641016j, 3.232051+2.3660254j]\
+输出“y”为：\
 [-0.6339746-1.1339746j, 1.5980761+2.098076j]
 
 ## 函数原型
@@ -84,7 +84,7 @@ AspbStatus asdBlasCsrot(
     </table>
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 ## asdBlasCsrot
 
 - **参数说明：**
@@ -146,7 +146,7 @@ AspbStatus asdBlasCsrot(
     </table>
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
 
 ## 约束说明

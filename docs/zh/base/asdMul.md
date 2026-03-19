@@ -24,10 +24,10 @@
 
     示例：
 
-  输入“A”为：
+  输入“A”为：\
 [ [ 1+1i, 1+1i ],\
   [ 2+2i, 2+2i ] ]\
-输入“B”为：
+输入“B”为：\
 [ [ 1+1i, 1+1i ],\
   [ 2+2i, 2+2i ] ]\
 调用asdMul算子后，输出“result”为：\
@@ -62,7 +62,7 @@ AspbStatus asdMul(
       </tr></thead>
   <tbody>
     <tr>
-      <td>n（aclTensor *）</td>
+      <td>n（int）</td>
       <td>输入</td>
       <td>表示输入的元素个数。</td>
     </tr>
@@ -99,7 +99,7 @@ AspbStatus asdMul(
 
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+  返回状态码，具体参见[SiP返回码](../docs/zh/context/SiP返回码.md)。
 
 ## 约束说明
 

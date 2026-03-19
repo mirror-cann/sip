@@ -88,7 +88,7 @@ AspbStatus asdBlasHCgemmBatched(
     </table>
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 ## asdBlasHCgemmBatched
 
 - **参数说明：**
@@ -183,7 +183,7 @@ AspbStatus asdBlasHCgemmBatched(
     </table>
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
 ## 约束说明
 - 算子实际计算时，只支持3维ND运算。

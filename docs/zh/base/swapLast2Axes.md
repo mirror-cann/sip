@@ -14,14 +14,15 @@
 
 ## 功能说明
 
-- 接口功能：
-swapLast2AxesGetWorkspaceSize：计算swapLast2Axes算子所需的workspace大小。
+- 接口功能：\
+swapLast2AxesGetWorkspaceSize：计算swapLast2Axes算子所需的workspace大小。\
 swapLast2Axes：交换Tensor的最后两维。
 - 计算公式：
 
   $$
   outTensor_{bij} = inTensor_{bij}\\
   $$
+  其中：b为数据的批次号，i为输入数据的行号， j为输入数据的列号。
 示例：
   - 示例一：
 输入“inTensor”为：\
@@ -34,7 +35,7 @@ swapLast2Axes：交换Tensor的最后两维。
 [ 3.+0.j, 4.+0.j, 5.+0.j]],\
 [[ 6.+0.j, 7.+0.j, 8.+0.j], \
 [ 9.+0.j, 10.+0.j, 11.+0.j]]]\
-调用swapLast2Axes算子后，输出“outTensor”为：
+调用swapLast2Axes算子后，输出“outTensor”为：\
 [[[ 0.+0.j, 3.+0.j], \
 [ 1.+0.j, 4.+0.j], \
 [ 2.+0.j, 5.+0.j]],\
@@ -88,8 +89,7 @@ AsdSip::AspbStatus swapLast2Axes(
   
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
-
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 ## swapLast2Axes
 
 - **参数说明：**
@@ -110,7 +110,7 @@ AsdSip::AspbStatus swapLast2Axes(
       <td>inTensor（aclTensor *）</td>
       <td>输入</td>
       <td><ul><li>表示输入的张量数据，对应公式中的'inTensor'。</li><li>输入的最大元素数为3600000000 ([60000, 60000]以内)。</li><li>数据类型仅支持COMPLEX64，数据格式支持ND。</li>
-      <li>输入shape限制为2或3。</li></ul>
+      <li>输入dim限制为2或3。</li></ul>
       </td>
     </tr>
     <tr>
@@ -133,8 +133,7 @@ AsdSip::AspbStatus swapLast2Axes(
   
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
-
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
 
 ## 约束说明

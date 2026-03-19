@@ -100,16 +100,54 @@ AspbStatus asdFftExecR2C(
       <td>选择FFT执行正向变换或反向变换<ul><li>ASCEND_FFT_FORWARD：正向快速傅里叶变换。</li><li>ASCEND_FFT_INVERSE：逆向快速傅里叶变换。</li></ul></td>
     </tr>
     <tr>
-      <td>batchSize（int64_t）</td>
+      <td>batchSize（int32_t）</td>
       <td>输入</td>
       <td>FFT变换批处理操作中的数据批次数量。</td>
     </tr>
     </table>
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
   
 ## asdFftExecC2C
+
+- **参数说明：**
+
+  <table style="undefined;table-layout: fixed; width: 880px"><colgroup>
+    <col style="width: 250px">
+    <col style="width: 120px">
+    <col style="width: 510px">
+  </colgroup>
+  <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+      </tr></thead>
+  <tbody>
+    <tr>
+      <td>handle（asdFftHandle）</td>
+      <td>输入</td>
+      <td>算子的句柄，需要手动申请创建asdFftHandle对象。</td>
+    </tr>
+    <tr>
+      <td>inData（ aclTensor *）</td>
+      <td>输入</td>
+      <td><ul><li>对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
+      <li>输入的shape为（batchSize，fftSizeX，fftSizeY）。</li></ul></td>
+    </tr>
+    <tr>
+      <td>outData（aclTensor *）</td>
+      <td>输出</td>
+      <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
+      <li>输入的shape为（batchSize，fftSizeX，fftSizeY）。</li></ul></td>
+    </tr>
+    </table>
+
+- **返回值**：
+
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
+## asdFftExecC2R
 
 - **参数说明：**
 
@@ -147,44 +185,6 @@ AspbStatus asdFftExecR2C(
 - **返回值**：
 
   返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
-## asdFftExecC2R
-
-- **参数说明：**
-
-  <table style="undefined;table-layout: fixed; width: 880px"><colgroup>
-    <col style="width: 250px">
-    <col style="width: 120px">
-    <col style="width: 510px">
-  </colgroup>
-  <thead>
-      <tr>
-        <th>参数名</th>
-        <th>输入/输出</th>
-        <th>描述</th>
-      </tr></thead>
-  <tbody>
-    <tr>
-      <td>handle（asdFftHandle）</td>
-      <td>输入</td>
-      <td>算子的句柄，需要手动申请创建asdFftHandle对象。</td>
-    </tr>
-    <tr>
-      <td>inData（ aclTensor *）</td>
-      <td>输入</td>
-      <td><ul><li>对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
-      <li>输入的shape为（batchSize，fftSizeX，fftSizeY）。</li></ul></td>
-    </tr>
-    <tr>
-      <td>outData（aclTensor *）</td>
-      <td>输出</td>
-      <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
-      <li>输入的shape为（batchSize，fftSizeX，fftSizeY）。</li></ul></td>
-    </tr>
-    </table>
-
-- **返回值**：
-
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
 ## asdFftExecR2C
 
@@ -210,7 +210,7 @@ AspbStatus asdFftExecR2C(
     <tr>
       <td>inData（ aclTensor *）</td>
       <td>输入</td>
-      <td><ul><li>对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
+      <td><ul><li>对应公式中的'x'。</li><li>数据类型支持COMPLEX32。</li><li>数据格式支持ND。</li>
       <li>输入的shape为（batchSize，fftSizeX，fftSizeY）。</li></ul></td>
     </tr>
     <tr>

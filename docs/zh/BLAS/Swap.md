@@ -25,7 +25,7 @@ asdBlasCswap：交换两个复数向量。
   t= x, x= y, y=t
   $$
 
-        - 示例：
+        示例：
         输入“x”为：
         [1.0, 2.0]
         输入“y”为：
@@ -40,7 +40,7 @@ asdBlasCswap：交换两个复数向量。
   t= x, x= y, y=t
   $$
 
-        - 示例：
+        示例：
         输入“x”为：[1.0 + 1.0i, 2.0 + 2.0i]
         输入“y”为：[3.0 + 3.0i, 4.0 + 4.0i]
         调用asdBlasCswap算子后，输出“x”为：
@@ -97,7 +97,7 @@ AspbStatus asdBlasCswap(
 
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
 ## asdBlasSswap & asdBlasCswap
 - **参数说明：**
@@ -122,7 +122,7 @@ AspbStatus asdBlasCswap(
     <tr>
       <td>n（int64_t）</td>
       <td>输入</td>
-      <td>向量x（y）中元素的个数。</td>
+      <td>向量x或者向量y中元素的个数。</td>
     </tr>
     <tr>
       <td>x（aclTensor *）</td>
@@ -147,7 +147,7 @@ AspbStatus asdBlasCswap(
     </table>
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
 ## 约束说明
 

@@ -27,17 +27,17 @@ asdBlasStrmm：单精度，其功能是将一个三角矩阵A乘一个矩阵B，
   $$
 
   示例：\
-  输入“A”为：
+  输入“A”为：\
   [   [ 1, 0 ],
     [ 3, 4 ]  ]\
-  输入“B”为：
+  输入“B”为：\
  [   [ 1, 2 ],
     [ 3, 4 ]  ]\
   输入“side”为：L，“uplo”为：L，输入“trans”为：N，输入“diag”为：N。\
   输入“n”为：2，输入“lda”为：2，输入“ldb”为：2，输入“ldc”为：2。\
   输入“alpha”为：2.345。\
   调用“asdBlasStrmm”算子后，输出“A”为：\
-[  [ 2.3450,  4.6900],
+[  [ 2.3450,  4.6900],\
    [35.1750, 51.5900]  ]
 
 ## 函数原型
@@ -88,9 +88,9 @@ AspbStatus asdBlasStrmm(
 
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
-## asdBlasSsyr2
+## asdBlasStrmm
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 880px"><colgroup>
@@ -154,11 +154,11 @@ AspbStatus asdBlasStrmm(
     <tr>
       <td>lda（int64_t）</td>
       <td>输入</td>
-      <td>表示张量A中元素的间隔（当前约束为m/n，当side=ASDBLAS_SIDE_LEFT时为m，ASDBLAS_SIDE_RIGHT时为n）。</td>
+      <td>表示张量A中元素的间隔（当前约束为m/n，当side=ASDBLAS_SIDE_LEFT时为m，side=ASDBLAS_SIDE_RIGHT时为n）。</td>
     </tr>
     <tr>
       <td>B（aclTensor *）</td>
-      <td>输入/输出</td>
+      <td>输入</td>
       <td><ul><li>对应公式中的'B'。</li><li>数据类型支持FLOAT32。</li><li>数据格式支持ND。</li>
       <li>shape为[m，n]</li></ul></td>
     </tr>
@@ -182,7 +182,7 @@ AspbStatus asdBlasStrmm(
     
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
 ## 约束说明
 
@@ -194,7 +194,7 @@ AspbStatus asdBlasStrmm(
 ## 调用示例
 
 示例代码如下，该样例旨在提供快速上手、开发和调试算子的最小化实现，其核心目标是使用最精简的代码展示算子的核心功能，而非提供生产级的安全保障。不推荐用户直接将示例代码作为业务代码，若用户将示例代码应用在自身的真实业务场景中且发生了安全问题，则需用户自行承担。
-- **asdBlasStrmm**
+
 ```Cpp
 #include <iostream>
 #include <vector>

@@ -25,21 +25,21 @@ asdBlasCcopy：将复数向量的值复制到另外一个向量中。
   y= x
   $$
 
-        - 示例：
+        示例：
           输入“x”为：
           [3, 4]
           调用asdBlasScopy算子后，输出“y”为：
           [3, 4]
-  - aasdBlasCcopy的公式
+  - asdBlasCcopy的公式
 
   $$
   y = x
   $$
 
-        - 示例：
+        示例：
         输入“x”为：
         [3+4i,4-3i,4+3i,3-4i]
-        调用asdBlasScopy算子后，输出“y”为：
+        调用asdBlasCcopy算子后，输出“y”为：
         [3+4i,4-3i,4+3i,3-4i]
 
 ## 函数原型
@@ -93,7 +93,7 @@ AspbStatus asdBlasCcopy(
     </table>
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 ## asdBlasScopy & asdBlasCcopy
 
 - **参数说明：**
@@ -145,7 +145,7 @@ AspbStatus asdBlasCcopy(
     </table>
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
 
 ## 约束说明

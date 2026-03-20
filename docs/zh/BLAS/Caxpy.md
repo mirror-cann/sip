@@ -72,7 +72,7 @@ AspbStatus asdBlasCaxpy(
 
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
 ## asdBlasCaxpy
 
@@ -96,7 +96,7 @@ AspbStatus asdBlasCaxpy(
       <td>算子的句柄</td>
     </tr>
     <tr>
-      <td>x（int64_t）</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td><ul><li>输入向量，对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
     </tr>
@@ -121,14 +121,14 @@ AspbStatus asdBlasCaxpy(
       <td>向量y相邻元素间的内存地址偏移量（当前约束为1）。</td>
     </tr>
     <tr>
-      <td>alpha（std::complex<float> *）</td>
+      <td>alpha（std::complex&ltfloat> *）</td>
       <td>输入</td>
       <td><ul><li>对应公式中的alpha，输入的复数标量。</li><li>数据类型支持COMPLEX64</li></ul></td>
     </tr>
     </table>
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
 
 ## 约束说明

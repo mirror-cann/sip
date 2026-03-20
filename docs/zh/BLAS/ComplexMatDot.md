@@ -24,15 +24,12 @@ asdBlasComplexMatDot：实现两个复数矩阵对应位置逐点乘，返回一
   $$
 
   示例：\
-输入“x”为：\
- [   [ 1 +  i, 1 + 2i, 1 + 3i ],\
-      [ 1 + 4i, 1 + 5i, 1 + 6i ]   ]\
 输入“matx”为：\
-  [   [ 2 +  i, 2 + 2i, 2 + 3i ],\
-      [ 2 + 4i, 2 + 5i, 2 + 6i ]   ]\
+  [   [ 1 +  i, 1 + 2i, 1 + 3i ],\
+      [ 1 + 4i, 1 + 5i, 1 + 6i ]   ]\
 输入“maty”为：\
-[ [2.0 + 3.0j, 3.0 + 4.0j], \
-  [3.0 + 3.0j, 4.0 + 4.0j] ]\
+[   [ 2 +  i, 2 + 2i, 2 + 3i ],\
+      [ 2 + 4i, 2 + 5i, 2 + 6i ]   ]\
 调用“ComplexMatDot”算子后，输出“result”为：\
   [   [   1 +  3i,  -2 +  6i, -7 + 9i ],\
       [ -14 + 12i, -23 + 15i, -34 + 18i ]   ]
@@ -77,7 +74,7 @@ AspbStatus asdBlasComplexMatDot(
     </table>
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 ## asdBlasComplexMatDot
 
 - **参数说明：**
@@ -112,22 +109,22 @@ AspbStatus asdBlasComplexMatDot(
     <tr>
       <td>matx（Tensor &）</td>
       <td>输入/输出</td>
-      <td><ul><li>输入向量，对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m,n]。</li></ul></td>
+      <td><ul><li>对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m,n]。</li></ul></td>
     </tr>
     <tr>
       <td>maty（Tensor &）</td>
       <td>输入</td>
-      <td><ul><li>输入向量，对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m,n]。</li></ul></td>
+      <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m,n]。</li></ul></td>
     </tr>
     <tr>
-      <td>alpha（Tensor &）</td>
+      <td>result（Tensor &）</td>
       <td>输出</td>
-      <td><ul><li>输入向量，对应公式中的'result'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m,n]。</li></ul></td>
+      <td><ul><li>对应公式中的'result'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m,n]。</li></ul></td>
     </tr>
     </table>
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
 ## 约束说明
 

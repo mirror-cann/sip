@@ -11,7 +11,6 @@
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     ×  |
 
-
 ## 功能说明
 
 - 接口功能：\
@@ -27,7 +26,6 @@ asdFftExecR2C：执行实数到复数的FFT变换。
   将系数矩阵(N*N)和时域信号(N*1)看做两个Tensor，在NPU上直接使用矩阵乘，可完成DFT，但时间复杂度太高，因此需要快速傅里叶变换。其基本原理是利用三角函数在复数域的旋转对称性，将序列拆分成子序列，通过蝶形运算以降低计算的复杂度：\
   ![公式](../figures/FFT_ID_2.png)
 
- 
 ## 函数原型
 
 ```Cpp
@@ -39,18 +37,21 @@ AspbStatus asdFftMakePlan2D(
   asdFftDirection       direction, 
   int32_t               batchSize)
 ```
+
 ```Cpp
 AspbStatus asdFftExecC2C(
   asdFftHandle           handle, 
   const aclTensor *      input, 
   const aclTensor *      output)
 ```
+
 ```Cpp
 AspbStatus asdFftExecC2R(
   asdFftHandle           handle, 
   const aclTensor *      input, 
   const aclTensor *      output)
 ```
+
 ```Cpp
 AspbStatus asdFftExecR2C(
   asdFftHandle           handle, 
@@ -147,6 +148,7 @@ AspbStatus asdFftExecR2C(
 - **返回值**：
 
   返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
+
 ## asdFftExecC2R
 
 - **参数说明：**
@@ -225,11 +227,10 @@ AspbStatus asdFftExecR2C(
 
   返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
 
-
-
 ## 约束说明
 
 asdFftMakePlan2D
+
   - fftSizeX、fftSizeY需保证不超过$2^{27}$且分解质因数后不包含超过199的质因子。
   - batchSize在存储允许范围内应无额外约束。
   - 输入的元素个数理论支持[1，$2^{30}$]。
@@ -238,7 +239,9 @@ asdFftMakePlan2D
 ## 调用示例
 
 示例代码如下，该样例旨在提供快速上手、开发和调试算子的最小化实现，其核心目标是使用最精简的代码展示算子的核心功能，而非提供生产级的安全保障。不推荐用户直接将示例代码作为业务代码，若用户将示例代码应用在自身的真实业务场景中且发生了安全问题，则需用户自行承担。
+
 - **C2C_2D**
+
 ```Cpp
 #include <iostream>
 #include <vector>
@@ -395,7 +398,9 @@ int main()
     return 0;
 }
 ```
+
 - **C2R_2D**
+
 ```Cpp
 #include <iostream>
 #include <vector>
@@ -556,7 +561,9 @@ int main()
     return 0;
 }
 ```
+
 - **R2C_2D**
+
 ```Cpp
 #include <iostream>
 #include <vector>

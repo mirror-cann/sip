@@ -92,7 +92,7 @@ function fn_build_catlass()
     cd $THIRD_PARTY_DIR
     branch=9.0.0-beta.1
     echo "current branch for catlass: $branch"
-    git clone --branch $branch --depth 1 https://gitee.com/ascend/catlass.git
+    git clone --branch $branch --depth 1 https://gitcode.com/cann/catlass.git
 }
 
 function config_asdsip_version()

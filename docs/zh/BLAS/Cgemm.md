@@ -11,7 +11,6 @@
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：\
@@ -53,6 +52,7 @@ AspbStatus asdBlasMakeCgemmPlan(
   int64_t            ldb, 
   int64_t            ldc)
 ```
+
 ```Cpp
 AspbStatus asdBlasCgemm(
   asdBlasHandle             handle, 
@@ -223,7 +223,6 @@ AspbStatus asdBlasCgemm(
 
   返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
-
 ## 约束说明
 
 - 输入的元素个数m，n，k当前覆盖支持[1，8192]。
@@ -233,6 +232,7 @@ AspbStatus asdBlasCgemm(
 ## 调用示例
 
 示例代码如下，该样例旨在提供快速上手、开发和调试算子的最小化实现，其核心目标是使用最精简的代码展示算子的核心功能，而非提供生产级的安全保障。不推荐用户直接将示例代码作为业务代码，若用户将示例代码应用在自身的真实业务场景中且发生了安全问题，则需用户自行承担。
+
 ```Cpp
 #include <iostream>
 #include <vector>
@@ -442,4 +442,3 @@ int main(int argc, char **argv)
     return 0;
 }
 ```
-

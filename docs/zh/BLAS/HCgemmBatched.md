@@ -11,7 +11,6 @@
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：\
@@ -45,6 +44,7 @@ asdBlasHCgemmBatched：用于计算复数矩阵的乘积。
 AspbStatus asdBlasMakeHCgemmBatchedPlan(
   asdBlasHandle handle)
 ```
+
 ```Cpp
 AspbStatus asdBlasHCgemmBatched(
   asdBlasHandle                     handle, 
@@ -89,6 +89,7 @@ AspbStatus asdBlasHCgemmBatched(
 - **返回值**：
 
   返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
+
 ## asdBlasHCgemmBatched
 
 - **参数说明：**
@@ -186,12 +187,14 @@ AspbStatus asdBlasHCgemmBatched(
   返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
 ## 约束说明
+
 - 算子实际计算时，只支持3维ND运算。
 - 算子输入数据为行主序，输入shape为[batchCount, m，k,]、[batchCount, k，n]、[batchCount, m，n]，输出shape为[batchCount, m，n]。
 
 ## 调用示例
 
 示例代码如下，该样例旨在提供快速上手、开发和调试算子的最小化实现，其核心目标是使用最精简的代码展示算子的核心功能，而非提供生产级的安全保障。不推荐用户直接将示例代码作为业务代码，若用户将示例代码应用在自身的真实业务场景中且发生了安全问题，则需用户自行承担。
+
 ```Cpp
 #include <iostream>
 #include <vector>
@@ -406,4 +409,3 @@ int main(int argc, char **argv)
     return 0;
 }
 ```
-

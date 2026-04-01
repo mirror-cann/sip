@@ -4,7 +4,7 @@
 
 ## 目录结构
 
-```
+```txt
 sip_pta/
 ├── torch_sip/
 │   └── __init__.py          # Python 接口
@@ -27,13 +27,17 @@ sip_pta/
 - 昇腾 CANN 工具包 >= 8.5.0
 - AscendSiP 库 (asdsip)
 - 领域加速库公共组件 ascend-boost-comm
+
 ### 构建步骤
+
 配置环境
+
    1. 环境变量: ASDSIP_HOME_PATH asdsip安装目录 如不配置默认为/usr/local/Ascend/asdsip/latest
    2. 环境变量: BOOST_COMM_PATH ascend-boost-comm头文件目录, 如不配置默认为 ../3rdparty/ascend-boost-comm/src/include
    3. 环境变量: USE_NINJA 可选配置, 是否启用ninja构建
    4. CANN配置: 如 source /opt/xxx/ascend-toolkit/set_env.sh
    5. conda环境激活: conda activate your_env 需要安装torch_npu
+
 ```bash
 cd sip_pta
 python3 setup.py build bdist_wheel
@@ -45,6 +49,7 @@ pip install --force-reinstall --no-deps ./dist/torch_sip-<version>-<python_tag>-
 1. 执行构建
 2. 生成 `torch_sip-0.1.0-cp39-cp39-linux_aarch64.whl` 库
 3. 覆盖安装到当前环境
+
 ## 使用方法
 
 ```python
@@ -60,11 +65,14 @@ result = torch_sip.asd_mul(x, y)
 
 print(result)  # 逐元素乘法结果
 ```
-### 脚本运行方法:
+
+### 脚本运行方法
+
 1. export LD_LIBRARY_PATH=/usr/local/Ascend/asdsip/latest/lib:$LD_LIBRARY_PATH 配置sip算子so文件目录
 2. source xxx/ascend-toolkit/set_env.sh 配置CANN环境
 3. conda activate your_env 环境激活
 4. python asd_mul.py 执行脚本
+
 ## 实现细节
 
 ### Torch Library
@@ -72,6 +80,7 @@ print(result)  # 逐元素乘法结果
 此实现使用 **Torch Library** (TORCH_LIBRARY)：
 
 **优势：**
+
 - 更好地集成到 PyTorch 的算子系统
 - 自动分发到 NPU 后端
 - 可与 torch.compile() 和其他 PyTorch 优化一起使用
@@ -82,6 +91,7 @@ print(result)  # 逐元素乘法结果
 **base类算子：**
 
 1. **csrc/base/asd_mul.cpp** - 完整实现
+
    ```cpp
    namespace sip_pta {
    at::Tensor asdMul(const at::Tensor& x, const at::Tensor& y)
@@ -103,13 +113,16 @@ print(result)  # 逐元素乘法结果
    ```
 
 2. **torch_sip/__init__.py** - Python 接口
+
    ```python
    def asd_mul(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         return torch.ops.torch_sip.asd_mul(x, y)
    ```
+
 **fft类算子：** - 完整实现
 
 1. **csrc/fft/asd_fft_c2c.cpp** - 完整实现
+
    ```cpp
    namespace sip_pta {
    at::Tensor asdFftC2C(const at::Tensor& in, bool isForward)
@@ -157,14 +170,18 @@ print(result)  # 逐元素乘法结果
    TORCH_LIBRARY_IMPL(torch_sip, PrivateUse1, m) { m.impl("asd_fft_c2c", &asdFftC2C); }
    } // namespace sip_pta
    ```
+
 2. **torch_sip/__init__.py** - Python 接口
+
    ```python
    def asd_fft_c2c(input_tensor: torch.Tensor, is_forward: bool = True) -> torch.Tensor:
         return torch.ops.torch_sip.asd_fft_c2c(input_tensor, is_forward)
    ```
+
 **blas类算子：** - 完整实现
 
 1. **csrc/blas/asd_blas_ctrmv.cpp** - 完整实现
+
    ```cpp
    namespace sip_pta {
    at::Tensor asdBlasCtrmv(const at::Tensor& A, at::Tensor& x, int64_t uplo, int64_t trans, int64_t diag)
@@ -221,7 +238,9 @@ print(result)  # 逐元素乘法结果
    }
    }
    ```
+
 2. **torch_sip/__init__.py** - Python 接口
+
    ```python
    def asd_blas_ctrmv(mat_a, vec_x, uplo="L", trans="N", diag="N"):
    """
@@ -248,6 +267,7 @@ print(result)  # 逐元素乘法结果
 要添加新算子（例如 `asd_add`）：
 
 1. **添加到 csrc/asd_mul.cpp（或创建新文件）：**
+
    ```cpp
    at::Tensor asd_add(const at::Tensor &x, const at::Tensor &y) {
        // 实现代码
@@ -263,11 +283,11 @@ print(result)  # 逐元素乘法结果
    ```
 
 2. **添加到 torch_sip/__init__.py：**
+
    ```python
    def asd_add(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
        return torch.ops.TorchSip.asd_add(x, y)
    ```
-
 
 ## 故障排除
 

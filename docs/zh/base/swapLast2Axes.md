@@ -11,7 +11,6 @@
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：\
@@ -59,6 +58,7 @@ AsdSip::AspbStatus swapLast2Axes(
   void *               stream,
   void *               workspace = nullptr)
 ```
+
 - **返回值**：
 
   返回状态码，具体参见[aclnn返回码](/docs/zh/context/SiP返回码.md)。
@@ -90,6 +90,7 @@ AsdSip::AspbStatus swapLast2Axes(
 - **返回值**：
 
   返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
+
 ## swapLast2Axes
 
 - **参数说明：**
@@ -134,7 +135,6 @@ AsdSip::AspbStatus swapLast2Axes(
 - **返回值**：
 
   返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
-
 
 ## 约束说明
 

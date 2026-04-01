@@ -11,7 +11,6 @@
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：\
@@ -36,6 +35,7 @@ asdBlasSsyr：用于计算单精度向量的外积并将结果加到一个矩阵
   调用“asdBlasSsyr”算子后，更新上三角数据，输出“A”为：\
  [   [ 3, 6 ], \
     [ 3, 12 ]  ]
+
 ## 函数原型
 
 ```Cpp
@@ -43,6 +43,7 @@ AspbStatus asdBlasMakeSsyrPlan(
   asdBlasHandle handle)
 
 ```
+
 ```Cpp
 AspbStatus asdBlasSsyr(
   asdBlasHandle         handle, 
@@ -54,6 +55,7 @@ AspbStatus asdBlasSsyr(
   aclTensor *           A, 
   const int64_t         lda)
 ```
+
 ## asdBlasMakeSsyrPlan
 
 - **参数说明：**
@@ -80,7 +82,9 @@ AspbStatus asdBlasSsyr(
 - **返回值**：
 
   返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
+
 ## asdBlasSsyr
+
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 880px"><colgroup>

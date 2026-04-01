@@ -11,7 +11,6 @@
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：\
@@ -46,6 +45,7 @@ asdBlasStrmm：单精度，其功能是将一个三角矩阵A乘一个矩阵B，
 AspbStatus asdBlasMakeStrmmPlan(
   asdBlasHandle handle)
 ```
+
 ```Cpp
 AspbStatus asdBlasStrmm(
   asdBlasHandle          handle, 
@@ -63,6 +63,7 @@ AspbStatus asdBlasStrmm(
   aclTensor *             C, 
   const int64_t           ldc)
 ```
+
 ## asdBlasMakeStrmmPlan
 
 - **参数说明：**
@@ -91,6 +92,7 @@ AspbStatus asdBlasStrmm(
   返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
 ## asdBlasStrmm
+
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 880px"><colgroup>

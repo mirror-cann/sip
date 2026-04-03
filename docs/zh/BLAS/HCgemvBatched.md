@@ -94,6 +94,7 @@ AspbStatus asdBlasHCgemvBatched(
       <td>输入</td>
       <td>单批次矩阵A的行数。</td>
     </tr>
+    </tbody>
     </table>
 
 - **返回值**：
@@ -137,7 +138,7 @@ AspbStatus asdBlasHCgemvBatched(
       <td>单批次矩阵A的列数。</td>
     </tr>
     <tr>
-      <td>alpha（std::complex<op::fp16_t> &）</td>
+      <td>alpha（std::complex&lt;op::fp16_t&gt; &）</td>
       <td>输入</td>
       <td>对应公式中的alpha，复数标量，用于乘以矩阵和向量乘法的结果，当前版本alpha的取值只能为1+0i。</td>
     </tr>
@@ -162,7 +163,7 @@ AspbStatus asdBlasHCgemvBatched(
       <td>向量x的步长（当前约束为1）。</td>
     </tr>
     <tr>
-      <td>beta（std::complex<op::fp16_t> &）</td>
+      <td>beta（std::complex&lt;op::fp16_t&gt; &）</td>
       <td>输入</td>
       <td>对应公式中的beta，复数标量，用于乘以向量y，当前版本beta的取值只能为0+0i。</td>
     </tr>
@@ -181,6 +182,7 @@ AspbStatus asdBlasHCgemvBatched(
       <td>输入</td>
       <td>批次数量。取值范围为{12 - 314496}。</td>
     </tr>
+    </tbody>
     </table>
     
 - **返回值**：

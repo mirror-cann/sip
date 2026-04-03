@@ -85,6 +85,7 @@ AspbStatus asdBlasStrmm(
       <td>输入</td>
       <td>算子的句柄</td>
     </tr>
+    </tbody>
     </table>
 
 - **返回值**：
@@ -180,6 +181,7 @@ AspbStatus asdBlasStrmm(
       <td>输入</td>
       <td>表示张量C中元素的间隔（当前约束为m）。</td>
     </tr>
+    </tbody>
     </table>
     
 - **返回值**：

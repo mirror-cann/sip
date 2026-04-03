@@ -22,6 +22,7 @@
       <td>输入</td>
       <td>asdFftCreate接口的句柄。</td>
     </tr>
+  </tbody>
     </table>
 
 - **asdFftSetStream**
@@ -51,6 +52,7 @@
       <td>输入</td>
       <td>指向流对象的指针。</td>
     </tr>
+  </tbody>
     </table>
 
 - **asdFftDestroy**
@@ -75,6 +77,7 @@
       <td>输入</td>
       <td>asdFftDestroy接口的句柄。</td>
     </tr>
+  </tbody>
     </table>
 
 - **asdFftGetWorkspaceSize**
@@ -104,6 +107,7 @@
       <td>输入</td>
       <td>所需的工作空间大小。</td>
     </tr>
+  </tbody>
     </table>
 
 - **asdFftSetWorkspace**
@@ -133,6 +137,7 @@
       <td>输入</td>
       <td>指向工作空间的指针。</td>
     </tr>
+  </tbody>
     </table>
 
 - **asdFftSynchronize**
@@ -157,6 +162,7 @@
       <td>输入</td>
       <td>asdFftSynchronize接口的句柄。</td>
     </tr>
+  </tbody>
     </table>
 
 - **asdFftGetType**
@@ -186,4 +192,5 @@
       <td>输入</td>
       <td>用于接收FFT类型的值。</td>
     </tr>
+  </tbody>
     </table>

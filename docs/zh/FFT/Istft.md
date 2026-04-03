@@ -123,6 +123,7 @@ AspbStatus asdFftExecIstft(
       <td>输入</td>
       <td>输出是否应为复数，默认为True，当前版本只支持True。</td>
     </tr>
+  </tbody>
     </table>
 - **返回值**：
 
@@ -157,13 +158,14 @@ AspbStatus asdFftExecIstft(
     <tr>
       <td>windowOpt（aclTensor *）</td>
       <td>输入</td>
-      <td><ul><li>对应公式中的'w'。</li><li>数据格式支持ND。</li><li>数据类型仅支持FLOAT。</li><li>shape为[win_length]。<ul></td>
+      <td><ul><li>对应公式中的'w'。</li><li>数据格式支持ND。</li><li>数据类型仅支持FLOAT。</li><li>shape为[win_length]。</li></ul></td>
     </tr>
     <tr>
       <td>output（aclTensor *）</td>
       <td>输出</td>
-      <td><ul><li>数据格式支持ND。</li><li>数据类型仅支持COMPLEX64。</li><li>shape为（B, length）。<ul></td>
+      <td><ul><li>数据格式支持ND。</li><li>数据类型仅支持COMPLEX64。</li><li>shape为（B, length）。</li></ul></td>
     </tr>
+  </tbody>
     </table>
 - **返回值**：
 

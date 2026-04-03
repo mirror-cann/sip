@@ -124,6 +124,7 @@ AspbStatus asdFftExecC2CSeparated(
       <td>输入</td>
       <td>FFT变换批处理操作中的数据批次数量。</td>
     </tr>
+  </tbody>
     </table>
 - **返回值**：
 
@@ -162,6 +163,7 @@ AspbStatus asdFftExecC2CSeparated(
       <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
       <li>输入的shape为（batchSize，fftSizeX，fftSizeY，fftSizeZ）。</li></ul></td>
     </tr>
+    </tbody>
     </table>
 
 - **返回值**：
@@ -201,6 +203,7 @@ AspbStatus asdFftExecC2CSeparated(
       <td><ul><li>对应公式中的'y'。</li><li>数据类型支持FLOAT32。</li><li>数据格式支持ND。</li>
       <li>输入的shape为（batchSize，fftSizeX，fftSizeY，fftSizeZ）。</li></ul></td>
     </tr>
+    </tbody>
     </table>
 
 - **返回值**：
@@ -240,6 +243,7 @@ AspbStatus asdFftExecC2CSeparated(
       <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
       <li>输入的shape为（batchSize，fftSizeX，fftSizeY，fftSizeZ/2+1）。</li></ul></td>
     </tr>
+    </tbody>
     </table>
 
 - **返回值**：
@@ -291,6 +295,7 @@ AspbStatus asdFftExecC2CSeparated(
       <td><ul><li>公式中的'y'的虚部。</li><li>数据类型支持FLOAT32。</li><li>数据格式支持ND。</li>
       <li>输入的shape为（batchSize，fftSize）。</li></ul></td>
     </tr>
+    </tbody>
     </table>
 
 - **返回值**：

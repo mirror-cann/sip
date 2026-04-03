@@ -98,6 +98,7 @@ AspbStatus asdBlasStrmv(
       <td>输入</td>
       <td>矩阵A的行数和列数，向量x的元素个数。</td>
     </tr>
+    </tbody>
     </table>
 
 - **返回值**：
@@ -167,6 +168,7 @@ AspbStatus asdBlasStrmv(
       <td>输入</td>
       <td>表示向量x中元素的间隔。</td>
     </tr>
+    </tbody>
     </table>
 - **返回值**：
 

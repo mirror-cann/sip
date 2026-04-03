@@ -28,6 +28,7 @@
       <td>输入</td>
       <td>asdBlasCreate接口的句柄。</td>
     </tr>
+  </tbody>
     </table>
 
 - **asdBlasSetStream**
@@ -57,6 +58,7 @@
       <td>输入</td>
       <td>指向流对象的指针。</td>
     </tr>
+  </tbody>
     </table>
 
 - **asdBlasDestroy**
@@ -81,6 +83,7 @@
       <td>输入</td>
       <td>asdBlasDestroy接口的句柄。</td>
     </tr>
+  </tbody>
     </table>
 
 - **asdBlasSetWorkspace**
@@ -110,6 +113,7 @@
       <td>输入</td>
       <td>指针，指向一个存储所需的工作空间大小的变量。</td>
     </tr>
+  </tbody>
     </table>
 
 - **asdBlasSynchronize**
@@ -134,6 +138,7 @@
       <td>输入</td>
       <td>asdBlasSynchronize接口的句柄。</td>
     </tr>
+  </tbody>
     </table>
 
 - **asdBlasGetWorkspaceSize**
@@ -163,4 +168,5 @@
       <td>输入</td>
       <td>所需工作空间大小。</td>
     </tr>
+  </tbody>
     </table>

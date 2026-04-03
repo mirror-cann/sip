@@ -85,6 +85,7 @@ AspbStatus asdBlasCgemmBatched(
       <td>输入</td>
       <td>算子的句柄</td>
     </tr>
+    </tbody>
     </table>
 - **返回值**：
 
@@ -167,12 +168,12 @@ AspbStatus asdBlasCgemmBatched(
       <td><ul><li>对应公式中的'C'</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[batchCount, m, n]。</li></ul></td>
     </tr>
     <tr>
-      <td>alpha（std::complex<float> &）</td>
+      <td>alpha（std::complex&lt;float&gt; &）</td>
       <td>输入</td>
       <td>对应公式中的alpha，复数标量，用于乘以矩阵乘法的结果，取值必须为1+0j。</td>
     </tr>
     <tr>
-      <td>beta（std::complex<float> &）</td>
+      <td>beta（std::complex&lt;float&gt; &）</td>
       <td>输入</td>
       <td>对应公式中的beta，复数标量，用于乘以矩阵C。取值必须为 0+0j。。</td>
     </tr>
@@ -181,6 +182,7 @@ AspbStatus asdBlasCgemmBatched(
       <td>输入</td>
       <td>批次数量。取值范围为{12 - 26208}。</td>
     </tr>
+    </tbody>
     </table>
     
 - **返回值**：

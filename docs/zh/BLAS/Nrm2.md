@@ -92,6 +92,7 @@ AspbStatus asdBlasScnrm2(
       <td>输入</td>
       <td>算子的句柄</td>
     </tr>
+  </tbody>
     </table>
 
 - **返回值**：
@@ -127,7 +128,7 @@ AspbStatus asdBlasScnrm2(
     <tr>
       <td>x（aclTensor *）</td>
       <td>输入</td>
-      <td><ul><li>对应公式中的'x'。</li><li>asdBlasIsamax支持的数据类型支持FLOAT32。</li><li>asdBlasIcamax支持的数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li><ul>
+      <td><ul><li>对应公式中的'x'。</li><li>asdBlasIsamax支持的数据类型支持FLOAT32。</li><li>asdBlasIcamax支持的数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
     </tr>
     <tr>
       <td>incx（int64_t）</td>
@@ -137,8 +138,9 @@ AspbStatus asdBlasScnrm2(
     <tr>
       <td>result（aclTensor *）</td>
       <td>输出</td>
-      <td><ul><li>表示输出的结果，对应公式中的'result'。</li><li>数据类型支持FLOAT32，只包含一个元素。</li><li>数据格式支持ND。</li><li>shape为[1]。</li><ul></td>
+      <td><ul><li>表示输出的结果，对应公式中的'result'。</li><li>数据类型支持FLOAT32，只包含一个元素。</li><li>数据格式支持ND。</li><li>shape为[1]。</li></ul></td>
     </tr>
+    </tbody>
     </table>
 
 - **返回值**：

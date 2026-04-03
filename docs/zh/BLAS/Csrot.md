@@ -80,6 +80,7 @@ AspbStatus asdBlasCsrot(
       <td>输入</td>
       <td>算子的句柄。</td>
     </tr>
+  </tbody>
     </table>
 - **返回值**：
 
@@ -125,7 +126,7 @@ AspbStatus asdBlasCsrot(
     <tr>
       <td>y（aclTensor *）</td>
       <td>输入/输出</td>
-      <td><ul><li>对应公式中的'y'。</li>数据类型支持COMPLEX64。</li><li>asdBlasCcopy的数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
+      <td><ul><li>对应公式中的'y'。</li>数据类型支持COMPLEX64。<li>asdBlasCcopy的数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
       <li>shape为[n]</li></ul></td>
     </tr>
     <tr>
@@ -143,6 +144,7 @@ AspbStatus asdBlasCsrot(
       <td>输入</td>
       <td>旋转矩阵的正弦值指针。</td>
     </tr>
+    </tbody>
     </table>
 - **返回值**：
 

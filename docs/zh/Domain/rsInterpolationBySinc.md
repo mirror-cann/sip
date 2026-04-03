@@ -131,6 +131,7 @@ AspbStatus rsInterpolationBySinc(
       <td>输出</td>
       <td>workspace的地址。</td>
     </tr>
+  </tbody>
     </table>
 - **返回值**：
 
@@ -202,6 +203,7 @@ AspbStatus rsInterpolationBySinc(
       <td>输入</td>
       <td>workspace的地址。</td>
     </tr>
+  </tbody>
     </table>
 - **返回值**：
 

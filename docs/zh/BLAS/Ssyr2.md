@@ -76,6 +76,7 @@ AspbStatus asdBlasSsyr2(
       <td>输入</td>
       <td>算子的句柄</td>
     </tr>
+    </tbody>
     </table>
 
 - **返回值**：
@@ -151,6 +152,7 @@ AspbStatus asdBlasSsyr2(
       <td>输入</td>
       <td>y相邻元素间的内存地址偏移量（当前约束为1）。</td>
     </tr>
+    </tbody>
     </table>
     
 - **返回值**：

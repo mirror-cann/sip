@@ -67,6 +67,7 @@ AspbStatus asdBlasColwiseMul(
       <td>输入</td>
       <td>算子的句柄</td>
     </tr>
+    </tbody>
     </table>
 - **返回值**：
 
@@ -118,6 +119,7 @@ AspbStatus asdBlasColwiseMul(
       <td>输出</td>
       <td><ul><li>输入向量，对应公式中的'result'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m，n]。</li></ul></td>
     </tr>
+    </tbody>
     </table>
 - **返回值**：
 

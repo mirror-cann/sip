@@ -105,6 +105,7 @@ AspbStatus asdFftExecR2C(
       <td>输入</td>
       <td>FFT变换批处理操作中的数据批次数量。</td>
     </tr>
+    </tbody>
     </table>
 - **返回值**：
 
@@ -143,6 +144,7 @@ AspbStatus asdFftExecR2C(
       <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
       <li>输入的shape为（batchSize，fftSizeX，fftSizeY）。</li></ul></td>
     </tr>
+    </tbody>
     </table>
 
 - **返回值**：
@@ -182,11 +184,12 @@ AspbStatus asdFftExecR2C(
       <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
       <li>输入的shape为（batchSize，fftSizeX，fftSizeY）。</li></ul></td>
     </tr>
+    </tbody>
     </table>
 
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
 ## asdFftExecR2C
 
@@ -221,11 +224,12 @@ AspbStatus asdFftExecR2C(
       <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
       <li>输入的shape为（batchSize，fftSizeX，fftSizeY/2+1）。</li></ul></td>
     </tr>
+    </tbody>
     </table>
 
 - **返回值**：
 
-  返回状态码，具体参见[SiP返回码](/docs/zh/context/SiP返回码.md)。
+  返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
 ## 约束说明
 

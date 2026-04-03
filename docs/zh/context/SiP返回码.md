@@ -95,21 +95,22 @@
 </td>
 <td class="cellrowborder" valign="top" width="15.971597159715973%" headers="mcps1.2.4.1.2 "><p id="zh-cn_topic_0000001563019104_p1156543125020"><a name="zh-cn_topic_0000001563019104_p1156543125020"></a><a name="zh-cn_topic_0000001563019104_p1156543125020"></a>错误信息，该级别打印错误与异常信息。</p>
 </td>
+</tr>
 <tr id="zh-cn_topic_0000001563019104_row9156144365013"><td class="cellrowborder" valign="top" width="30.543054305430545%" headers="mcps1.2.4.1.1 "><p id="zh-cn_topic_0000001563019104_p14704133965112"><a name="zh-cn_topic_0000001563019104_p14704133965112"></a><a name="zh-cn_topic_0000001563019104_p14704133965112"></a>WARN</p>
 </td>
 <td class="cellrowborder" valign="top" width="15.971597159715973%" headers="mcps1.2.4.1.2 "><p id="zh-cn_topic_0000001563019104_p1156543125020"><a name="zh-cn_topic_0000001563019104_p1156543125020"></a><a name="zh-cn_topic_0000001563019104_p1156543125020"></a>警告信息，表明会出现潜在错误的情形，给开发者一些提示。</p>
 </td>
-</td>
+</tr>
 <tr id="zh-cn_topic_0000001563019104_row9156144365013"><td class="cellrowborder" valign="top" width="30.543054305430545%" headers="mcps1.2.4.1.1 "><p id="zh-cn_topic_0000001563019104_p14704133965112"><a name="zh-cn_topic_0000001563019104_p14704133965112"></a><a name="zh-cn_topic_0000001563019104_p14704133965112"></a>INFO（默认）</p>
 </td>
 <td class="cellrowborder" valign="top" width="15.971597159715973%" headers="mcps1.2.4.1.2 "><p id="zh-cn_topic_0000001563019104_p1156543125020"><a name="zh-cn_topic_0000001563019104_p1156543125020"></a><a name="zh-cn_topic_0000001563019104_p1156543125020"></a>数据信息，打印算子与整图相关的信息，用户通过观察INFO日志就可以得知整图或单算子的运行状态。</p>
 </td>
-</td>
+</tr>
 <tr id="zh-cn_topic_0000001563019104_row9156144365013"><td class="cellrowborder" valign="top" width="30.543054305430545%" headers="mcps1.2.4.1.1 "><p id="zh-cn_topic_0000001563019104_p14704133965112"><a name="zh-cn_topic_0000001563019104_p14704133965112"></a><a name="zh-cn_topic_0000001563019104_p14704133965112"></a>DEBUG</p>
 </td>
 <td class="cellrowborder" valign="top" width="15.971597159715973%" headers="mcps1.2.4.1.2 "><p id="zh-cn_topic_0000001563019104_p1156543125020"><a name="zh-cn_topic_0000001563019104_p1156543125020"></a><a name="zh-cn_topic_0000001563019104_p1156543125020"></a>调试信息，打印加速库代码细节信息，加速库开发者可以通过查看DEBUG日志来调试框架代码。</p>
 </td>
-
+</tr>
 </tbody>
 </table>
 

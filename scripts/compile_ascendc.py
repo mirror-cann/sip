@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
-# Copyright (c) 2025 Huawei Technologies Co., Ltd.
+# Copyright (c) 2024 Huawei Technologies Co., Ltd.
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ def parse_args():
     parser.add_argument('--use_mssanitizer', type=str, required=True)
     parser.add_argument('--no_warning', action='store_true')
     parser.add_argument('--include_directories', type=str, required=False, nargs="+")
+    parser.add_argument('--use_ascendc_dump', action='store_true')
     return parser.parse_args()
 
 
@@ -49,6 +50,11 @@ def gen_compile_cmd(args, dst: str, sub_arch: str, compile_options):
                         "-mllvm", "-cce-aicore-jump-expand=true"]
     compile_cmd += ["-std=c++17"]
     compile_cmd += ["--cce-mask-opt"]
+    if (args.use_ascendc_dump):
+        compile_cmd += ["-mllvm", "-cce-aicore-function-stack-size=0x4000"]
+        compile_cmd += ["--cce-long-call=true"]
+        compile_cmd += ["-DASCENDC_DUMP=1"]
+        compile_cmd += ["-DASCENDC_DEBUG"]
     return compile_cmd
 
 
@@ -73,6 +79,10 @@ def gen_compile_cmd_v220(args, dst: str, sub_arch: str, compile_options):
                         "-mllvm", "-cce-aicore-long-call",
                         "-mllvm", "-cce-aicore-jump-expand=true"]
     compile_cmd += ["-std=c++17"]
+    if (args.use_ascendc_dump):
+        compile_cmd += ["--cce-long-call=true"]
+        compile_cmd += ["-DASCENDC_DUMP=1"]
+        compile_cmd += ["-DASCENDC_DEBUG"]
     return compile_cmd
 
 
@@ -87,12 +97,34 @@ def gen_compile_cmd_v300(args, dst: str, sub_arch: str, compile_options):
     compile_cmd += compile_options
     compile_cmd += [args.srcs, "--cce-aicore-arch=%s" % sub_arch,
                     "--cce-aicore-only", "-o", dst,
-                    "-mllvm", "-cce-aicore-function-stack-size=16000",
+                    "-mllvm", "-cce-aicore-function-stack-size=0x4000",
                     "-mllvm", "-cce-aicore-addr-transform",
                     "-mllvm", "--cce-aicore-or-combine=false",
                     "-mllvm", "-instcombine-code-sinking=false",
                     "-mllvm", "-cce-aicore-jump-expand=false",
                     "-mllvm", "-cce-aicore-mask-opt=false"]
+    compile_cmd += ["-std=c++17"]
+    if (args.use_ascendc_dump):
+        compile_cmd += ["--cce-long-call=true"]
+        compile_cmd += ["-DASCENDC_DUMP=1"]
+        compile_cmd += ["-DASCENDC_DEBUG"]
+    return compile_cmd
+
+
+def gen_compile_cmd_c310(args, dst: str, sub_arch: str, compile_options):
+    compile_cmd = [os.path.join(args.code_root, '3rdparty', 'compiler',
+                                'ccec_compiler', 'bin', 'bisheng'),
+                   '-c']
+    compile_cmd += compile_options
+    compile_cmd += [args.srcs, "--cce-aicore-arch=%s" % sub_arch,
+                    "--cce-aicore-only", "-o", dst,
+                    "-mllvm", "-cce-aicore-stack-size=0x8000",
+                    "-mllvm", "-cce-aicore-function-stack-size=0x8000",
+                    "-mllvm", "-cce-aicore-record-overflow=true",
+                    "-mllvm", "-cce-aicore-addr-transform",
+                    "-mllvm", "-cce-aicore-jump-expand=true",
+                    "-mllvm", "-cce-aicore-dcci-insert-for-scalar=false",
+                    "-mllvm", "-cce-aicore-dcci-before-kernel-end=false"]
     compile_cmd += ["-std=c++17"]
     return compile_cmd
 
@@ -181,7 +213,8 @@ def get_arch(soc, channel):
         "ascend310b": {"vector": "dav-m300", "cube": "dav-m300"},
         "ascend310p": {"vector": "dav-m200", "cube": "dav-m200"},
         "ascend910":  {"vector": "dav-c100", "cube": "dav-c100"},
-        "ascend910b": {"vector": "dav-c220-vec", "cube": "dav-c220-cube", "mix": "mix"}
+        "ascend910b": {"vector": "dav-c220-vec", "cube": "dav-c220-cube", "mix": "mix"},
+        "ascend950": {"vector": "dav-c310", "cube": "dav-c310", "mix": "mix"}
     }
     try:
         return arch_dict[soc][channel]
@@ -261,6 +294,27 @@ def compile_ascendc_operation(args):
             if(exe_cmd(compile_cmd)) != 0:
                 return -1
             dsts.append(dst)
+        elif args.soc == "ascend950":
+            if args.channel != "mix":
+                dst = os.path.splitext(args.dst)[0] + f"_{key}.o"
+                opt = options + [f'-D{args.kernel}={args.kernel}_{key}', f'-DTILING_KEY_VAR={key}']
+                compile_cmd = ' '.join(gen_compile_cmd_c310(args, dst, arch, opt))
+                if(exe_cmd(compile_cmd)) != 0:
+                    return -1
+                dsts.append(dst)
+            else:
+                dst = os.path.splitext(args.dst)[0] + f"_mix_aic_{key}.o"
+                aic_opt = options + [f'-D{args.kernel}={args.kernel}_{key}_mix_aic', f'-DTILING_KEY_VAR={key}']
+                compile_cmd = ' '.join(gen_compile_cmd_c310(args, dst, "dav-c310", aic_opt))
+                if(exe_cmd(compile_cmd)) != 0:
+                    return -1
+                dsts.append(dst)
+                dst = os.path.splitext(args.dst)[0] + f"_mix_aiv_{key}.o"
+                aiv_opt = options + [f'-D{args.kernel}={args.kernel}_{key}_mix_aiv', f'-DTILING_KEY_VAR={key}']
+                compile_cmd = ' '.join(gen_compile_cmd_c310(args, dst, "dav-c310", aiv_opt))
+                if(exe_cmd(compile_cmd)) != 0:
+                    return -1
+                dsts.append(dst)
         else:
             logging.error("soc version %s is not supported", args.soc)
             exit(1)

@@ -43,20 +43,8 @@ void DftC2RCore::Run(void *input, void *output, void *stream, workspace::Workspa
         FftOperation::Run(input, output, stream, workspace);
         ASDSIP_LOG(INFO) << "ASCEND_910B DftC2RCore run success.";
     } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
-        Tensor inTensor;
-        Tensor outTensor;
-        TensorDType dtype = TENSOR_DTYPE_FLOAT;
-        SVector<int64_t> inShape {problemDesc.batch};
-        inShape.push_back((problemDesc.nDoing / 2 + 1) * 2);
-        inTensor.dataSize = problemDesc.batch * problemDesc.nDoing * sizeof(float) * 2;
-        inTensor.desc = {dtype, TENSOR_FORMAT_ND, inShape, {}, 0};
-        inTensor.data = input;
-        outTensor.data = output;
-        uint8_t *deviceBuffer = (uint8_t *)workspace.allocate(ASYNC_WORKSPACE_SIZE);
-        int64_t M = inTensor.desc.dims[0];
-        int64_t K = inTensor.desc.dims[1];
-        int64_t N = (*rotationMatrix).desc.dims[1];
-        MatMul(inTensor, *rotationMatrix, outTensor, M, K, N, stream, deviceBuffer);
+        FftOperation::Run(input, output, stream, workspace);
+        ASDSIP_LOG(INFO) << "ASCEND_950 DftC2RCore run success.";
     }
 }
 
@@ -144,8 +132,8 @@ bool DftC2RCore::PreAllocateInDevice()
 AspbStatus DftC2RCore::InitTactic()
 {
     if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
-        ASDSIP_LOG(INFO) << "ASCEND_950 DftC2RCore aclnnMatmul.";
-        return AsdSip::ErrorType::ACL_SUCCESS;
+        // ascend 950 initialization
+        ASDSIP_LOG(INFO) << "ASCEND_950 DftC2RCore init tactic";
     }
     OpParam::DftC2R param = {problemDesc.nDoing, problemDesc.batch, 1 - int(problemDesc.forward)};
 

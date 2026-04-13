@@ -2,6 +2,7 @@
     "targets": {
         "ascend310b": false,
         "ascend310p": false,
-        "ascend910b": true
+        "ascend910b": true,
+        "ascend950": true
     }
 }

@@ -97,6 +97,7 @@ InterpolationOperation:
 DftC2ROperation:
     DftC2RC64Kernel:
         ascend910b: true
+        ascend950: true
 
 FftC2ROperation:
     FftC2R1C64Kernel:

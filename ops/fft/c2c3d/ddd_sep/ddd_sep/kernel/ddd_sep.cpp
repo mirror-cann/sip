@@ -7,6 +7,9 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+#ifndef CATLASS_ARCH
+#define CATLASS_ARCH 2201
+#endif
 
 #include "kernel_operator.h"
 #include "kernel/fft_batched_matmul_kernel.hpp"

@@ -8,6 +8,10 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#ifndef CATLASS_ARCH
+#define CATLASS_ARCH 2201
+#endif
+
 #include "kernel_operator.h"
 #include "dft_sep_matmul_kernel.hpp"
 #include "catlass/arch/arch.hpp"

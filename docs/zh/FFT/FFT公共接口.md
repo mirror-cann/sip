@@ -189,7 +189,7 @@
     </tr>
     <tr>
       <td>fftType（asdFftType）</td>
-      <td>输入</td>
+      <td>输入/输出</td>
       <td>用于接收FFT类型的值。</td>
     </tr>
   </tbody>

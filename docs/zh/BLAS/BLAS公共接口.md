@@ -25,7 +25,7 @@
   <tbody>
     <tr>
       <td>handle（asdBlasHandle）</td>
-      <td>输入</td>
+      <td>输入/输出</td>
       <td>asdBlasCreate接口的句柄。</td>
     </tr>
   </tbody>
@@ -165,7 +165,7 @@
     </tr>
     <tr>
       <td>workspaceSize（size_t &）</td>
-      <td>输入</td>
+      <td>输入/输出</td>
       <td>所需工作空间大小。</td>
     </tr>
   </tbody>

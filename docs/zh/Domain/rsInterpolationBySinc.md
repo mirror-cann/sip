@@ -33,7 +33,7 @@ rsInterpolationBySinc：实现带batch的一维复数向量插值计算，返回
 转为输入“posToTabIndex”为：round((Pos -posFloor) *quant_num)\
   [ 0 , 1 ] \
 其中，tab大小为2*3。由于pos[0] = 0.2，取inputTensor[0]及后面一个元素inputTensor[1]共2个元素，与sincTab[posToTabIndex[0]]进行向量点乘，得到outputTensor[0]，依次计算后续元素。\
-  pos[0] = 0.3 → outputTensor[0] = [1 + i , 2 + i] · [ 1 , 0 ] = 1 + i \
+  pos[0] = 0.2 → outputTensor[0] = [1 + i , 2 + i] · [ 1 , 0 ] = 1 + i \
   pos[1] = 1.6 → outputTensor[1] = [2 + i , 2 + i] · [ 0.5 , 0.5 ] = 2 + i\
 调用“rsInterpolationBySinc”算子后，输出“outputTensor”为：\
   [ 1 + i , 2 + i ]

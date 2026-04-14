@@ -166,11 +166,11 @@ AspbStatus asdBlasCdotc(
     <tr>
       <td>y（aclTensor *）</td>
       <td>输入</td>
-      <td><ul><li>对应公式中的'x'。</li><li>asdBlasSdot支持的数据类型支持FLOAT32。</li><li>asdBlasCdotu & asdBlasCdotc支持的数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
+      <td><ul><li>对应公式中的'y'。</li><li>asdBlasSdot支持的数据类型支持FLOAT32。</li><li>asdBlasCdotu & asdBlasCdotc支持的数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
     </tr>
     <tr>
       <td>incy（int64_t）</td>
-      <td>输出</td>
+      <td>输入</td>
       <td>向量y相邻元素间的内存地址偏移量（当前约束为1）。</td>
     </tr>
     <tr>
@@ -594,7 +594,7 @@ int main(int argc, char **argv)
 }
 ```
 
-- **aasdBlasCdotc**
+- **asdBlasCdotc**
 
 ```Cpp
 #include <iostream>

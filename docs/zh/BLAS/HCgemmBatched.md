@@ -191,7 +191,7 @@ AspbStatus asdBlasHCgemmBatched(
 ## 约束说明
 
 - 算子实际计算时，只支持3维ND运算。
-- 算子输入数据为行主序，输入shape为[batchCount, m，k,]、[batchCount, k，n]、[batchCount, m，n]，输出shape为[batchCount, m，n]。
+- 算子输入数据为行主序，输入shape为[batchCount, m，k]、[batchCount, k，n]、[batchCount, m，n]，输出shape为[batchCount, m，n]。
 
 ## 调用示例
 

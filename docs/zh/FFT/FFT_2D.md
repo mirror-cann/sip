@@ -133,13 +133,13 @@ AspbStatus asdFftExecR2C(
       <td>算子的句柄，需要手动申请创建asdFftHandle对象。</td>
     </tr>
     <tr>
-      <td>inData（ aclTensor *）</td>
+      <td>input（ const aclTensor *）</td>
       <td>输入</td>
       <td><ul><li>对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
       <li>输入的shape为（batchSize，fftSizeX，fftSizeY）。</li></ul></td>
     </tr>
     <tr>
-      <td>outData（aclTensor *）</td>
+      <td>output（const aclTensor *）</td>
       <td>输出</td>
       <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
       <li>输入的shape为（batchSize，fftSizeX，fftSizeY）。</li></ul></td>
@@ -173,13 +173,13 @@ AspbStatus asdFftExecR2C(
       <td>算子的句柄，需要手动申请创建asdFftHandle对象。</td>
     </tr>
     <tr>
-      <td>inData（ aclTensor *）</td>
+      <td>input（ const aclTensor *）</td>
       <td>输入</td>
       <td><ul><li>对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
       <li>输入的shape为（batchSize，fftSizeX，fftSizeY/2+1）。</li></ul></td>
     </tr>
     <tr>
-      <td>outData（aclTensor *）</td>
+      <td>output（const aclTensor *）</td>
       <td>输出</td>
       <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
       <li>输入的shape为（batchSize，fftSizeX，fftSizeY）。</li></ul></td>
@@ -213,13 +213,13 @@ AspbStatus asdFftExecR2C(
       <td>算子的句柄，需要手动申请创建asdFftHandle对象。</td>
     </tr>
     <tr>
-      <td>inData（ aclTensor *）</td>
+      <td>input（ const aclTensor *）</td>
       <td>输入</td>
-      <td><ul><li>对应公式中的'x'。</li><li>数据类型支持COMPLEX32。</li><li>数据格式支持ND。</li>
+      <td><ul><li>对应公式中的'x'。</li><li>数据类型支持FLOAT32。</li><li>数据格式支持ND。</li>
       <li>输入的shape为（batchSize，fftSizeX，fftSizeY）。</li></ul></td>
     </tr>
     <tr>
-      <td>outData（aclTensor *）</td>
+      <td>output（const aclTensor *）</td>
       <td>输出</td>
       <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
       <li>输入的shape为（batchSize，fftSizeX，fftSizeY/2+1）。</li></ul></td>

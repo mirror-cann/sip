@@ -34,7 +34,7 @@ asdBlasCgemmBatched：用于计算两批复数矩阵的乘积。
 输入“m”为：2，输入“n”为： 2，输入“k”为：2，输入“alpha”为：1+i，“beta”为：2+2i。\
 输入“lda”为： 2，输入“ldb”为：2，输入“ldc”为：2。\
 输入“batchCount”为：1。\
-调用“asdBlasHCgemmBatched”算子后，输出“C”为：\
+调用“asdBlasCgemmBatched”算子后，输出“C”为：\
 [   [ -15+19i, -27+19i ],
     [ -37+21i, -57+13i ]  ]
  
@@ -64,7 +64,7 @@ AspbStatus asdBlasCgemmBatched(
   const int64_t                     batchCount)
 ```
 
-## asdBlasMakeHCgemmBatchedPlan
+## asdBlasMakeCgemmBatchedPlan
 
 - **参数说明：**
 
@@ -91,7 +91,7 @@ AspbStatus asdBlasCgemmBatched(
 
   返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
-## asdBlasHCgemmBatched
+## asdBlasCgemmBatched
 
 - **参数说明：**
 
@@ -192,7 +192,7 @@ AspbStatus asdBlasCgemmBatched(
 ## 约束说明
 
 - 算子实际计算时，只支持3维ND运算。
-- 算子输入数据为行主序，输入shape为[batchCount, m，k,]、[batchCount, k，n]、[batchCount, m，n]，输出shape为[batchCount, m，n]。
+- 算子输入数据为行主序，输入shape为[batchCount, m, k]、[batchCount, k, n]、[batchCount, m, n]，输出shape为[batchCount, m, n]。
 
 ## 调用示例
 

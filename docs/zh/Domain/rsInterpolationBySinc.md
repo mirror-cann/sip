@@ -127,7 +127,7 @@ AspbStatus rsInterpolationBySinc(
       <td>插值长度。</td>
     </tr>
     <tr>
-      <td>workspaceSize（void *）</td>
+      <td>workspaceSize（size_t *）</td>
       <td>输出</td>
       <td>workspace的地址。</td>
     </tr>
@@ -199,7 +199,7 @@ AspbStatus rsInterpolationBySinc(
       <td>npu执行流。</td>
     </tr>
     <tr>
-      <td>workspaceSize（size_t *）</td>
+      <td>workspaceSize（void *）</td>
       <td>输入</td>
       <td>workspace的地址。</td>
     </tr>
@@ -217,15 +217,15 @@ rsInterpolationBySinc：
 - 算子实际计算时，不支持ND高维度运算（不支持维度≥3的运算）。
 - interpNum只支持偶数，通常使用 [8 ，12 ，16] ，当前版本最大支持16。
 - quantNum为2的幂，最大32。
-- inputTensor、posFloor、posToTabIndex第0维是相同的batch数，outTensors长度和posFloor、posToTabIndex一致。
-- sincTab：为了将复数点乘转化为实数点乘以及更亲和NPU和需要进行预处理，需要扩充成[ ((quantNum+1) *2) * (interpNum*2+8) * 4] ，具体算法参考“调用示例”中的预处理内容。
+- inputTensor、posFloor、posToTabIndex第0维是相同的batch数，outputTensors长度和posFloor、posToTabIndex一致。
+- sincTab：为了将复数点乘转化为实数点乘以及更亲和NPU，需要进行预处理，需要扩充成[ ((quantNum+1) *2) * (interpNum*2+8) * 4] ，具体算法参考“调用示例”中的预处理内容。
 
 ## 调用示例
 
 示例代码如下，该样例旨在提供快速上手、开发和调试算子的最小化实现，其核心目标是使用最精简的代码展示算子的核心功能，而非提供生产级的安全保障。不推荐用户直接将示例代码作为业务代码，若用户将示例代码应用在自身的真实业务场景中且发生了安全问题，则需用户自行承担。
 
 - rsInterpolationBySinc算子调用说明：\
-  - 调用示例中会进行incTab预处理：\
+  - 调用示例中会进行sincTab预处理：\
 系数矩阵要和复数点乘，在NPU上会转换为系数矩阵和两组float32相乘，所以需要将系数转为下面格式，此时虚数矩阵会被扩充成 ((quantNum+1)*2)* (interpNum*2)。\
     [系数1,0]\
     [ 0,系数1]\

@@ -130,22 +130,22 @@ AspbStatus asdBlasCswap(
     </tr>
     <tr>
       <td>x（aclTensor *）</td>
-      <td>输入</td>
+      <td>输入/输出</td>
       <td><ul><li>对应公式中的'x'。</li><li>asdBlasSswap支持的数据类型支持FLOAT32。</li><li> asdBlasCswap支持的数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
     </tr>
     <tr>
       <td>incx（int64_t）</td>
-      <td>输出</td>
+      <td>输入</td>
       <td>x相邻元素间的内存地址偏移量（当前约束为1）。</td>
     </tr>
     <tr>
       <td>y（aclTensor *）</td>
-      <td>输入</td>
+      <td>输入/输出</td>
       <td><ul><li>对应公式中的'y'。</li><li>asdBlasSswap支持的数据类型支持FLOAT32。</li><li> asdBlasCswap支持的数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
     </tr>
     <tr>
       <td>incy（int64_t）</td>
-      <td>输出</td>
+      <td>输入</td>
       <td>y相邻元素间的内存地址偏移量（当前约束为1）。</td>
     </tr>
     </tbody>

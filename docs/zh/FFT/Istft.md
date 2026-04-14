@@ -81,17 +81,17 @@ AspbStatus asdFftExecIstft(
     <tr>
       <td>input（aclTensor *）</td>
       <td>输入</td>
-      <td><ul><li>对应公式中的'x'。</li><li>数据格式支持ND，格式预期与stft输出相同。</li><li>数据类型仅支持COMPELX64。</li><li>shape为(B, N, T)<ul><li>'B'是批处理维度。</li><li>N是频率样本的数量，当onesidedOpt为true时， 为 (nFft // 2) + 1，当onesidedOpt为false时，为nFft。</li><li>T是帧的数量，对于中心填充的STFT，取值为“1 + lengthOpt // hopLengthOpt”，其他场景取值为 “1 + (lengthOpt - nFft) // hopLengthOpt”。</li></ul></li></ul></td>
+      <td><ul><li>对应公式中的'x'。</li><li>数据格式支持ND，格式预期与stft输出相同。</li><li>数据类型仅支持COMPLEX64。</li><li>shape为(B, N, T)<ul><li>'B'是批处理维度。</li><li>N是频率样本的数量，当onesidedOpt为true时， 为 (nFft // 2) + 1，当onesidedOpt为false时，为nFft。</li><li>T是帧的数量，对于中心填充的STFT，取值为“1 + lengthOpt // hopLengthOpt”，其他场景取值为 “1 + (lengthOpt - nFft) // hopLengthOpt”。</li></ul></li></ul></td>
     </tr>
     <tr>
       <td>nFft（int64_t）</td>
       <td>输入</td>
-      <td>对应公式中的'N'，FFT信号长度（第二维）。</td>
+      <td>傅里叶变换的大小</td>
     </tr>
     <tr>
       <td>hopLengthOpt（int64_t）</td>
       <td>输入</td>
-      <td>对应公式中的'N'，FFT信号长度（第三维）。</td>
+      <td>相邻滑动窗口帧之间的距离，0 < hopLengthOpt <= nFft。</td>
     </tr>
     <tr>
       <td>winLengthOpt（int64_t）</td>
@@ -153,7 +153,7 @@ AspbStatus asdFftExecIstft(
     <tr>
       <td>input（aclTensor *）</td>
       <td>输入</td>
-      <td><ul><li>对应公式中的'x'。</li><li>数据格式支持ND，格式预期与stft输出相同。</li><li>数据类型仅支持COMPELX64。</li><li>shape为(B, N, T)<ul><li>'B'是批处理维度。</li><li>N 是频率样本的数量，对于 onesided为true， 输入为 (n_fft // 2) + 1，否则为 n_fft。</li><li>T是帧的数量，对于中心填充的stft为 1 + length // hop_length，否则为 1 + (length - n_fft) // hop_length。</li></ul></li></ul></td>
+      <td><ul><li>对应公式中的'x'。</li><li>数据格式支持ND，格式预期与stft输出相同。</li><li>数据类型仅支持COMPLEX64。</li><li>shape为(B, N, T)<ul><li>'B'是批处理维度。</li><li>N 是频率样本的数量，对于 onesided为true， 输入为 (n_fft // 2) + 1，否则为 n_fft。</li><li>T是帧的数量，对于中心填充的stft为 1 + length // hop_length，否则为 1 + (length - n_fft) // hop_length。</li></ul></li></ul></td>
     </tr>
     <tr>
       <td>windowOpt（aclTensor *）</td>
@@ -184,7 +184,7 @@ AspbStatus asdFftExecIstft(
     - 当前功能实现所限，nFft大于等于32768且为2的幂的时候，会修改输入数据，需提前做好备份。
     - hopLengthOpt <= 1500。
     - 输入的元素不支持inf、-inf和nan，如果输入中包含这些值, 那么结果为未定义。
-- asdFftExecIstft\
+- asdFftExecIstft
   windowOpt tensor数值不能有接近零的最小值，否则结果未定义。
 
 ## 调用示例

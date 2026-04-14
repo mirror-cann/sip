@@ -113,7 +113,7 @@ AspbStatus asdFftExecC2CSeparated(
     <tr>
       <td>dimType（asdFft1dDimType）</td>
       <td>输入</td>
-      <td>指定Fft_1D变换的维度“方向”（是按行做FFT还是按列做FFT）<ul><li>ASCEND_FFT_HORIZONTAL：横向FFT。</li><li>ASCEND_FFT_VERTICAL：正向FFT。</li></ul></td>
+      <td>指定Fft_1D变换的维度“方向”（是按行做FFT还是按列做FFT）<ul><li>ASCEND_FFT_HORIZONTAL：横向FFT。</li><li>ASCEND_FFT_VERTICAL：纵向FFT。</li></ul></td>
     </tr>
     </tbody>
     </table>

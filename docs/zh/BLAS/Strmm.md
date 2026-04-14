@@ -20,8 +20,8 @@ asdBlasStrmm：单精度，其功能是将一个三角矩阵A乘一个矩阵B，
   $$
   c = 
   \begin{cases}
-  alpha*op(A)*B & if side == ASDBLA\_SIDE\_LEFT \\
-  alpha*B*op(A) & if side == ASDBLA\_SIDE\_RIGHT \\
+  alpha*op(A)*B & if side == ASDBLAS\_SIDE\_LEFT \\
+  alpha*B*op(A) & if side == ASDBLAS\_SIDE\_RIGHT \\
   \end{cases}
   $$
 

@@ -30,7 +30,7 @@ asdBlasHCgemmBatched：用于计算复数矩阵的乘积。
 输入“inTensorC[i]”为：\
 [   [ 3+i, 3+2i ],
     [ 3+3i, 3+4i ]  ]\
-输入“transa”为： N，输入“transb”为：T。\
+输入“transa”为： ASDBLAS_OP_N，输入“transb”为：ASDBLAS_OP_N。\
 输入“m”为：2，输入“n”为： 2，输入“k”为：2，输入“alpha”为：1+i，“beta”为：2+2i。\
 输入“lda”为： 2，输入“ldb”为：2，输入“ldc”为：2。\
 输入“batchCount”为：1。\

@@ -32,7 +32,7 @@ asdBlasCmatinvBatched：对复数矩阵进行求逆。
 1-i, 1-i, 1-i, 3-3i]\
 输入“n”为： 4\
 输入“batchSize”为：2\
-调用“asdBlasHCmatinvBatched”算子后，\
+调用“asdBlasCmatinvBatched”算子后，\
 输出“Ainv”为：\
 [0.4+0.4i, -0.1-0.1i,-0.1-0.1i ,-0.1-0.1i\
 -0.1-0.1i ,0.4+0.4i ,-0.1-0.1i ,-0.1-0.1i\
@@ -85,11 +85,6 @@ AspbStatus asdBlasCmatinvBatched(
       <td>handle（asdBlasHandle）</td>
       <td>输入</td>
       <td>算子的句柄</td>
-    </tr>
-    <tr>
-      <td>trans（asdBlasOperation_t）</td>
-      <td>输入</td>
-      <td>指定矩阵A是否需要转置。<ul><li>ASDBLAS_OP_N：不转置</li><li>ASDBLAS_OP_T：转置</li><li>ASDBLAS_OP_C：共轭转置</li></ul></td>
     </tr>
     <tr>
       <td>n（int64_t）</td>

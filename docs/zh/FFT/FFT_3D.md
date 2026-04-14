@@ -309,7 +309,7 @@ AspbStatus asdFftExecC2CSeparated(
     - batchSize在存储允许范围内应无额外约束。
     - 输入的元素个数理论支持[1，$2^{30}$]。
     - 输入的元素不支持inf、-inf和nan，如果输入中包含这些值, 那么结果为未定义。
-- asdFftExecC2CSeparated\
+- asdFftExecC2CSeparated
   信号长度范围[2, 256]。
 
 ## 调用示例

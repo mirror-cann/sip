@@ -24,7 +24,7 @@ asdBlasColwiseMul：复数矩阵与复数向量按列逐点乘，返回一个和
   [ 2+2i, 2+2i ] ]\
 输入“X”为：\
 [ 1+1i, 2+2i ]\
-调用“asdBlasCgerc”算子后，输出“result”为：\
+调用“asdBlasColwiseMul”算子后，输出“result”为：\
 [ [ 0+2i, 0+2i ],\
   [ 0+8i, 0+8i ] ]
  
@@ -117,7 +117,7 @@ AspbStatus asdBlasColwiseMul(
     <tr>
       <td>result（aclTensor*）</td>
       <td>输出</td>
-      <td><ul><li>输入向量，对应公式中的'result'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m，n]。</li></ul></td>
+      <td><ul><li>输入向量，对应公式中的'result'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m, n]。</li></ul></td>
     </tr>
     </tbody>
     </table>

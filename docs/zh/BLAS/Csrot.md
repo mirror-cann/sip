@@ -126,8 +126,8 @@ AspbStatus asdBlasCsrot(
     <tr>
       <td>y（aclTensor *）</td>
       <td>输入/输出</td>
-      <td><ul><li>对应公式中的'y'。</li>数据类型支持COMPLEX64。<li>asdBlasCcopy的数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
-      <li>shape为[n]</li></ul></td>
+      <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li></ul>
+      <li>shape为[n]</li></td>
     </tr>
     <tr>
       <td>incy（int64_t）</td>

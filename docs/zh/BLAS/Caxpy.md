@@ -97,19 +97,19 @@ AspbStatus asdBlasCaxpy(
       <td>算子的句柄</td>
     </tr>
     <tr>
-      <td>x（aclTensor*）</td>
-      <td>输入</td>
-      <td><ul><li>输入向量，对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
-    </tr>
-    <tr>
       <td>n（int64_t）</td>
       <td>输入</td>
       <td>向量中复数元素的个数。</td>
     </tr>
     <tr>
-      <td>y（aclTensor*）</td>
-      <td>输入/输出</td>
-      <td><ul><li>输入/输出向量，对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
+      <td>alpha（std::complex&ltfloat&gt *）</td>
+      <td>输入</td>
+      <td><ul><li>对应公式中的alpha，输入的复数标量。</li><li>数据类型支持COMPLEX64</li></ul></td>
+    </tr>
+    <tr>
+      <td>x（aclTensor*）</td>
+      <td>输入</td>
+      <td><ul><li>输入向量，对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
     </tr>
     <tr>
       <td>incx（int64_t）</td>
@@ -117,14 +117,14 @@ AspbStatus asdBlasCaxpy(
       <td>向量x相邻元素间的内存地址偏移量（当前约束为1）。</td>
     </tr>
     <tr>
+      <td>y（aclTensor*）</td>
+      <td>输入/输出</td>
+      <td><ul><li>输入/输出向量，对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
+    </tr>
+    <tr>
       <td>incy（int64_t）</td>
       <td>输入</td>
       <td>向量y相邻元素间的内存地址偏移量（当前约束为1）。</td>
-    </tr>
-    <tr>
-      <td>alpha（std::complex&ltfloat> *）</td>
-      <td>输入</td>
-      <td><ul><li>对应公式中的alpha，输入的复数标量。</li><li>数据类型支持COMPLEX64</li></ul></td>
     </tr>
     </tbody>
     </table>

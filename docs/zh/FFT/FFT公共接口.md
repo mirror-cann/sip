@@ -1,6 +1,6 @@
 # FFT公共接口
 
-- **asdBlasCreate**
+- **asdFftCreate**
 
     功能描述：注册FFT句柄。\
     函数原型：AspbStatus asdFftCreate(asdFftHandle &handle)\
@@ -103,7 +103,7 @@
       <td>asdFftGetWorkspaceSize接口的句柄。</td>
     </tr>
     <tr>
-      <td>workSpace（size_t &）</td>
+      <td>workSize（size_t &）</td>
       <td>输入</td>
       <td>所需的工作空间大小。</td>
     </tr>
@@ -128,12 +128,12 @@
       </tr></thead>
   <tbody>
     <tr>
-      <td>handle（asdBlasHandle）</td>
+      <td>handle（asdFftHandle）</td>
       <td>输入</td>
       <td>asdFftSetWorkspace接口的句柄。</td>
     </tr>
     <tr>
-      <td>workSpace（void *）</td>
+      <td>workspace（void *）</td>
       <td>输入</td>
       <td>指向工作空间的指针。</td>
     </tr>

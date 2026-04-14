@@ -84,14 +84,14 @@ AspbStatus asdMul(
       <li>shape为[n]</li></ul></td>
     </tr>
     <tr>
-      <td>workspaceSize（void *）</td>
-      <td>输入</td>
-      <td>asdMul算子所需要的workspace。</td>
-    </tr>
-    <tr>
       <td>stream（void *）</td>
       <td>输入</td>
       <td>npu执行流。</td>
+    </tr>
+    <tr>
+      <td>workspace（void *）</td>
+      <td>输入</td>
+      <td>asdMul算子所需要的workspace。</td>
     </tr>
   </tbody>
   </table>
@@ -103,7 +103,6 @@ AspbStatus asdMul(
 ## 约束说明
 
   - 输入的元素个数n理论支持[1，9.22e+18]。
-  - 算子输入shape为[n]，[n]，输出shape为[n]。
 
 ## 调用示例
 

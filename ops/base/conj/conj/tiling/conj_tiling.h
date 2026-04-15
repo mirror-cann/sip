@@ -7,8 +7,8 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef OPS_BUILT_IN_OP_TILING_RUNTIME_MULTINOMIAL_H_
-#define OPS_BUILT_IN_OP_TILING_RUNTIME_MULTINOMIAL_H_
+#ifndef ASDOPS_MULTINOMIAL_TILING_H
+#define ASDOPS_MULTINOMIAL_TILING_H
 
 #include "mki/kernel_info.h"
 #include "mki/launch_param.h"

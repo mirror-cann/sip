@@ -76,7 +76,7 @@ int main(int argc, char **argv)
     int64_t batch = 1;
     int64_t nRs = 2;
     int64_t totalSubcarrier = 32;
-    int64_t nSingal = 14;
+    int64_t nSignal = 14;
 
     int64_t xSize = batch * nRs * totalSubcarrier * 2;
     std::vector<float> tensorInXData;
@@ -85,14 +85,14 @@ int main(int argc, char **argv)
         tensorInXData[i] = 1.0 + i;
     }
 
-    int64_t coeffSize = batch * (nSingal - nRs) * nRs * 2;
+    int64_t coeffSize = batch * (nSignal - nRs) * nRs * 2;
     std::vector<float> coeffData;
     coeffData.reserve(xSize);
     for (int64_t i = 0; i < coeffSize; i++) {
         coeffData[i] = 1;
     }
 
-    int64_t resultSize = batch * (nSingal - nRs) * totalSubcarrier * 2;
+    int64_t resultSize = batch * (nSignal - nRs) * totalSubcarrier * 2;
     std::vector<float> resultData;
     resultData.reserve(resultSize);
     for (int64_t i = 0; i < resultSize; i++) {
@@ -104,12 +104,12 @@ int main(int argc, char **argv)
     // for (int i = 0; i < xSize; i++) {
     //     tensorInXData[i] = std::complex<float>(i * 2, i * 2 + 1);
     // }
-    // int64_t coeffSize = batch * (nSingal - nRs) * nRs;
+    // int64_t coeffSize = batch * (nSignal - nRs) * nRs;
     // std::vector<std::complex<float>> coeffData(xSize, std::complex<float>(0, 0));
     // for (int i = 0; i < coeffSize; i++) {
     //     coeffData[i] = std::complex<float>(1, 1);
     // }
-    // int64_t resultSize = batch * (nSingal - nRs) * totalSubcarrier;
+    // int64_t resultSize = batch * (nSignal - nRs) * totalSubcarrier;
     // std::vector<std::complex<float>> resultData(xSize, std::complex<float>(0, 0));
     // for (int i = 0; i < resultSize; i++) {
     //     resultData[i] = std::complex<float>(2, 2);
@@ -135,8 +135,8 @@ int main(int argc, char **argv)
     void *inputYDeviceAddr = nullptr;
     void *resultDeviceAddr = nullptr;
     CreateAclTensor(tensorInXData, {batch, nRs, totalSubcarrier}, &inputXDeviceAddr, aclDataType::ACL_COMPLEX64, &inputX);
-    CreateAclTensor(coeffData, {batch, nSingal-nRs, nRs}, &inputYDeviceAddr, aclDataType::ACL_COMPLEX64, &inputCoeff);
-    CreateAclTensor(resultData, {batch, nSingal-nRs, totalSubcarrier}, &resultDeviceAddr, aclDataType::ACL_COMPLEX64, &result);
+    CreateAclTensor(coeffData, {batch, nSignal-nRs, nRs}, &inputYDeviceAddr, aclDataType::ACL_COMPLEX64, &inputCoeff);
+    CreateAclTensor(resultData, {batch, nSignal-nRs, totalSubcarrier}, &resultDeviceAddr, aclDataType::ACL_COMPLEX64, &result);
 
     size_t lwork = 0;
     void *buffer = nullptr;
@@ -154,7 +154,7 @@ int main(int argc, char **argv)
         ACL_MEMCPY_DEVICE_TO_HOST);
 
     std::cout << "------- result -------" << std::endl;
-    for (int64_t i = 0; i < nSingal - nRs; i++) {
+    for (int64_t i = 0; i < nSignal - nRs; i++) {
         for (int64_t j = 0; j < totalSubcarrier * 2; j++) {
             std::cout << resultData[i * totalSubcarrier * 2 + j] << " ";
         }

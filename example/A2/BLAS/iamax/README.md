@@ -13,7 +13,7 @@
     - Isamax 计算公式：
         $$\text{result} = \mathop{\mathrm{argmax}}_{i=1}^{n} |x_i|$$
     - Icamax 计算公式：
-        $$\text{result} = \mathop{\mathrm{argmax}}_{i=1}^{n} ({|\text{Re}(x_i)| + |\text{Im}(x_i)|})
+        $$\text{result} = \mathop{\mathrm{argmax}}_{i=1}^{n} ({|\text{Re}(x_i)| + |\text{Im}(x_i)|})$$
 
 ## 使用说明
 

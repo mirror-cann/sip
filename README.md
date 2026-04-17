@@ -88,6 +88,14 @@ source /usr/local/Ascend/cann/set_env.sh
 # source ${install_path}/cann/set_env.sh
 ```
 
+#### 3.1.4  基础工具版本要求与安装
+
+安装CANN之后，您可安装一些工具方便后续开发，参见以下内容：
+
+* [CANN依赖列表](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/850alpha001/softwareinst/instg/instg_0045.html?Mode=PmIns&InstallType=local&OS=Debian&Software=cannToolKit)
+* [CANN安装后操作](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/850alpha001/softwareinst/instg/instg_0094.html?Mode=PmIns&InstallType=local&OS=Debian&Software=cannToolKit)
+
+
 ## <a id="learn"></a>4.  快速上手
 
 ### 4.1  SiP编译

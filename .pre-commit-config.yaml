@@ -8,7 +8,7 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ---------------------------------------------------------------------------------------------------------
 repos:
-  - repo: https://github.com/pre-commit/mirrors-clang-format
+  - repo: https://gitcode.com/pre-commit-clang/mirrors-clang-format
     rev: v16.0.0
     hooks:
       - id: clang-format

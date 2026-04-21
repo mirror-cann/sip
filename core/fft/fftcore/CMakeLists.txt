@@ -27,6 +27,7 @@ add_library(fft_core STATIC
 
     dft_c2r_core.cpp
     fft_c2r_core.cpp
+    fft_c2r_arch35.cpp
 
     dft_r2c_core.cpp
     fft_r2c_core.cpp

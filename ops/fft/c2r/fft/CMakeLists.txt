@@ -13,7 +13,13 @@ set(fft_c2r_src
     ${CMAKE_CURRENT_LIST_DIR}/fft/fft_c2r_kernel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/fft/tiling/fft_c2r_tiling.cpp
 )
- 
+
+set(CATLASS_INCLUDES
+    ${OPS_THIRD_PARTY_DIR}/catlass/include
+    $ENV{ASCEND_HOME_PATH}/include
+    ${PROJECT_SOURCE_DIR}/ops/include/template
+)
+
 add_operation(FftC2ROperation "${fft_c2r_src}")
 
 
@@ -52,3 +58,16 @@ add_kernel(fft_c2r_2_even ascend910b mix
 add_kernel(fft_c2r_3_even ascend910b mix
     fft/kernel/fft_c2r_3_even.cce
     FftC2REven3C64Kernel)
+
+# Ascend 950 (arch35) kernels using Catlass
+# add_kernel(fft_c2r ascend950 vector
+#     fft/kernel/arch35/fft_c2r.cpp
+#     FftC2RC64Kernel
+#     INCLUDE_DIRECTORIES ${CATLASS_INCLUDES})
+
+# Ascend 950 (arch35) kernels using Catlass
+add_kernel(fft_c2r_multi_core ascend950 vector
+    fft/kernel/arch35/fft_c2r_multi_core.cpp
+    FftC2RC64Kernel
+    INCLUDE_DIRECTORIES ${CATLASS_INCLUDES})
+

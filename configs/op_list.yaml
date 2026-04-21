@@ -118,6 +118,8 @@ FftC2ROperation:
         ascend910b: true
     FftC2REven3C64Kernel:
         ascend910b: true
+    FftC2RC64Kernel:
+        ascend950: true
 
 DftOperation:
     DftC64Kernel:

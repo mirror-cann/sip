@@ -11,7 +11,11 @@
 #ifndef ASDOPS_FFT_ALL_MIX_TILING_DATA
 #define ASDOPS_FFT_ALL_MIX_TILING_DATA
 
+#include <cstdint>
+
 namespace AsdSip {
+constexpr int32_t MAX_FFT_STAGES_TILING = 32;
+
 struct FftAllMixTilingData {
     int64_t batchSize;
     int64_t fftN;
@@ -19,6 +23,13 @@ struct FftAllMixTilingData {
     // for now, c2r is only inverse and inverse = 1, r2c is only forward and inverse = 0
     int32_t isInverse;
     int64_t workspaceOffsets[5];
+    
+    // Precomputed plan data (moved from device to host to avoid VLOOP nesting)
+    int32_t radix_arr[MAX_FFT_STAGES_TILING];
+    int64_t M_arr[MAX_FFT_STAGES_TILING];
+    int64_t dft_offset_arr[MAX_FFT_STAGES_TILING];
+    int64_t tw_offset_arr[MAX_FFT_STAGES_TILING];
+    int64_t currentBatch_arr[MAX_FFT_STAGES_TILING];
 };
 }
 

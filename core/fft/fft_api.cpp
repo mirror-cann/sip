@@ -28,6 +28,9 @@
 #include "fftcore/ddd_core_sep.h"
 #include "fftcore/fft_core_b_sep.h"
 
+// arch35 fft cores
+#include "fftcore/fft_c2r_arch35_core.h"
+
 #include "fftplan/fft_plan_cache.h"
 #include "fftcore/select_core.h"
 #include "utils/include/utils/fft_common_func.h"
@@ -186,7 +189,9 @@ void getC2RCore(std::optional<FFTCoreType> &coreTypeOpt, int radix, unsigned nDo
         if (nDoing <= K_N_FFT_1024) {
             coreTypeOpt = FFTCoreType::kDftC2R;
         } else {
-            return;
+            if (radix == K_RADIX_MIX) { // currently supports radix=2,3,5,7
+                coreTypeOpt = FFTCoreType::kFftC2RArch35;
+            }
         }
     }
     return;
@@ -280,6 +285,10 @@ std::unique_ptr<FftOperation> InitFftOpPtr(std::optional<FFTCoreType> coreTypeOp
             // radixMix for c2r
             case FFTCoreType::kFftC2R:
                 unique.reset(new FftC2RCore(nDone, nDoing, nLeft, batch, fftType, forward));
+                break;
+            // radixMix for c2r arch35
+            case FFTCoreType::kFftC2RArch35:
+                unique.reset(new FftC2RCoreArch35(nDone, nDoing, nLeft, batch, fftType, forward));
                 break;
 
             // radixMix for r2c

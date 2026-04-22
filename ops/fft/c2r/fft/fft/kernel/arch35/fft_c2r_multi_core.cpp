@@ -198,7 +198,7 @@ __simt_vf__ LAUNCH_BOUND(VF_MAX_THREAD_NUM) __aicore__ void FftC2RTransposeStage
 }
 
 // ============================================================================
-// Phase 3: Take real part and normalize
+// Phase 3: Take real part (hfft semantics, NO normalization)
 // ============================================================================
 __simt_vf__ LAUNCH_BOUND(VF_MAX_THREAD_NUM) __aicore__ void FftC2RRealNormalize(
     __gm__ float * __restrict__ gm_workspace,
@@ -208,7 +208,6 @@ __simt_vf__ LAUNCH_BOUND(VF_MAX_THREAD_NUM) __aicore__ void FftC2RRealNormalize(
     int64_t wsOffset)
 {
     int64_t totalElements = batchSize * fftN;
-    float invN = 1.0f / static_cast<float>(fftN);
 
     // Multi-core: use block-local thread ID
     int64_t tid = static_cast<int64_t>(Simt::GetThreadIdx<0>());
@@ -218,7 +217,7 @@ __simt_vf__ LAUNCH_BOUND(VF_MAX_THREAD_NUM) __aicore__ void FftC2RRealNormalize(
 
     for (int64_t idx = tid; idx < totalElements; idx += stride) {
         float re = gm_workspace[wsFloatOffset + idx * 2];
-        gm_output[idx] = re * invN;
+        gm_output[idx] = re;  // hfft: no normalization by N
     }
 }
 

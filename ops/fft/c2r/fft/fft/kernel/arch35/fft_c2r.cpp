@@ -316,7 +316,7 @@ __simt_vf__ LAUNCH_BOUND(VF_MAX_THREAD_NUM) __aicore__ void FftC2RTransposeStage
 // ============================================================================
 /**
  * Take real part of C2C IFFT result and normalize by fftN.
- * Input:  workspace [batch, fftN] complex64 (float interleaved)
+ * Take real part of C2C FFT result (hfft semantics, NO normalization).
  * Output: gm_output [batch, fftN] float
  */
 __simt_vf__ LAUNCH_BOUND(VF_MAX_THREAD_NUM) __aicore__ void FftC2RRealNormalize(
@@ -327,7 +327,6 @@ __simt_vf__ LAUNCH_BOUND(VF_MAX_THREAD_NUM) __aicore__ void FftC2RRealNormalize(
     int64_t wsOffset)
 {
     int64_t totalElements = batchSize * fftN;
-    float invN = 1.0f / static_cast<float>(fftN);
 
     int64_t tid = static_cast<int64_t>(Simt::GetThreadIdx<0>()) +
                   static_cast<int64_t>(Simt::GetBlockIdx()) * static_cast<int64_t>(Simt::GetThreadNum<0>());
@@ -338,7 +337,7 @@ __simt_vf__ LAUNCH_BOUND(VF_MAX_THREAD_NUM) __aicore__ void FftC2RRealNormalize(
 
     for (int64_t idx = tid; idx < totalElements; idx += stride) {
         float re = gm_workspace[wsFloatOffset + idx * 2];
-        gm_output[idx] = re * invN;
+        gm_output[idx] = re;  // hfft: no normalization by N
     }
 }
 
@@ -445,7 +444,6 @@ __aicore__ inline void FftC2RKernel::Process()
     //     2. Twiddle factor: X_out[u, n2] *= TW[u, n2]  (skip for last stage)
     int64_t tempBatch = batchSize_;
     for (int32_t step = 0; step < radixListLen_; step++) {
-    // for (int32_t step = 0; step < 1; step++) {
         __gm__ float * __restrict__ inputBuf;
         __gm__ float * __restrict__ outputBuf;
         if (step % 2 == 0) {

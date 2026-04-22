@@ -316,7 +316,7 @@ static Status CopyDeviceTensorToHostTensor(Tensor &tensor)
 }
 
 // 辅助函数：根据dtype返回元素大小（字节）
-size_t GetElementSize(TensorDType dtype) {
+inline size_t GetElementSize(TensorDType dtype) {
     switch (dtype) {
         case TENSOR_DTYPE_FLOAT: return 4;
         case TENSOR_DTYPE_FLOAT16: return 2;
@@ -331,7 +331,7 @@ size_t GetElementSize(TensorDType dtype) {
 }
 
 // 辅助函数：根据dtype返回元素类型字符串
-std::string GetElementDtype(TensorDType dtype) {
+inline std::string GetElementDtype(TensorDType dtype) {
     switch (dtype) {
         case TENSOR_DTYPE_FLOAT: return "float";
         case TENSOR_DTYPE_FLOAT16: return "half";
@@ -345,7 +345,7 @@ std::string GetElementDtype(TensorDType dtype) {
     }
 }
 
-bool SaveTensorToBin(const Tensor& tensor, const std::string& filename) {
+inline bool SaveTensorToBin(const Tensor& tensor, const std::string& filename) {
     std::ofstream file(filename, std::ios::binary);
     if (!file.is_open()) return false;
 
@@ -374,7 +374,7 @@ bool SaveTensorToBin(const Tensor& tensor, const std::string& filename) {
     return !file.fail();
 }
 
-bool SaveOutTensorToBin(const Tensor& tensor, const std::string& filename) {
+inline bool SaveOutTensorToBin(const Tensor& tensor, const std::string& filename) {
     std::ofstream file(filename, std::ios::binary);
     if (!file.is_open()) return false;
 

@@ -15,6 +15,7 @@ include_directories(${CMAKE_CURRENT_LIST_DIR} $ENV{CODE_ROOT}/3rdparty/googletes
     $ENV{ASCEND_HOME_PATH}/include
     $ENV{ASCEND_HOME_PATH}/include/aclnn
     ${PROJECT_SOURCE_DIR}/ops/include
+    ${PROJECT_SOURCE_DIR}/include
 )
 
 link_libraries(asdsip_test_util asdsip_host gtest)
@@ -24,6 +25,9 @@ add_library(test_src OBJECT ${TEST_SRC})
 
 aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/base/conj TEST_SRC_CONJ)
 add_library(test_src_conj OBJECT ${TEST_SRC_CONJ})
+
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/fft/1d/c2r TEST_SRC_FFT_C2R)
+add_library(test_src_fft_c2r OBJECT ${TEST_SRC_FFT_C2R})
 
 # aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/base/asd_mul TEST_SRC_ASD_MUL)
 # add_library(test_src_asd_mul OBJECT ${TEST_SRC_ASD_MUL})
@@ -158,6 +162,7 @@ add_executable(ops_unittest
     # $<TARGET_OBJECTS:test_src_swaplast2axes>
     # $<TARGET_OBJECTS:test_src_function>
     $<TARGET_OBJECTS:test_src_conj>
+    $<TARGET_OBJECTS:test_src_fft_c2r>
     # $<TARGET_OBJECTS:test_src_concat>
     # $<TARGET_OBJECTS:test_src_matmul>
     # $<TARGET_OBJECTS:test_src_reverse>

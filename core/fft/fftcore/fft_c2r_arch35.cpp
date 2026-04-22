@@ -122,7 +122,7 @@ void FftC2RCoreArch35::InitRadix()
 // BuildFftPlan - Construct W_R and T matrices for each stage.
 //
 // Strictly matches fft_c2r_test.py build_fft_plan:
-//   sign = 1.0 if is_forward else -1.0
+//   sign = -1.0 if is_forward else 1.0
 //   while temp_N > 1:
 //       radix = first of [2,3,5,7] that divides temp_N
 //       M = temp_N // radix
@@ -143,12 +143,11 @@ AspbStatus FftC2RCoreArch35::BuildFftPlan()
         return AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR;
     }
 
-    // sign convention (MUST match fft_c2r_test.py):
-    // forward=true  → sign=+1.0 → exp(+jθ)
-    // forward=false → sign=-1.0 → exp(-jθ)
-    // Note: This is OPPOSITE to standard FFT definition,
-    // but consistent with dft_c2r_core.cpp and fft_c2r_test.py
-    double sign = problemDesc.forward ? (1.0) : (-1.0);
+    // sign convention for hfft (Hermitian FFT):
+    // forward=true  → sign=-1.0 → exp(-jθ)  [hfft uses forward FFT sign]
+    // forward=false → sign=+1.0 → exp(+jθ)
+    // This matches numpy.fft.hfft semantics
+    double sign = problemDesc.forward ? (-1.0) : (1.0);
 
     // ---- 1. Build radixListTensor: int32 [planLen] ----
     size_t planLen = plan.size();

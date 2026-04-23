@@ -11,7 +11,6 @@
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：\
@@ -81,10 +80,12 @@ AspbStatus asdBlasCsrot(
       <td>输入</td>
       <td>算子的句柄。</td>
     </tr>
+    </tbody>
     </table>
 - **返回值**：
 
   返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
+
 ## asdBlasCsrot
 
 - **参数说明：**
@@ -125,7 +126,7 @@ AspbStatus asdBlasCsrot(
     <tr>
       <td>y（aclTensor *）</td>
       <td>输入/输出</td>
-      <td><ul><li>对应公式中的'y'。</li>数据类型支持COMPLEX64。</li><li>asdBlasCcopy的数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
+      <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
       <li>shape为[n]</li></ul></td>
     </tr>
     <tr>
@@ -143,11 +144,11 @@ AspbStatus asdBlasCsrot(
       <td>输入</td>
       <td>旋转矩阵的正弦值指针。</td>
     </tr>
+    </tbody>
     </table>
 - **返回值**：
 
   返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
-
 
 ## 约束说明
 
@@ -158,6 +159,7 @@ AspbStatus asdBlasCsrot(
 ## 调用示例
 
 示例代码如下，该样例旨在提供快速上手、开发和调试算子的最小化实现，其核心目标是使用最精简的代码展示算子的核心功能，而非提供生产级的安全保障。不推荐用户直接将示例代码作为业务代码，若用户将示例代码应用在自身的真实业务场景中且发生了安全问题，则需用户自行承担。
+
 - **asdBlasCsrot**
 
 ```Cpp

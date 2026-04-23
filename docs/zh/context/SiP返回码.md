@@ -112,7 +112,7 @@
 
 - **日志保存**：
 日志文件保存在“[LOG_PATH]/log/asdsip”下。
-   <ul><li>[LOG_PATH]由环境变量ASCEND_PROCESS_LOG_PATH控制，默认为"~/ascend"；</li><li>数日志文件的命名格式为asdsip_[PID]_[年][月][日][时][分][秒].log。[PID]为线程号。例如：asdsip_253440_20231102065052.log。</li></ul>
+   <ul><li>[LOG_PATH]由环境变量ASCEND_PROCESS_LOG_PATH控制，默认为"~/ascend"；</li><li>日志文件的命名格式为asdsip_[PID]_[年][月][日][时][分][秒].log。[PID]为线程号。例如：asdsip_253440_20231102065052.log。</li></ul>
 - **空间管理**：
    <ul><li>每个日志文件大小最大为20MB，最多存50个文件。如当前保存目录下的日志文件（以标准命名格式存储的日志文件）达到最高存储数量，将根据时间戳，删除最早时间的日志文件。</li><li>在生成日志文件前，将会对日志保存目录的空间大小进行判断，如果空间不足1GB，将不会继续生成日志文件。</li></ul>
 # DumpTensor能力

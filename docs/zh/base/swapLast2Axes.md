@@ -20,7 +20,7 @@ swapLast2Axes：交换Tensor的最后两维。
 - 计算公式：
 
   $$
-  outTensor_{bij} = inTensor_{bij}\\
+  outTensor_{bij} = inTensor_{bji}\\
   $$
   其中：b为数据的批次号，i为输入数据的行号， j为输入数据的列号。
 示例：
@@ -59,6 +59,7 @@ AsdSip::AspbStatus swapLast2Axes(
   void *               stream,
   void *               workspace = nullptr)
 ```
+
 - **返回值**：
 
   返回状态码，具体参见[aclnn返回码](/docs/zh/context/SiP返回码.md)。
@@ -116,10 +117,10 @@ AsdSip::AspbStatus swapLast2Axes(
     <tr>
       <td>outTensor（aclTensor *）</td>
       <td>输出</td>
-      <td><ul><li>表示输出的张量数据，对应公式中的'outTensor'。</li><li>数据类型仅支持COMPLEX64，数据类型需要与inTensor的数据类型一致。</li><li>如果inTensor的shape为[k，x，y]，outTensor的shape为[k，y，x]。<li>数据格式支持ND。</li></li></ul></td>
+      <td><ul><li>表示输出的张量数据，对应公式中的'outTensor'。</li><li>数据类型仅支持COMPLEX64，数据类型需要与inTensor的数据类型一致。</li><li>如果inTensor的shape为[k，x，y]，outTensor的shape为[k，y，x]。</li><li>数据格式支持ND。</li></ul></td>
     </tr>
     <tr>
-      <td>workspaceSize（void *）</td>
+      <td>workspace（void *）</td>
       <td>输入</td>
       <td>swapLast2Axes算子所需要的workspace。</td>
     </tr>

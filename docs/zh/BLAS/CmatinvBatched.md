@@ -11,7 +11,6 @@
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：\
@@ -33,7 +32,7 @@ asdBlasCmatinvBatched：对复数矩阵进行求逆。
 1-i, 1-i, 1-i, 3-3i]\
 输入“n”为： 4\
 输入“batchSize”为：2\
-调用“asdBlasHCmatinvBatched”算子后，\
+调用“asdBlasCmatinvBatched”算子后，\
 输出“Ainv”为：\
 [0.4+0.4i, -0.1-0.1i,-0.1-0.1i ,-0.1-0.1i\
 -0.1-0.1i ,0.4+0.4i ,-0.1-0.1i ,-0.1-0.1i\
@@ -53,6 +52,7 @@ AspbStatus asdBlasMakeCmatinvBatchedPlan(
   const int64_t            n,
    const int64_t           batchSize)
 ```
+
 ```Cpp
 AspbStatus asdBlasCmatinvBatched(
   asdBlasHandle            handle, 
@@ -87,11 +87,6 @@ AspbStatus asdBlasCmatinvBatched(
       <td>算子的句柄</td>
     </tr>
     <tr>
-      <td>trans（asdBlasOperation_t）</td>
-      <td>输入</td>
-      <td>指定矩阵A是否需要转置。<ul><li>ASDBLAS_OP_N：不转置</li><li>ASDBLAS_OP_T：转置</li><li>ASDBLAS_OP_C：共轭转置</li></ul></td>
-    </tr>
-    <tr>
       <td>n（int64_t）</td>
       <td>输入</td>
       <td>单批次矩阵A的行数。</td>
@@ -101,6 +96,7 @@ AspbStatus asdBlasCmatinvBatched(
       <td>输入</td>
       <td>复数矩阵求逆中的矩阵数量。</td>
     </tr>
+    </tbody>
     </table>
 
 - **返回值**：
@@ -175,10 +171,10 @@ AspbStatus asdBlasCmatinvBatched(
 - 输入参数n小于等于256。
 - 输入参数batchSize小于等于3000。
 
-
 ## 调用示例
 
 示例代码如下，该样例旨在提供快速上手、开发和调试算子的最小化实现，其核心目标是使用最精简的代码展示算子的核心功能，而非提供生产级的安全保障。不推荐用户直接将示例代码作为业务代码，若用户将示例代码应用在自身的真实业务场景中且发生了安全问题，则需用户自行承担。
+
 ```Cpp
 #include <iostream>
 #include <vector>
@@ -386,4 +382,3 @@ int main(int argc, char **argv)
     return 0;
 }
 ```
-

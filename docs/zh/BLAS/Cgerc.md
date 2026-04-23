@@ -103,11 +103,7 @@ AspbStatus asdBlasCgerc(
       <td>输入</td>
       <td>算子的句柄</td>
     </tr>
-    <tr>
-      <td>x（int64_t）</td>
-      <td>输入</td>
-      <td><ul><li>输入向量，对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m]。</li></ul></td>
-    </tr>
+    
     <tr>
       <td>m（int64_t）</td>
       <td>输入</td>
@@ -119,15 +115,26 @@ AspbStatus asdBlasCgerc(
       <td>表示y向量中复数元素的个数，矩阵A的列数。</td>
     </tr>
     <tr>
-      <td>y（aclTensor*）</td>
+      <td>alpha（std::complex&ltfloat&gt *）</td>
       <td>输入</td>
-      <td><ul><li>输入向量，对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
+      <td><ul><li>公式中的alpha，输入的复数标量。</li><li>数据类型支持COMPLEX64。</li></ul></td>
+    </tr>
+    <tr>
+      <td>x（aclTensor*）</td>
+      <td>输入</td>
+      <td><ul><li>输入向量，对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m]。</li></ul></td>
     </tr>
     <tr>
       <td>incx（int64_t）</td>
       <td>输入</td>
       <td>向量x相邻元素间的内存地址偏移量（当前约束为1）。</td>
     </tr>
+    <tr>
+      <td>y（aclTensor*）</td>
+      <td>输入</td>
+      <td><ul><li>输入向量，对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
+    </tr>
+    
     <tr>
       <td>incy（int64_t）</td>
       <td>输入</td>
@@ -136,18 +143,14 @@ AspbStatus asdBlasCgerc(
     <tr>
       <td>A（aclTensor *）</td>
       <td>输入</td>
-      <td><ul><li>输入向量，对应公式中的'A'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m，n]。</li></ul></td>
+      <td><ul><li>对应公式中的'A'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m，n]。</li></ul></td>
     </tr>
     <tr>
       <td>lda（int64_t）</td>
       <td>输入</td>
       <td>表示矩阵A的第一个维度大小（当前约束为m）。</td>
     </tr>
-    <tr>
-      <td>alpha（std::complex&ltfloat> *）</td>
-      <td>输入</td>
-      <td><ul><li>公式中的alpha，输入的复数标量。</li><li>数据类型支持COMPLEX64。</li></ul></td>
-    </tr>
+    
     </table>
 - **返回值**：
 

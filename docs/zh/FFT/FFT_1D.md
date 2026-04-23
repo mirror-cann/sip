@@ -225,7 +225,7 @@ AspbStatus asdFftExecC2CSeparated(
     <tr>
       <td>outData（aclTensor *）</td>
       <td>输出</td>
-      <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPELX64。</li><li>数据格式支持ND。</li>
+      <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
       <li>对横向FFT，输入的shape为（batchSize ，fftSize / 2 + 1）。</li><li>对纵向FFT，输入的shape为（fftSize / 2 + 1，batchSize）。</li></ul></td>
     </tr>
     </table>

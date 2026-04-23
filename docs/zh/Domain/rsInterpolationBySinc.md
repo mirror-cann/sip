@@ -11,7 +11,6 @@
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     ×  |
 
-
 ## 功能说明
 
 - 接口功能：\
@@ -33,7 +32,7 @@ rsInterpolationBySinc：实现带batch的一维复数向量插值计算，返回
   [ 0 , 1 ] \
 转为输入“posToTabIndex”为：round((Pos -posFloor) *quant_num)\
   [ 0 , 1 ] \
-其中，tab大小为2 * 3。由于pos[0] = 0.2，取inputTensor[0]及后面一个元素inputTensor[1]共2个元素，与sincTab[posToTabIndex[0]]进行向量点乘，得到outputTensor[0]，依次计算后续元素。\
+其中，tab大小为2*3。由于pos[0] = 0.2，取inputTensor[0]及后面一个元素inputTensor[1]共2个元素，与sincTab[posToTabIndex[0]]进行向量点乘，得到outputTensor[0]，依次计算后续元素。\
   pos[0] = 0.3 → outputTensor[0] = [1 + i , 2 + i] · [ 1 , 0 ] = 1 + i \
   pos[1] = 1.6 → outputTensor[1] = [2 + i , 2 + i] · [ 0.5 , 0.5 ] = 2 + i\
 调用“rsInterpolationBySinc”算子后，输出“outputTensor”为：\
@@ -42,6 +41,7 @@ rsInterpolationBySinc：实现带batch的一维复数向量插值计算，返回
 ## 函数原型
 
 若需使用“rsInterpolationBySinc”算子，需先调用“rsInterpolationBySincGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“rsInterpolationBySinc”接口执行计算。
+
 ```Cpp
 AspbStatus rsInterpolationBySincGetWorkspaceSize(
   const aclTensor *          inputTensor, 
@@ -54,6 +54,7 @@ AspbStatus rsInterpolationBySincGetWorkspaceSize(
   int                        length,
   size_t *                   workspaceSize)
 ```
+
 ```Cpp
 AspbStatus rsInterpolationBySinc(
   const aclTensor *          inputTensor, 
@@ -126,11 +127,13 @@ AspbStatus rsInterpolationBySinc(
       <td>插值长度。</td>
     </tr>
     <tr>
-      <td>workspaceSize（void *）</td>
+      <td>workspaceSize（size_t *）</td>
       <td>输出</td>
       <td>workspace的地址。</td>
     </tr>
+    </tbody>
     </table>
+  
 - **返回值**：
 
   返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
@@ -197,31 +200,35 @@ AspbStatus rsInterpolationBySinc(
       <td>npu执行流。</td>
     </tr>
     <tr>
-      <td>workspaceSize（size_t *）</td>
+      <td>workspaceSize（void *）</td>
       <td>输入</td>
       <td>workspace的地址。</td>
     </tr>
+    </tbody>
     </table>
 - **返回值**：
 
   返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
   
-
 ## 约束说明
+
 rsInterpolationBySinc：
+
 - 输入的元素个数理论支持[1，3.93e+09]。
 - 算子实际计算时，不支持ND高维度运算（不支持维度≥3的运算）。
 - interpNum只支持偶数，通常使用 [8 ，12 ，16] ，当前版本最大支持16。
 - quantNum为2的幂，最大32。
-- inputTensor、posFloor、posToTabIndex第0维是相同的batch数，outTensors长度和posFloor、posToTabIndex一致。
-- sincTab：为了将复数点乘转化为实数点乘以及更亲和NPU和需要进行预处理，需要扩充成[ ((quantNum + 1) * 2) * (interpNum * 2 + 8) * 4] ，具体算法参考“调用示例”中的预处理内容。
+- inputTensor、posFloor、posToTabIndex第0维是相同的batch数，outputTensors长度和posFloor、posToTabIndex一致。
+- sincTab：为了将复数点乘转化为实数点乘以及更亲和NPU和需要进行预处理，需要扩充成[((quantNum + 1)*2) * (interpNum*2 + 8) * 4] ，具体算法参考“调用示例”中的预处理内容。
 
 ## 调用示例
 
 示例代码如下，该样例旨在提供快速上手、开发和调试算子的最小化实现，其核心目标是使用最精简的代码展示算子的核心功能，而非提供生产级的安全保障。不推荐用户直接将示例代码作为业务代码，若用户将示例代码应用在自身的真实业务场景中且发生了安全问题，则需用户自行承担。
-- rsInterpolationBySinc算子调用说明：\
-  - 调用示例中会进行incTab预处理：\
-系数矩阵要和复数点乘，在NPU上会转换为系数矩阵和两组float32相乘，所以需要将系数转为下面格式，此时虚数矩阵会被扩充成 ((quantNum + 1) * 2) * (interpNum * 2)。\
+
+- rsInterpolationBySinc算子调用说明：
+  - 调用示例中会进行sincTab预处理：\
+系数矩阵要和复数点乘，在NPU上会转换为系数矩阵和两组float32相乘，所以需要将系数转为下面格式，此时虚数矩阵会被扩充成 ((quantNum + 1)*2) * (interpNum*2)。\
+
     [系数1,0]\
     [ 0,系数1]\
   - 为了亲和NPU（32字节对齐），需要有四种格式矩阵，每行开头不补0，补2个0，补4个0及补6个0，其中“genTab”函数用于生成如下类似系数矩阵：
@@ -229,7 +236,9 @@ rsInterpolationBySinc：
 0,0,w0,0,w1,0,w2,0,w3,0,w4,0,w5,0,w6,0,w7,0,w8,0,w9,0,w10,0,w11,0,w12,0,w13,0,w14,0,w15,0,0,0,0,0,0\
 0,0,0,0,w0,0,w1,0,w2,0,w3,0,w4,0,w5,0,w6,0,w7,0,w8,0,w9,0,w10,0,w11,0,w12,0,w13,0,w14,0,w15,0,0,0,0\
 0,0,0,0,0,0,w0,0,w1,0,w2,0,w3,0,w4,0,w5,0,w6,0,w7,0,w8,0,w9,0,w10,0,w11,0,w12,0,w13,0,w14,0,w15,0,0
+
 - rsInterpolationBySinc算子调用示例：
+
 ```Cpp
 #include <iostream>
 #include <vector>

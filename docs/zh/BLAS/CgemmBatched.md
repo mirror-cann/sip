@@ -11,7 +11,6 @@
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：\
@@ -35,7 +34,7 @@ asdBlasCgemmBatched：用于计算两批复数矩阵的乘积。
 输入“m”为：2，输入“n”为： 2，输入“k”为：2，输入“alpha”为：1+i，“beta”为：2+2i。\
 输入“lda”为： 2，输入“ldb”为：2，输入“ldc”为：2。\
 输入“batchCount”为：1。\
-调用“asdBlasHCgemmBatched”算子后，输出“C”为：\
+调用“asdBlasCgemmBatched”算子后，输出“C”为：\
 [   [ -15+19i, -27+19i ],
     [ -37+21i, -57+13i ]  ]
  
@@ -64,7 +63,7 @@ AspbStatus asdBlasCgemmBatched(
   const int64_t                     batchCount)
 ```
 
-## asdBlasMakeHCgemmBatchedPlan
+## asdBlasMakeCgemmBatchedPlan
 
 - **参数说明：**
 
@@ -174,7 +173,7 @@ AspbStatus asdBlasCgemmBatched(
     <tr>
       <td>beta（std::complex<float> &）</td>
       <td>输入</td>
-      <td>对应公式中的beta，复数标量，用于乘以矩阵C。取值必须为 0+0j。。</td>
+      <td>对应公式中的beta，复数标量，用于乘以矩阵C。取值必须为 0+0j。</td>
     </tr>
     <tr>
       <td>batchCount（int64_t）</td>
@@ -187,14 +186,15 @@ AspbStatus asdBlasCgemmBatched(
 
   返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
-
 ## 约束说明
+
 - 算子实际计算时，只支持3维ND运算。
-- 算子输入数据为行主序，输入shape为[batchCount, m，k,]、[batchCount, k，n]、[batchCount, m，n]，输出shape为[batchCount, m，n]。
+- 算子输入数据为行主序，输入shape为[batchCount, m，k]、[batchCount, k，n]、[batchCount, m，n]，输出shape为[batchCount, m，n]。
 
 ## 调用示例
 
 示例代码如下，该样例旨在提供快速上手、开发和调试算子的最小化实现，其核心目标是使用最精简的代码展示算子的核心功能，而非提供生产级的安全保障。不推荐用户直接将示例代码作为业务代码，若用户将示例代码应用在自身的真实业务场景中且发生了安全问题，则需用户自行承担。
+
 ```Cpp
 #include <iostream>
 #include <vector>

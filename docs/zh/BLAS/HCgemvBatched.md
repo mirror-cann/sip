@@ -59,7 +59,7 @@ AspbStatus asdBlasHCgemvBatched(
   const int64_t                    incx, 
   const std::complex<op::fp16_t> & beta, 
   aclTensor *                      y, 
-  const int64_t                    incy
+  const int64_t                    incy,
   const int64_t                    batchCount)
 ```
 

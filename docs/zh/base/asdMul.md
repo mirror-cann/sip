@@ -84,15 +84,16 @@ AspbStatus asdMul(
       <td><ul><li>表示输出的矩阵，对应公式中的'result'。</li><li>数据类型支持COMPLEX32、COMPLEX64</li><li>数据格式支持ND。</li>
       <li>shape为[n]</li></ul></td>
     </tr>
-    <tr>
-      <td>workspaceSize（void *）</td>
-      <td>输入</td>
-      <td>asdMul算子所需要的workspace。</td>
-    </tr>
+    
     <tr>
       <td>stream（void *）</td>
       <td>输入</td>
       <td>npu执行流。</td>
+    </tr>
+    <tr>
+      <td>workspace（void *）</td>
+      <td>输入</td>
+      <td>asdMul算子所需要的workspace。</td>
     </tr>
   </tbody>
   </table>
@@ -104,7 +105,6 @@ AspbStatus asdMul(
 ## 约束说明
 
   - 输入的元素个数n理论支持[1，9.22e+18]。
-  - 算子输入shape为[n]，[n]，输出shape为[n]。
 
 ## 调用示例
 

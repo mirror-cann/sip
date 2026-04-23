@@ -11,7 +11,6 @@
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：\
@@ -54,6 +53,7 @@ asdBlasCswap：交换两个复数向量。
 AspbStatus asdBlasMakeSwapPlan(
   asdBlasHandle handle)
 ```
+
 ```Cpp
 AspbStatus asdBlasSswap(
   asdBlasHandle        handle, 
@@ -63,6 +63,7 @@ AspbStatus asdBlasSswap(
   aclTensor *          y, 
   const int64_t        incy)
 ```
+
 ```Cpp
 AspbStatus asdBlasCswap(
   asdBlasHandle handle, 
@@ -72,6 +73,7 @@ AspbStatus asdBlasCswap(
   aclTensor *y,
   const int64_t incy)
 ```
+
 ## asdBlasMakeSwapPlan
 
 - **参数说明：**
@@ -127,21 +129,21 @@ AspbStatus asdBlasCswap(
     <tr>
       <td>x（aclTensor *）</td>
       <td>输入</td>
-      <td><ul><li>对应公式中的'x'。</li><li>asdBlasSswap支持的数据类型支持FLOAT32。</li><li> asdBlasCswap支持的数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li><ul>
+      <td><ul><li>对应公式中的'x'。</li><li>asdBlasSswap支持的数据类型支持FLOAT32。</li><li> asdBlasCswap支持的数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
     </tr>
     <tr>
       <td>incx（int64_t）</td>
-      <td>输出</td>
+      <td>输入</td>
       <td>x相邻元素间的内存地址偏移量（当前约束为1）。</td>
     </tr>
     <tr>
       <td>y（aclTensor *）</td>
       <td>输入</td>
-      <td><ul><li>对应公式中的'y'。</li><li>asdBlasSswap支持的数据类型支持FLOAT32。</li><li> asdBlasCswap支持的数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li><ul>
+      <td><ul><li>对应公式中的'y'。</li><li>asdBlasSswap支持的数据类型支持FLOAT32。</li><li> asdBlasCswap支持的数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
     </tr>
     <tr>
       <td>incy（int64_t）</td>
-      <td>输出</td>
+      <td>输入</td>
       <td>y相邻元素间的内存地址偏移量（当前约束为1）。</td>
     </tr>
     </table>

@@ -9,10 +9,12 @@
  */
 #include <mki_loader/op_register.h>
 #include <mki/utils/SVector/SVector.h>
+#include <mki/utils/platform/platform_info.h>
 #include <mki/base/operation_base.h>
 #include "utils/assert.h"
 #include "log/log.h"
 #include "fft_all_mix.h"
+#include "fft_r2c_arch35.h"
 
 namespace {
 constexpr int EVEN_THRESHOLD = 524288 / 2;
@@ -29,48 +31,70 @@ public:
 
     Kernel *GetBestKernel(const LaunchParam &launchParam) const override
     {
-        ASDSIP_CHECK(IsConsistent(launchParam), "Failed to check consistent", return nullptr);
-        const auto &param = AnyCast<OpParam::FftAllMix>(launchParam.GetParam());
+        if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
+            return GetKernelByName("FftR2CC64Kernel");
+        } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910B) {
+            ASDSIP_CHECK(IsConsistent(launchParam), "Failed to check consistent", return nullptr);
+            const auto &param = AnyCast<OpParam::FftAllMix>(launchParam.GetParam());
 
-        if (param.aiv_split_way == 1 && param.parity == 1) {
-            return GetKernelByName("FftR2COdd1C64Kernel");
-        } else if (param.aiv_split_way == 1 && param.parity == 0) {
-            return param.fftN <= EVEN_THRESHOLD ? GetKernelByName("FftR2CEven1C64Kernel") :
-                                                  GetKernelByName("FftR2C1C64Kernel");
-        } else if (param.aiv_split_way == AIVWAYC2R2C && param.parity == 1) {
-            return GetKernelByName("FftR2COdd2C64Kernel");
-        } else if (param.aiv_split_way == AIVWAYC2R2C && param.parity == 0) {
-            return param.fftN <= EVEN_THRESHOLD ? GetKernelByName("FftR2CEven2C64Kernel") :
-                                                  GetKernelByName("FftR2C2C64Kernel");
-        } else if (param.aiv_split_way == AIVWAYC2R3C && param.parity == 1) {
-            return GetKernelByName("FftR2COdd3C64Kernel");
-        } else if (param.aiv_split_way == AIVWAYC2R3C && param.parity == 0) {
-            return param.fftN <= EVEN_THRESHOLD ? GetKernelByName("FftR2CEven3C64Kernel") :
-                                                  GetKernelByName("FftR2C3C64Kernel");
+            if (param.aiv_split_way == 1 && param.parity == 1) {
+                return GetKernelByName("FftR2COdd1C64Kernel");
+            } else if (param.aiv_split_way == 1 && param.parity == 0) {
+                return param.fftN <= EVEN_THRESHOLD ? GetKernelByName("FftR2CEven1C64Kernel") :
+                                                    GetKernelByName("FftR2C1C64Kernel");
+            } else if (param.aiv_split_way == AIVWAYC2R2C && param.parity == 1) {
+                return GetKernelByName("FftR2COdd2C64Kernel");
+            } else if (param.aiv_split_way == AIVWAYC2R2C && param.parity == 0) {
+                return param.fftN <= EVEN_THRESHOLD ? GetKernelByName("FftR2CEven2C64Kernel") :
+                                                    GetKernelByName("FftR2C2C64Kernel");
+            } else if (param.aiv_split_way == AIVWAYC2R3C && param.parity == 1) {
+                return GetKernelByName("FftR2COdd3C64Kernel");
+            } else if (param.aiv_split_way == AIVWAYC2R3C && param.parity == 0) {
+                return param.fftN <= EVEN_THRESHOLD ? GetKernelByName("FftR2CEven3C64Kernel") :
+                                                    GetKernelByName("FftR2C3C64Kernel");
+            }
         }
-
         return nullptr;
     }
 
 protected:
     Status InferShapeImpl(const LaunchParam &launchParam, SVector<Tensor> &outTensors) const override
     {
-        ASDSIP_CHECK(launchParam.GetParam().Type() == typeid(OpParam::FftAllMix), "OpParam is invalid",
+        if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
+            ASDSIP_CHECK(launchParam.GetParam().Type() == typeid(OpParam::FftR2CArch35), "OpParam is invalid",
                   return Status::FailStatus(ERROR_INFERSHAPE_ERROR, "no match specificParam type."));
-        ASDSIP_CHECK(launchParam.GetInTensor(0).desc.dtype == TENSOR_DTYPE_FLOAT, "error dataDype",
-                  return Status::FailStatus(ERROR_INFERSHAPE_ERROR));
+            
+            outTensors[0].desc.dtype = TENSOR_DTYPE_COMPLEX64;
+            outTensors[0].desc.format = launchParam.GetInTensor(0).desc.format;
+            int64_t batch = launchParam.GetInTensor(0).desc.dims[0];
+            outTensors[0].desc.dims = {batch, *(launchParam.GetInTensor(0).desc.dims.end() - 1) / 2 + 1};
 
-        outTensors[0].desc.dtype = TENSOR_DTYPE_COMPLEX64;
-        outTensors[0].desc.format = launchParam.GetInTensor(0).desc.format;
-        int64_t batch = launchParam.GetInTensor(0).desc.dims[0];
-        outTensors[0].desc.dims = {batch, *(launchParam.GetInTensor(0).desc.dims.end() - 1) / 2 + 1};
+
+        } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910B) {
+            ASDSIP_CHECK(launchParam.GetParam().Type() == typeid(OpParam::FftAllMix), "OpParam is invalid",
+                  return Status::FailStatus(ERROR_INFERSHAPE_ERROR, "no match specificParam type."));
+            
+            outTensors[0].desc.dtype = TENSOR_DTYPE_COMPLEX64;
+            outTensors[0].desc.format = launchParam.GetInTensor(0).desc.format;
+            int64_t batch = launchParam.GetInTensor(0).desc.dims[0];
+            outTensors[0].desc.dims = {batch, *(launchParam.GetInTensor(0).desc.dims.end() - 1) / 2 + 1};
+        }
+
+        ASDSIP_CHECK(launchParam.GetInTensor(0).desc.dtype == TENSOR_DTYPE_FLOAT, "error dataDype",
+                    return Status::FailStatus(ERROR_INFERSHAPE_ERROR));
 
         return Status::OkStatus();
     }
 
     int64_t GetInputNum(const Any &specificParam) const override
     {
-        ASDSIP_CHECK(specificParam.Type() == typeid(OpParam::FftAllMix), "OpParam is invalid", return 0);
+        if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
+            ASDSIP_CHECK(specificParam.Type() == typeid(OpParam::FftR2CArch35), "OpParam is invalid", return 0);
+            return 5;
+        } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910B) {
+            ASDSIP_CHECK(specificParam.Type() == typeid(OpParam::FftAllMix), "OpParam is invalid", return 0);
+            return INPUT_NUM;
+        }
         return INPUT_NUM;
     }
 };

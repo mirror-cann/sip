@@ -7,6 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+#include <iostream>
 #include <algorithm>
 #include <mki/utils/platform/platform_info.h>
 #include "aclnn/acl_meta.h"
@@ -30,6 +31,7 @@
 
 // arch35 fft cores
 #include "fftcore/fft_c2r_arch35_core.h"
+#include "fftcore/fft_r2c_arch35_core.h"
 
 #include "fftplan/fft_plan_cache.h"
 #include "fftcore/select_core.h"
@@ -200,9 +202,9 @@ void getC2RCore(std::optional<FFTCoreType> &coreTypeOpt, int radix, unsigned nDo
 void getR2CCore(std::optional<FFTCoreType> &coreTypeOpt, int radix, unsigned nDoing, bool forward)
 {
     if (forward) {
-        ASDSIP_LOG(DEBUG) << "C2CCore forward.";
+        ASDSIP_LOG(DEBUG) << "R2CCore forward.";
     } else {
-        ASDSIP_LOG(DEBUG) << "C2CCore backward.";
+        ASDSIP_LOG(DEBUG) << "R2CCore backward.";
     }
     
     if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910B) {
@@ -217,7 +219,9 @@ void getR2CCore(std::optional<FFTCoreType> &coreTypeOpt, int radix, unsigned nDo
         if (nDoing <= K_N_FFT_1024) {
             coreTypeOpt = FFTCoreType::kDftR2C;
         } else {
-            return;
+            if (radix == K_RADIX_MIX) { // currently supports radix=2,3,5,7
+                coreTypeOpt = FFTCoreType::kFftR2CArch35;
+            }
         }
     }
     return;
@@ -298,6 +302,10 @@ std::unique_ptr<FftOperation> InitFftOpPtr(std::optional<FFTCoreType> coreTypeOp
             // radixMix for r2c
             case FFTCoreType::kFftR2C:
                 unique.reset(new FftR2CCore(nDone, nDoing, nLeft, batch, fftType, forward));
+                break;
+            // radixMix for r2c arch35
+            case FFTCoreType::kFftR2CArch35:
+                unique.reset(new FftR2CCoreArch35(nDone, nDoing, nLeft, batch, fftType, forward));
                 break;
 
             // radixAny for c2c c2r r2c

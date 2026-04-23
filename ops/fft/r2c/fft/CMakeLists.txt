@@ -52,3 +52,12 @@ add_kernel(fft_r2c_2_even ascend910b mix
 add_kernel(fft_r2c_3_even ascend910b mix
     fft/kernel/fft_r2c_3_even.cce
     FftR2CEven3C64Kernel)
+
+# Arch35 (Ascend 950) kernels
+# add_kernel(fft_r2c_arch35 ascend950 vector
+#     fft/kernel/arch35/fft_r2c.cpp
+#     FftR2CC64Kernel)
+
+add_kernel(fft_r2c_multi_core ascend950 vector
+    fft/kernel/arch35/fft_r2c_multi_core.cpp
+    FftR2CC64Kernel)

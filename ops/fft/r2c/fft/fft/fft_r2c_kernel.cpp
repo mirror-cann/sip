@@ -9,10 +9,12 @@
  */
 #include <mki/utils/math/tensor_utils.h>
 #include <mki/utils/math/math.h>
+#include <mki/utils/platform/platform_info.h>
 #include <mki_loader/op_register.h>
 #include "utils/assert.h"
 #include "log/log.h"
 #include "fft_all_mix.h"
+#include "fft_r2c_arch35.h"
 #include "../../../common/include/tiling/fft_all_mix_tiling_data.h"
 #include "tiling/fft_r2c_tiling.h"
 
@@ -28,10 +30,18 @@ public:
 
     bool CanSupport(const LaunchParam &launchParam) const override
     {
-        ASDSIP_CHECK(launchParam.GetParam().Type() == typeid(OpParam::FftAllMix), "FftR2C: param type invalid",
-                  return false);
-        ASDSIP_CHECK(launchParam.GetInTensorCount() == 8, "InTensor num invalid", return false);
-        ASDSIP_CHECK(launchParam.GetOutTensorCount() == 1, "OutTensor num invalid", return false);  // markhere
+        if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
+            ASDSIP_CHECK(launchParam.GetParam().Type() == typeid(OpParam::FftR2CArch35), "FftR2C: param type invalid",
+                return false);
+            ASDSIP_CHECK(launchParam.GetInTensorCount() == 5, "input num invalid", return false);
+            ASDSIP_CHECK(launchParam.GetOutTensorCount() == 1, "output num invalid", return false);
+        } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910B) {
+            ASDSIP_CHECK(launchParam.GetParam().Type() == typeid(OpParam::FftAllMix), "FftR2C: param type invalid",
+                return false);
+            ASDSIP_CHECK(launchParam.GetInTensorCount() == 8, "InTensor num invalid", return false);  // markhere
+            ASDSIP_CHECK(launchParam.GetOutTensorCount() == 1, "OutTensor num invalid", return false);  // markhere
+        }
+
         return true;
     }
 
@@ -47,7 +57,10 @@ public:
         auto status = FftR2CTiling(launchParam, kernelInfo_);
         ASDSIP_CHECK(status == AsdSip::ErrorType::ACL_SUCCESS, "InitRunInfoImpl FftR2CTiling failed",
                   return Status::FailStatus(ERROR_INVALID_VALUE));
-        kernelInfo_.SetHwsyncIdx(0);
+        if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910B) {
+            kernelInfo_.SetHwsyncIdx(0);
+        }
+        
         return Status::OkStatus();
     }
 };
@@ -205,6 +218,24 @@ public:
     }
 };
 
+// arch35 (Ascend 950)
+// FftR2CC64Kernel
+class FftR2CC64Kernel : public FftR2CKernel {
+public:
+    explicit FftR2CC64Kernel(const std::string &kernelName, const BinHandle *handle) noexcept
+        : FftR2CKernel(kernelName, handle)
+    {
+    }
+
+    bool CanSupport(const LaunchParam &launchParam) const override
+    {
+        ASDSIP_CHECK(FftR2CKernel::CanSupport(launchParam), "FftR2CC64Kernel failed to check support", return false);
+        ASDSIP_CHECK(launchParam.GetInTensor(0).desc.dtype == TENSOR_DTYPE_FLOAT, "tensor dtype unsupported",
+                  return false);
+        return true;
+    }
+};
+
 REG_KERNEL_BASE(FftR2C1C64Kernel);
 REG_KERNEL_BASE(FftR2C2C64Kernel);
 REG_KERNEL_BASE(FftR2C3C64Kernel);
@@ -214,4 +245,5 @@ REG_KERNEL_BASE(FftR2COdd3C64Kernel);
 REG_KERNEL_BASE(FftR2CEven1C64Kernel);
 REG_KERNEL_BASE(FftR2CEven2C64Kernel);
 REG_KERNEL_BASE(FftR2CEven3C64Kernel);
+REG_KERNEL_BASE(FftR2CC64Kernel);
 }  // namespace AsdSip

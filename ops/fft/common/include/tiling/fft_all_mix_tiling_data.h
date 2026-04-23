@@ -22,6 +22,7 @@ struct FftAllMixTilingData {
     int32_t radixListLen;
     // for now, c2r is only inverse and inverse = 1, r2c is only forward and inverse = 0
     int32_t isInverse;
+    int32_t isOddN;  // 新增：1 if N is odd, 0 if N is even
     int64_t workspaceOffsets[5];
     
     // Precomputed plan data (moved from device to host to avoid VLOOP nesting)

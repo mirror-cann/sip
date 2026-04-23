@@ -154,6 +154,8 @@ FftR2COperation:
         ascend910b: true
     FftR2CEven3C64Kernel:
         ascend910b: true
+    FftR2CC64Kernel:
+        ascend950: true
 
 FftBOperation:
     FftBC64Kernel:

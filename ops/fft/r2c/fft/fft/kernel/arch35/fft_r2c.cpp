@@ -251,6 +251,7 @@ private:
     int64_t fftN_;
     int32_t radixListLen_;
     int32_t isInverse_;
+    int32_t isOddN_;  // 新增：标记是否为奇数 N
     int64_t workspaceOffsets_[5];
     
     __gm__ int32_t * __restrict__ gm_radix_arr_;
@@ -288,6 +289,9 @@ __aicore__ inline void FftR2CKernel::Init(
         workspaceOffsets_[i] = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 24 + 8 * i));
     }
     
+    // isOddN 在结构体末尾，偏移 = 24 + 40 + 32*(4+8+8+8+8) = 1216
+    isOddN_ = (*(__gm__ int32_t *)((__gm__ uint8_t *)tiling_buf + 1216));
+
     int64_t baseOffset = 24 + 5 * 8;
     gm_radix_arr_ = (__gm__ int32_t *)((__gm__ uint8_t *)tiling_buf + baseOffset);
     gm_M_arr_ = (__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + baseOffset + MAX_FFT_STAGES * 4);
@@ -336,7 +340,14 @@ __aicore__ inline void FftR2CKernel::Process()
         tempBatch *= gm_radix_arr_[step];
     }
 
-    bool useWs1 = (radixListLen_ % 2 == 1);
+    // Stockham结束后，数据位置取决于step的奇偶性
+    // step从0开始：偶数step输出到ws1，奇数step输出到ws0
+    // 最后一个step是radixListLen_-1，所以：
+    // - 如果radixListLen_是奇数，最后一个step是偶数，数据在ws1
+    // - 如果radixListLen_是偶数，最后一个step是奇数，数据在ws0
+    bool dataInWs1 = (radixListLen_ % 2 == 1);
+    
+    bool useWs1 = dataInWs1;
     tempBatch = batchSize_;
     
     for (int32_t s = 0; s < radixListLen_; s++) {
@@ -366,6 +377,13 @@ __aicore__ inline void FftR2CKernel::Process()
         useWs1 = !useWs1;
     }
 
+    // 转置结束后，useWs1已经翻转到下一次的状态
+    // 转置循环中：useWs1=true → input=ws1, output=ws0；useWs1=false → input=ws0, output=ws1
+    // 最后一次转置写入的buffer与useWs1最终值相反：
+    // - useWs1=true 表示下一次应该从ws1读，但最后一次写入的是ws0
+    // - useWs1=false 表示下一次应该从ws0读，但最后一次写入的是ws1
+    int64_t finalWsOffset = useWs1 ? workspaceOffsets_[1] : workspaceOffsets_[0];
+    
     Simt::VF_CALL<FftR2CPostProcess>(
         Simt::Dim3{VF_MAX_THREAD_NUM, 1, 1},
         gm_workspace_,
@@ -373,7 +391,7 @@ __aicore__ inline void FftR2CKernel::Process()
         gm_output_,
         batchSize_,
         fftN_,
-        workspaceOffsets_[0]);
+        finalWsOffset);
     
     return;
 }

@@ -318,15 +318,16 @@ __aicore__ inline void FftR2CKernelMultiCore::Init(
     fftN_ = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 8));
     radixListLen_ = (*(__gm__ int32_t *)((__gm__ uint8_t *)tiling_buf + 16));
     isInverse_ = (*(__gm__ int32_t *)((__gm__ uint8_t *)tiling_buf + 20));
-    isOddN_ = (*(__gm__ int32_t *)((__gm__ uint8_t *)tiling_buf + 24));  // 新增
+    // isOddN 在结构体末尾，偏移 = 24 + 40 + 32*(4+8+8+8+8) = 1216
+    isOddN_ = (*(__gm__ int32_t *)((__gm__ uint8_t *)tiling_buf + 1216));
 
-    // 修复：isOddN 后有 4 字节 padding，workspaceOffsets 从 offset 32 开始
+    // workspaceOffsets 从 offset 24 开始 (isOddN 已移到结构体末尾)
     for (int32_t i = 0; i < 5; i++) {
-        workspaceOffsets_[i] = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 32 + 8 * i));
+        workspaceOffsets_[i] = (*(__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + 24 + 8 * i));
     }
     
-    // 修复：baseOffset = 32 (workspaceOffsets起始) + 40 (5*8) = 72
-    int64_t baseOffset = 32 + 5 * 8;  // 72
+    // baseOffset = 24 + 40 = 64 (workspaceOffsets[5] 占 40 字节)
+    int64_t baseOffset = 24 + 5 * 8;  // 64
     gm_radix_arr_ = (__gm__ int32_t *)((__gm__ uint8_t *)tiling_buf + baseOffset);
     gm_M_arr_ = (__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + baseOffset + MAX_FFT_STAGES * 4);
     gm_dft_offset_arr_ = (__gm__ int64_t *)((__gm__ uint8_t *)tiling_buf + baseOffset + MAX_FFT_STAGES * 4 + MAX_FFT_STAGES * 8);

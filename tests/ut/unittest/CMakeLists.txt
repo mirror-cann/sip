@@ -59,8 +59,8 @@ add_library(test_src_fft_c2r OBJECT ${TEST_SRC_FFT_C2R})
 # aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/icamax TEST_SRC_ICAMAX)
 # add_library(test_src_icamax OBJECT ${TEST_SRC_ICAMAX})
 
-# aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/ssyr2 TEST_SRC_SSYR2)
-# add_library(test_src_ssyr2 OBJECT ${TEST_SRC_SSYR2})
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/ssyr2 TEST_SRC_SSYR2)
+add_library(test_src_ssyr2 OBJECT ${TEST_SRC_SSYR2})
 
 # aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/ctrmv TEST_SRC_CTRMV)
 # add_library(test_src_ctrmv OBJECT ${TEST_SRC_CTRMV})
@@ -77,11 +77,11 @@ add_library(test_src_fft_c2r OBJECT ${TEST_SRC_FFT_C2R})
 # aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/scasum TEST_SRC_SCASUM)
 # add_library(test_src_scasum OBJECT ${TEST_SRC_SCASUM})
 
-# aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/snrm2 TEST_SRC_SNRM2)
-# add_library(test_src_snrm2 OBJECT ${TEST_SRC_SNRM2})
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/snrm2 TEST_SRC_SNRM2)
+add_library(test_src_snrm2 OBJECT ${TEST_SRC_SNRM2})
 
-# aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/scnrm2 TEST_SRC_SCNRM2)
-# add_library(test_src_scnrm2 OBJECT ${TEST_SRC_SCNRM2})
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/scnrm2 TEST_SRC_SCNRM2)
+add_library(test_src_scnrm2 OBJECT ${TEST_SRC_SCNRM2})
 
 # aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/sscal TEST_SRC_SSCAL)
 # add_library(test_src_sscal OBJECT ${TEST_SRC_SSCAL})
@@ -101,14 +101,14 @@ add_library(test_src_ccopy OBJECT ${TEST_SRC_CCOPY})
 # aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/caxpy TEST_SRC_CAXPY)
 # add_library(test_src_caxpy OBJECT ${TEST_SRC_CAXPY})
 
-# aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/sdot TEST_SRC_SDOT)
-# add_library(test_src_sdot OBJECT ${TEST_SRC_SDOT})
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/sdot TEST_SRC_SDOT)
+add_library(test_src_sdot OBJECT ${TEST_SRC_SDOT})
 
-# aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/cdotu TEST_SRC_CDOTU)
-# add_library(test_src_cdotu OBJECT ${TEST_SRC_CDOTU})
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/cdotu TEST_SRC_CDOTU)
+add_library(test_src_cdotu OBJECT ${TEST_SRC_CDOTU})
 
-# aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/cdotc TEST_SRC_CDOTC)
-# add_library(test_src_cdotc OBJECT ${TEST_SRC_CDOTC})
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/cdotc TEST_SRC_CDOTC)
+add_library(test_src_cdotc OBJECT ${TEST_SRC_CDOTC})
 
 # aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/sswap TEST_SRC_SSWAP)
 # add_library(test_src_sswap OBJECT ${TEST_SRC_SSWAP})
@@ -116,8 +116,8 @@ add_library(test_src_ccopy OBJECT ${TEST_SRC_CCOPY})
 # aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/cswap TEST_SRC_CSWAP)
 # add_library(test_src_cswap OBJECT ${TEST_SRC_CSWAP})
 
-# aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/ssyr TEST_SRC_SSYR)
-# add_library(test_src_ssyr OBJECT ${TEST_SRC_SSYR})
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/ssyr TEST_SRC_SSYR)
+add_library(test_src_ssyr OBJECT ${TEST_SRC_SSYR})
 
 # aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/cgemv TEST_SRC_CGEMV)
 # add_library(test_src_cgemv OBJECT ${TEST_SRC_CGEMV})
@@ -170,26 +170,26 @@ add_executable(ops_unittest
     # $<TARGET_OBJECTS:test_src_isamax>
     # $<TARGET_OBJECTS:test_src_icamax>
     # $<TARGET_OBJECTS:test_src_strmv>
-    # $<TARGET_OBJECTS:test_src_ssyr2>
+    $<TARGET_OBJECTS:test_src_ssyr2>
     # $<TARGET_OBJECTS:test_src_ctrmv>
     # $<TARGET_OBJECTS:test_src_strmm>
     # $<TARGET_OBJECTS:test_src_cgemm>
     # $<TARGET_OBJECTS:test_src_sasum>
     # $<TARGET_OBJECTS:test_src_scasum>
-    # $<TARGET_OBJECTS:test_src_snrm2>
-    # $<TARGET_OBJECTS:test_src_scnrm2>
+    $<TARGET_OBJECTS:test_src_snrm2>
+    $<TARGET_OBJECTS:test_src_scnrm2>
     # $<TARGET_OBJECTS:test_src_sscal>
     # $<TARGET_OBJECTS:test_src_csscal>
     # $<TARGET_OBJECTS:test_src_cscal>
     $<TARGET_OBJECTS:test_src_scopy>
     $<TARGET_OBJECTS:test_src_ccopy>
     # $<TARGET_OBJECTS:test_src_caxpy>
-    # $<TARGET_OBJECTS:test_src_sdot>
-    # $<TARGET_OBJECTS:test_src_cdotu>
-    # $<TARGET_OBJECTS:test_src_cdotc>
+    $<TARGET_OBJECTS:test_src_sdot>
+    $<TARGET_OBJECTS:test_src_cdotu>
+    $<TARGET_OBJECTS:test_src_cdotc>
     # $<TARGET_OBJECTS:test_src_sswap>
     # $<TARGET_OBJECTS:test_src_cswap>
-    # $<TARGET_OBJECTS:test_src_ssyr>
+    $<TARGET_OBJECTS:test_src_ssyr>
     # $<TARGET_OBJECTS:test_src_cgemv>
 	# $<TARGET_OBJECTS:test_src_cgerc>
     # $<TARGET_OBJECTS:test_src_csrot>

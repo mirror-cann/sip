@@ -45,8 +45,8 @@ TEST(TestOpConj, TestConjCase0)
     // 获取加速库所在路径 + 算子文件拼接
     std::string originPath = GetConjOutputDirectory() + "/tests/ut/unittest/base/conj/conj_data";
     std::string destPath = GetConjOutputDirectory() + "/build/tests/ut/unittest/base/conj";
-    std::string copy_cmd = "cp -rf " + originPath + " " + destPath;
-    std::string chmod_cmd = "chmod -R 755 " + destPath + "/conj_data/";
+    std::string copy_cmd = "cp -rf " + ShellQuote(originPath) + " " + ShellQuote(destPath);
+    std::string chmod_cmd = "chmod -R 755 " + ShellQuote(destPath + "/conj_data/");
     system(copy_cmd.c_str());
     system(chmod_cmd.c_str());
 
@@ -75,7 +75,7 @@ TEST(TestOpConj, TestConjCase0)
         }
 
     }
-    std::string gen_data_cmd = "cd " + destPath + "/conj_data/" + " && python3 gen_data.py";
+    std::string gen_data_cmd = "cd " + ShellQuote(destPath + "/conj_data/") + " && python3 gen_data.py";
     system(gen_data_cmd.c_str());
 
     AspbStatus blasStatus = Conj(input, output, stream);
@@ -96,7 +96,7 @@ TEST(TestOpConj, TestConjCase0)
 
     OpTestEnd(deviceId, context, stream);
 
-    std::string cmp_data_cmd = "cd " + destPath + "/conj_data/" + " && python3 compare_data.py";
+    std::string cmp_data_cmd = "cd " + ShellQuote(destPath + "/conj_data/") + " && python3 compare_data.py";
 
     int res = system(cmp_data_cmd.c_str());
     std::cout << "res = " << res << std::endl;

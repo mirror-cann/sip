@@ -44,11 +44,14 @@ Ascend Signal Processing Boost（昇腾信号处理加速库，下文简称为Si
    - python >= 3.7.0
    - pyyaml
    - gcc >= 7.3.0
+   - g++ >= 7.3.0
    - cmake >= 3.16.0
    - pigz（安装后可提升打包速度，建议版本 >= 2.4）
    - dos2unix
    - gawk
    - googletest（仅执行UT时依赖，建议版本 [1.14.0](https://github.com/google/googletest/releases/tag/v1.14.0)）
+
+   > **注意**：当前 ascend-boost-comm 第三方库与 GCC 14 存在兼容性问题（函数声明不匹配），建议使用 **GCC 12** 进行编译。
 
 #### 3.1.2  安装社区版CANN toolkit包
 

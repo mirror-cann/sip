@@ -11,7 +11,27 @@
 #ifndef ASCEND_UNIT_TEST_COMMON_H
 #define ASCEND_UNIT_TEST_COMMON_H
 
+#include <string>
 #include "mki/utils/SVector/SVector.h"
 
 int64_t Prod(const Mki::SVector<int64_t> &vec);
+
+/**
+ * @brief 对字符串进行 shell 单引号包裹，防止路径中的空格或特殊字符导致 system() 调用解析失败。
+ * @param s 原始字符串（如文件路径）
+ * @return 被单引号包裹并转义内部单引号的字符串
+ */
+static inline std::string ShellQuote(const std::string& s)
+{
+    std::string result = "'";
+    for (char c : s) {
+        if (c == '\'') {
+            result += "'\\''";
+        } else {
+            result += c;
+        }
+    }
+    result += "'";
+    return result;
+}
 #endif  // ASCEND_UNIT_TEST_COMMON_H

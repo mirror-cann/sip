@@ -92,11 +92,11 @@ add_library(test_src_fft_c2r OBJECT ${TEST_SRC_FFT_C2R})
 # aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/cscal TEST_SRC_CSCAL)
 # add_library(test_src_cscal OBJECT ${TEST_SRC_CSCAL})
 
-# aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/scopy TEST_SRC_SCOPY)
-# add_library(test_src_scopy OBJECT ${TEST_SRC_SCOPY})
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/scopy TEST_SRC_SCOPY)
+add_library(test_src_scopy OBJECT ${TEST_SRC_SCOPY})
 
-# aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/ccopy TEST_SRC_CCOPY)
-# add_library(test_src_ccopy OBJECT ${TEST_SRC_CCOPY})
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/ccopy TEST_SRC_CCOPY)
+add_library(test_src_ccopy OBJECT ${TEST_SRC_CCOPY})
 
 # aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/blas/caxpy TEST_SRC_CAXPY)
 # add_library(test_src_caxpy OBJECT ${TEST_SRC_CAXPY})
@@ -181,8 +181,8 @@ add_executable(ops_unittest
     # $<TARGET_OBJECTS:test_src_sscal>
     # $<TARGET_OBJECTS:test_src_csscal>
     # $<TARGET_OBJECTS:test_src_cscal>
-    # $<TARGET_OBJECTS:test_src_scopy>
-    # $<TARGET_OBJECTS:test_src_ccopy>
+    $<TARGET_OBJECTS:test_src_scopy>
+    $<TARGET_OBJECTS:test_src_ccopy>
     # $<TARGET_OBJECTS:test_src_caxpy>
     # $<TARGET_OBJECTS:test_src_sdot>
     # $<TARGET_OBJECTS:test_src_cdotu>

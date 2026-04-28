@@ -48,9 +48,9 @@ TEST(TestFftC2R1d, TestC2RCase0)
     // Get data directory path
     std::string originPath = GetC2ROutputDirectory() + "/tests/ut/unittest/fft/1d/c2r/c2r_data";
     std::string destPath = GetC2ROutputDirectory() + "/build/tests/ut/unittest/fft/1d/c2r";
-    std::string mkdir_cmd = "mkdir -p " + destPath;
-    std::string copy_cmd = "cp -rf " + originPath + " " + destPath;
-    std::string chmod_cmd = "chmod -R 755 " + destPath + "/c2r_data/";
+    std::string mkdir_cmd = "mkdir -p " + ShellQuote(destPath);
+    std::string copy_cmd = "cp -rf " + ShellQuote(originPath) + " " + ShellQuote(destPath);
+    std::string chmod_cmd = "chmod -R 755 " + ShellQuote(destPath + "/c2r_data/");
     system(mkdir_cmd.c_str());
     system(copy_cmd.c_str());
     system(chmod_cmd.c_str());
@@ -85,7 +85,7 @@ TEST(TestFftC2R1d, TestC2RCase0)
     }
 
     // Generate golden data via Python
-    std::string gen_data_cmd = "cd " + destPath + "/c2r_data/" + " && python3 gen_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
+    std::string gen_data_cmd = "cd " + ShellQuote(destPath + "/c2r_data/") + " && python3 gen_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
     system(gen_data_cmd.c_str());
 
     // Create aclTensor for FFT API
@@ -172,7 +172,7 @@ TEST(TestFftC2R1d, TestC2RCase0)
     OpTestEnd(deviceId, context, stream);
 
     // Compare results via Python
-    std::string cmp_data_cmd = "cd " + destPath + "/c2r_data/" + " && python3 compare_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
+    std::string cmp_data_cmd = "cd " + ShellQuote(destPath + "/c2r_data/") + " && python3 compare_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
     int res = system(cmp_data_cmd.c_str());
     std::cout << "compare result = " << res << std::endl;
     ASSERT_EQ(res, 0);
@@ -185,9 +185,9 @@ TEST(TestFftC2R1d, TestC2RCase1)
 {
     std::string originPath = GetC2ROutputDirectory() + "/tests/ut/unittest/fft/1d/c2r/c2r_data";
     std::string destPath = GetC2ROutputDirectory() + "/build/tests/ut/unittest/fft/1d/c2r";
-    std::string mkdir_cmd = "mkdir -p " + destPath;
-    std::string copy_cmd = "cp -rf " + originPath + " " + destPath;
-    std::string chmod_cmd = "chmod -R 755 " + destPath + "/c2r_data/";
+    std::string mkdir_cmd = "mkdir -p " + ShellQuote(destPath);
+    std::string copy_cmd = "cp -rf " + ShellQuote(originPath) + " " + ShellQuote(destPath);
+    std::string chmod_cmd = "chmod -R 755 " + ShellQuote(destPath + "/c2r_data/");
     system(mkdir_cmd.c_str());
     system(copy_cmd.c_str());
     system(chmod_cmd.c_str());
@@ -215,7 +215,7 @@ TEST(TestFftC2R1d, TestC2RCase1)
         SaveTensorToBin(context.inTensors[i], destPath + "/c2r_data/" + filename);
     }
 
-    std::string gen_data_cmd = "cd " + destPath + "/c2r_data/" + " && python3 gen_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
+    std::string gen_data_cmd = "cd " + ShellQuote(destPath + "/c2r_data/") + " && python3 gen_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
     system(gen_data_cmd.c_str());
 
     aclTensor *aclInput = nullptr;
@@ -289,7 +289,7 @@ TEST(TestFftC2R1d, TestC2RCase1)
 
     OpTestEnd(deviceId, context, stream);
 
-    std::string cmp_data_cmd = "cd " + destPath + "/c2r_data/" + " && python3 compare_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
+    std::string cmp_data_cmd = "cd " + ShellQuote(destPath + "/c2r_data/") + " && python3 compare_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
     int res = system(cmp_data_cmd.c_str());
     ASSERT_EQ(res, 0);
 }
@@ -301,9 +301,9 @@ TEST(TestFftC2R1d, TestC2RCase2)
 {
     std::string originPath = GetC2ROutputDirectory() + "/tests/ut/unittest/fft/1d/c2r/c2r_data";
     std::string destPath = GetC2ROutputDirectory() + "/build/tests/ut/unittest/fft/1d/c2r";
-    std::string mkdir_cmd = "mkdir -p " + destPath;
-    std::string copy_cmd = "cp -rf " + originPath + " " + destPath;
-    std::string chmod_cmd = "chmod -R 755 " + destPath + "/c2r_data/";
+    std::string mkdir_cmd = "mkdir -p " + ShellQuote(destPath);
+    std::string copy_cmd = "cp -rf " + ShellQuote(originPath) + " " + ShellQuote(destPath);
+    std::string chmod_cmd = "chmod -R 755 " + ShellQuote(destPath + "/c2r_data/");
     system(mkdir_cmd.c_str());
     system(copy_cmd.c_str());
     system(chmod_cmd.c_str());
@@ -331,7 +331,7 @@ TEST(TestFftC2R1d, TestC2RCase2)
         SaveTensorToBin(context.inTensors[i], destPath + "/c2r_data/" + filename);
     }
 
-    std::string gen_data_cmd = "cd " + destPath + "/c2r_data/" + " && python3 gen_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
+    std::string gen_data_cmd = "cd " + ShellQuote(destPath + "/c2r_data/") + " && python3 gen_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
     system(gen_data_cmd.c_str());
 
     aclTensor *aclInput = nullptr;
@@ -405,7 +405,7 @@ TEST(TestFftC2R1d, TestC2RCase2)
 
     OpTestEnd(deviceId, context, stream);
 
-    std::string cmp_data_cmd = "cd " + destPath + "/c2r_data/" + " && python3 compare_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
+    std::string cmp_data_cmd = "cd " + ShellQuote(destPath + "/c2r_data/") + " && python3 compare_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
     int res = system(cmp_data_cmd.c_str());
     ASSERT_EQ(res, 0);
 }

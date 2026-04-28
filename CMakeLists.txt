@@ -11,7 +11,7 @@
 cmake_minimum_required(VERSION 3.8)
 project("asdsipboost")
 
-option(USE_CXX11_ABI "USE_CXX11_ABI" ON)
+option(USE_CXX11_ABI "USE_CXX11_ABI" OFF)
 option(USE_MSDEBUG "USE_MSDEBUG" OFF)
 option(USE_MSSANITIZER "USE_MSSANITIZER" OFF)
 
@@ -37,7 +37,7 @@ set(MKI_SCRIPT_DIR "${MKI_PACKAGE_DIR}/scripts")
 
 include(${PROJECT_SOURCE_DIR}/cmake/host_config.cmake)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pipe -fstack-protector-all")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-copy")
 message(STATUS "CMAKE_CXX_FLAGS:${CMAKE_CXX_FLAGS}")
 

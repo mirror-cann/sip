@@ -1,0 +1,4 @@
+# SiP 项目 Python 依赖
+# 安装命令: pip install -r requirements.txt
+
+pyyaml

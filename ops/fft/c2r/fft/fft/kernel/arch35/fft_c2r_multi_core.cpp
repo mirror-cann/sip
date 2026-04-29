@@ -123,29 +123,17 @@ __simt_vf__ LAUNCH_BOUND(VF_MAX_THREAD_NUM) __aicore__ void FftC2RStockhamForwar
         float resultRe = 0.0f;
         float resultIm = 0.0f;
 
-        #define DFT_TERM(v) do { \
-            float wrRe = dftMat[(2 * u) * radix + (v)]; \
-            float wrIm = dftMat[(2 * u + 1) * radix + (v)]; \
-            int64_t xFloatIdx = (batchIdx * radix * M + (v) * M + n2) * 2; \
-            float xRe = inputBuf[xFloatIdx]; \
-            float xIm = inputBuf[xFloatIdx + 1]; \
-            float mulRe, mulIm; \
-            ComplexMul(wrRe, wrIm, xRe, xIm, mulRe, mulIm); \
-            resultRe += mulRe; \
-            resultIm += mulIm; \
-        } while(0)
-
-        if (radix == 2) {
-            DFT_TERM(0); DFT_TERM(1);
-        } else if (radix == 3) {
-            DFT_TERM(0); DFT_TERM(1); DFT_TERM(2);
-        } else if (radix == 5) {
-            DFT_TERM(0); DFT_TERM(1); DFT_TERM(2); DFT_TERM(3); DFT_TERM(4);
-        } else if (radix == 7) {
-            DFT_TERM(0); DFT_TERM(1); DFT_TERM(2); DFT_TERM(3); DFT_TERM(4); DFT_TERM(5); DFT_TERM(6);
+        for (int32_t v = 0; v < radix; v++) {
+            float wrRe = dftMat[(2 * u) * radix + v];
+            float wrIm = dftMat[(2 * u + 1) * radix + v];
+            int64_t xFloatIdx = (batchIdx * radix * M + v * M + n2) * 2;
+            float xRe = inputBuf[xFloatIdx];
+            float xIm = inputBuf[xFloatIdx + 1];
+            float mulRe, mulIm;
+            ComplexMul(wrRe, wrIm, xRe, xIm, mulRe, mulIm);
+            resultRe += mulRe;
+            resultIm += mulIm;
         }
-        
-        #undef DFT_TERM
 
         if (step < radixListLen - 1) {
             float tRe = twMat[(2 * u) * M + n2];

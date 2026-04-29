@@ -199,6 +199,10 @@ DddSepOperation:
     DddSepC64Kernel:
         ascend910b: true
 
+FftC2CArch35Operation:
+    FftC2CArch35C64Kernel:
+        ascend950: true
+
 MulOperation:
     MulC64Kernel:
         ascend910b: true

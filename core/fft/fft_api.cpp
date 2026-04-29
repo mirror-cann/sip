@@ -32,6 +32,7 @@
 // arch35 fft cores
 #include "fftcore/fft_c2r_arch35_core.h"
 #include "fftcore/fft_r2c_arch35_core.h"
+#include "fftcore/fft_c2c_arch35_core.h"
 
 #include "fftplan/fft_plan_cache.h"
 #include "fftcore/select_core.h"
@@ -235,6 +236,13 @@ void getC2CCore(std::optional<FFTCoreType> &coreTypeOpt, int radix, unsigned nDo
         ASDSIP_LOG(DEBUG) << "C2CCore backward.";
     }
 
+    if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
+        if (radix == K_RADIX_2 || radix == K_RADIX_MIX) {
+            coreTypeOpt = FFTCoreType::kFftC2CArch35;
+        }
+        return;
+    }
+
     if (nDoing <= K_N_FFT_256) {
         coreTypeOpt = FFTCoreType::kDft;
         return;
@@ -306,6 +314,10 @@ std::unique_ptr<FftOperation> InitFftOpPtr(std::optional<FFTCoreType> coreTypeOp
             // radixMix for r2c arch35
             case FFTCoreType::kFftR2CArch35:
                 unique.reset(new FftR2CCoreArch35(nDone, nDoing, nLeft, batch, fftType, forward));
+                break;
+            // radixMix for c2c arch35
+            case FFTCoreType::kFftC2CArch35:
+                unique.reset(new FftC2CCoreArch35(nDone, nDoing, nLeft, batch, fftType, forward));
                 break;
 
             // radixAny for c2c c2r r2c

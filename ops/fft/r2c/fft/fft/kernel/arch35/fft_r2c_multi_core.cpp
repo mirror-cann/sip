@@ -350,8 +350,8 @@ __aicore__ inline void FftR2CKernelMultiCore::Init(
     
     // 偶数 N: N/2 点 FFT
     // 奇数 N: N 点 FFT
-    int64_t N_half = isOddN_ ? ((fftN_ + 1) / 2) : (fftN_ / 2);
-    int64_t perBatchComplexBytes = N_half * sizeof(float) * 2;
+    int64_t fftPointCount = isOddN_ ? fftN_ : (fftN_ / 2);
+    int64_t perBatchComplexBytes = fftPointCount * sizeof(float) * 2;
     
     int64_t inputByteOffset = batchStart_ * fftN_ * sizeof(float);
     int64_t outputByteOffset = batchStart_ * (fftN_ / 2 + 1) * sizeof(float) * 2;  // 输出始终是 N//2+1

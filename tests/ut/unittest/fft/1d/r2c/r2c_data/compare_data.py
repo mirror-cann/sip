@@ -18,9 +18,8 @@ import argparse
 curr_dir = os.path.dirname(os.path.realpath(__file__))
 
 def compare_data(batch, nfft, rtol=1e-3, atol=1e-5):
-    """Compare NPU output with golden reference."""
-    golden_file = curr_dir + "/float_golden_c2r.bin"
-    output_file = curr_dir + "/float_output_.bin"
+    golden_file = curr_dir + "/complex64_golden_r2c.bin"
+    output_file = curr_dir + "/complex64_output_.bin"
     
     if not os.path.exists(golden_file):
         print(f"Golden file not found: {golden_file}")
@@ -30,11 +29,11 @@ def compare_data(batch, nfft, rtol=1e-3, atol=1e-5):
         print(f"Output file not found: {output_file}")
         sys.exit(1)
     
-    # Load data
-    golden = np.fromfile(golden_file, dtype=np.float32)
-    output = np.fromfile(output_file, dtype=np.float32)
+    golden = np.fromfile(golden_file, dtype=np.complex64)
+    output = np.fromfile(output_file, dtype=np.complex64)
     
-    expected_size = batch * nfft
+    out_signal = nfft // 2 + 1
+    expected_size = batch * out_signal
     print(f"Expected size: {expected_size}")
     print(f"Golden size: {golden.size}")
     print(f"Output size: {output.size}")
@@ -43,10 +42,9 @@ def compare_data(batch, nfft, rtol=1e-3, atol=1e-5):
         print(f"ERROR: Size mismatch! Expected {expected_size}")
         sys.exit(1)
     
-    golden = golden.reshape(batch, nfft)
-    output = output.reshape(batch, nfft)
+    golden = golden.reshape(batch, out_signal)
+    output = output.reshape(batch, out_signal)
     
-    # Compare with tolerance
     diff_res = np.isclose(output, golden, rtol=rtol, atol=atol)
     rows, cols = np.where(diff_res != True)
     total_errors = len(rows)
@@ -60,7 +58,6 @@ def compare_data(batch, nfft, rtol=1e-3, atol=1e-5):
         print("FAILED! Values mismatch:")
         print(f"Total mismatches: {total_errors} / {expected_size} ({100*total_errors/expected_size:.2f}%)")
         
-        # Show first 10 mismatches
         for i in range(min(10, total_errors)):
             b = rows[i]
             n = cols[i]
@@ -69,7 +66,7 @@ def compare_data(batch, nfft, rtol=1e-3, atol=1e-5):
         sys.exit(1)
 
 def main():
-    parser = argparse.ArgumentParser(description='Compare NPU output with golden reference for FFT C2R')
+    parser = argparse.ArgumentParser(description='Compare NPU output with golden reference for FFT R2C')
     parser.add_argument('--batch', type=int, required=True, help='Batch size')
     parser.add_argument('--nfft', type=int, required=True, help='FFT size')
     parser.add_argument('--rtol', type=float, default=1e-3, help='Relative tolerance')

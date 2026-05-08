@@ -13,20 +13,9 @@ set(dft_r2c_src
     ${CMAKE_CURRENT_LIST_DIR}/dft/dft_r2c_kernel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/dft/tiling/dft_r2c_tiling.cpp
 )
-
-set(CATLASS_INCLUDES 
-    ${OPS_THIRD_PARTY_DIR}/catlass/include
-    $ENV{ASCEND_HOME_PATH}/include
-    ${PROJECT_SOURCE_DIR}/ops/include/template
-)
  
 add_operation(DftR2COperation "${dft_r2c_src}")
 
 add_kernel(dft_r2c ascend910b cube
     dft/kernel/dft_r2c.cce
     DftR2CC64Kernel)
-
-add_kernel(dft_r2c ascend950 cube
-    dft/kernel/arch35/dft_r2c.cpp
-    DftR2CC64Kernel
-    INCLUDE_DIRECTORIES ${CATLASS_INCLUDES})

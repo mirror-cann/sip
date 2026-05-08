@@ -30,7 +30,7 @@ using namespace AsdSip;
 size_t DftR2CCore::EstimateWorkspaceSize()
 {
     if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
-        ASDSIP_LOG(INFO) << "ASCEND_950 DftR2CCore workspace size.";
+        ASDSIP_LOG(INFO) << "ASCEND_950 aclnnMatmul workspace size.";
         return MATMUL_WORKSIZE;
     }
     const KernelInfo &kernelInfo = kernel->GetKernelInfo();
@@ -43,8 +43,20 @@ void DftR2CCore::Run(void *input, void *output, void *stream, workspace::Workspa
         FftOperation::Run(input, output, stream, workspace);
         ASDSIP_LOG(INFO) << "ASCEND_910B DftR2CCore run success.";
     } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
-        FftOperation::Run(input, output, stream, workspace);
-        ASDSIP_LOG(INFO) << "ASCEND_950 DftR2CCore run success.";
+        Tensor inTensor;
+        Tensor outTensor;
+        TensorDType dtype = TENSOR_DTYPE_FLOAT;
+        SVector<int64_t> inShape {problemDesc.batch};
+        inShape.push_back(problemDesc.nDoing);
+        inTensor.dataSize = problemDesc.batch * problemDesc.nDoing * sizeof(float);
+        inTensor.desc = {dtype, TENSOR_FORMAT_ND, inShape, {}, 0};
+        inTensor.data = input;
+        outTensor.data = output;
+        uint8_t *deviceBuffer = (uint8_t *)workspace.allocate(ASYNC_WORKSPACE_SIZE);
+        int64_t M = inTensor.desc.dims[0];
+        int64_t K = inTensor.desc.dims[1];
+        int64_t N = (*rotationMatrix).desc.dims[1];
+        MatMul(inTensor, *rotationMatrix, outTensor, M, K, N, stream, deviceBuffer);
     }
 }
 
@@ -125,7 +137,8 @@ bool DftR2CCore::PreAllocateInDevice()
 AspbStatus DftR2CCore::InitTactic()
 {
     if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
-        ASDSIP_LOG(INFO) << "ASCEND_950 DftR2CCore init tactic";
+        ASDSIP_LOG(INFO) << "ASCEND_950 DftR2CCore aclnnMatmul.";
+        return AsdSip::ErrorType::ACL_SUCCESS;
     }
     OpParam::DftR2C param = {problemDesc.nDoing, problemDesc.batch, 1 - int(problemDesc.forward)};
     ASDSIP_LOG(DEBUG) << "OpDesc info: " << param.ToString();

@@ -237,8 +237,12 @@ void getC2CCore(std::optional<FFTCoreType> &coreTypeOpt, int radix, unsigned nDo
     }
 
     if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
-        if (radix == K_RADIX_2 || radix == K_RADIX_MIX) {
-            coreTypeOpt = FFTCoreType::kFftC2CArch35;
+        if (nDoing <= K_N_FFT_256) {
+            coreTypeOpt = FFTCoreType::kDft;
+        } else {
+            if (radix == K_RADIX_2 || radix == K_RADIX_MIX) {
+                coreTypeOpt = FFTCoreType::kFftC2CArch35;
+            }
         }
         return;
     }
@@ -413,28 +417,33 @@ std::unique_ptr<FftOperation> getCore(const std::vector<int64_t> &uniques, unsig
                                       unsigned nLeft, unsigned stride, unsigned batch, asdFftType fftType, bool forward,
                                       FFTPlan &plan)
 {
-    if (fftType == asdFftType::ASCEND_FFT_C2C) {
-        if (stride > 1) {
-            return InitFftOpPtr(FFTCoreType::kFftStride, nDone, nDoing, stride, batch, fftType, forward, plan);
-        }
-    }
-
     std::optional<FFTCoreType> coreTypeOpt = std::nullopt;
-    if (fftType == asdFftType::ASCEND_FFT_C2C_SEP) {
-        if ((nDoing == 256 || nDoing == 512) && forward) {
-            return InitFftOpPtr(FFTCoreType::kFftBSep, nDone, nDoing, stride, batch, fftType, forward, plan);
+
+    // only support Ascend 910B
+    if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910B) {
+        if (fftType == asdFftType::ASCEND_FFT_C2C) {
+            if (stride > 1) {
+                return InitFftOpPtr(FFTCoreType::kFftStride, nDone, nDoing, stride, batch, fftType, forward, plan);
+            }
         }
-        return InitFftOpPtr(FFTCoreType::kDftSep, nDone, nDoing, stride, batch, fftType, forward, plan);
+
+        if (fftType == asdFftType::ASCEND_FFT_C2C_SEP) {
+            if ((nDoing == 256 || nDoing == 512) && forward) {
+                return InitFftOpPtr(FFTCoreType::kFftBSep, nDone, nDoing, stride, batch, fftType, forward, plan);
+            }
+            return InitFftOpPtr(FFTCoreType::kDftSep, nDone, nDoing, stride, batch, fftType, forward, plan);
+        }
+
+        // getCore from configs
+        if (fftType == asdFftType::ASCEND_FFT_C2C) {
+            SelectCore::InitializeConfigs();
+            coreTypeOpt = SelectCore::FindConfig(batch, nDoing);
+            if (coreTypeOpt) {
+                return InitFftOpPtr(coreTypeOpt, nDone, nDoing, nLeft, batch, fftType, forward, plan);
+            }
+        }
     }
 
-    // getCore from configs
-    if (fftType == asdFftType::ASCEND_FFT_C2C) {
-        SelectCore::InitializeConfigs();
-        coreTypeOpt = SelectCore::FindConfig(batch, nDoing);
-        if (coreTypeOpt) {
-            return InitFftOpPtr(coreTypeOpt, nDone, nDoing, nLeft, batch, fftType, forward, plan);
-        }
-    }
     // the default rule of get core
     int radix = ChooseRadix(fftType, uniques);
     switch (fftType) {

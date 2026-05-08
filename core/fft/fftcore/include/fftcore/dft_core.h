@@ -38,6 +38,7 @@ private:
 
     std::string opName{"DftOperation"};
     std::shared_ptr<AsdSip::FFTensor> rotationMatrix;
+    std::unique_ptr<AsdSip::FFTensor> transposedRotationMatrix;
 };
 
 #endif

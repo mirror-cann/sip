@@ -76,8 +76,10 @@ AsdSip::AspbStatus DftTiling(const LaunchParam &launchParam, KernelInfo &kernelI
     tilingDataPtr->k = param.fftN * DFT_SIZE_MULTIPLIER;
     tilingDataPtr->transA = 0;
     tilingDataPtr->transB = 0;
-    if (static_cast<bool>(param.isInverse)) {
-        tilingDataPtr->transB = 1;
+    if (PlatformInfo::Instance().GetPlatformType() == PlatformType::ASCEND_910B) {
+        if (static_cast<bool>(param.isInverse)) {
+            tilingDataPtr->transB = 1;
+        }
     }
     tilingDataPtr->m0 = cubeDataCountPerLoopSmall;
     tilingDataPtr->n0 = cubeDataCountPerLoopSmall;
@@ -88,11 +90,9 @@ AsdSip::AspbStatus DftTiling(const LaunchParam &launchParam, KernelInfo &kernelI
         tilingDataPtr->k0 = cubeDataCountPerLoopLarge;
     }
     uint32_t maxCore = 0;
-    if (PlatformInfo::Instance().GetPlatformType() == PlatformType::ASCEND_910B) {
-        maxCore = static_cast<uint32_t>(PlatformInfo::Instance().GetCoreNum(CoreType::CORE_TYPE_CUBE));
-        if (maxCore == 0) {
-            maxCore = 1;
-        }
+    maxCore = static_cast<uint32_t>(PlatformInfo::Instance().GetCoreNum(CoreType::CORE_TYPE_CUBE));
+    if (maxCore == 0) {
+        maxCore = 1;
     }
 
     if (launchParam.GetInTensor(0).desc.dtype == TENSOR_DTYPE_COMPLEX32) {

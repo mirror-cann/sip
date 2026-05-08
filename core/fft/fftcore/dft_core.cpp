@@ -9,6 +9,7 @@
  */
 
 #include <mki/utils/rt/rt.h>
+#include <mki/utils/platform/platform_info.h>
 #include "utils/assert.h"
 #include "log/log.h"
 #include "ops.h"
@@ -136,7 +137,26 @@ AspbStatus DFTCore::InitTactic()
     tensorIn.dataSize = problemDesc.batch * problemDesc.nDoing * K_SIZE_OF_COMPLEX64;
     launchParam.SetParam(param);
     launchParam.AddInTensor(tensorIn);
-    launchParam.AddInTensor(*rotationMatrix);
+    if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950 && param.isInverse) {
+        if (transposedRotationMatrix == nullptr) {
+            transposedRotationMatrix = std::make_unique<AsdSip::FFTensor>();
+            int64_t fftN = static_cast<int64_t>(problemDesc.nDoing);
+            int64_t size = 2 * fftN;
+            float *transposedData = new float[size * size];
+            float *originalData = static_cast<float *>(rotationMatrix->hostData);
+            for (int64_t i = 0; i < size; i++) {
+                for (int64_t j = 0; j < size; j++) {
+                    transposedData[j * size + i] = originalData[i * size + j];
+                }
+            }
+            transposedRotationMatrix->desc = rotationMatrix->desc;
+            transposedRotationMatrix->hostData = transposedData;
+            transposedRotationMatrix->dataSize = rotationMatrix->dataSize;
+        }
+        launchParam.AddInTensor(*transposedRotationMatrix);
+    } else {
+        launchParam.AddInTensor(*rotationMatrix);
+    }
     launchParam.AddOutTensor(tensorOut);
     Operation *op = Ops::Instance().GetOperationByName(std::string("DftOperation"));
     if (op == nullptr) {

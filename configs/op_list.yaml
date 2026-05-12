@@ -124,6 +124,7 @@ FftC2ROperation:
 DftOperation:
     DftC64Kernel:
         ascend910b: true
+        ascend950: true
     DftC32Kernel:
         ascend910b: true
 
@@ -134,6 +135,7 @@ DftSepOperation:
 DftR2COperation:
     DftR2CC64Kernel:
         ascend910b: true
+        ascend950: true
 
 FftR2COperation:
     FftR2C1C64Kernel:

@@ -25,6 +25,11 @@ add_kernel(dft ascend910b cube
     dft/kernel/dft.cce
     DftC64Kernel)
 
+add_kernel(dft_c2c ascend950 cube
+    dft/kernel/arch35/dft_c2c.cpp
+    DftC64Kernel
+    INCLUDE_DIRECTORIES ${CATLASS_INCLUDES})
+
 add_kernel(dft_complex32 ascend910b mix
     dft/kernel/dft_complex32.cpp
     DftC32Kernel

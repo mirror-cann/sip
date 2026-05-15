@@ -15,7 +15,7 @@
 
 - 接口功能：\
 asdBlasMakeStrmmPlan：初始化该句柄对应的Strmm算子配置。\
-asdBlasStrmm：单精度，其功能是将一个三角矩阵A乘一个矩阵B，得到一个新的矩阵C。
+asdBlasStrmm：单精度算子，其功能是将一个三角矩阵A乘一个矩阵B，得到一个新的矩阵C。
 - 计算公式：
   $$
   c = 
@@ -55,7 +55,7 @@ AspbStatus asdBlasStrmm(
   asdBlasDiagType_t       diag, 
   const int64_t           m, 
   const int64_t           n, 
-  const float *           alpha, 
+  const float &           alpha, 
   aclTensor *             A,
   const int64_t           lda, 
   aclTensor *             B, 
@@ -116,7 +116,7 @@ AspbStatus asdBlasStrmm(
     <tr>
       <td>side（asdBlasSideMode_t）</td>
       <td>输入</td>
-      <td>指定矩阵A是乘法左侧还是右侧。。<ul><li>ASDBLAS_SIDE_LEFT:左侧</li><li>ASDBLAS_SIDE_RIGHT:右侧</li></ul></td>
+      <td>指定矩阵A是乘法左侧还是右侧。<ul><li>ASDBLAS_SIDE_LEFT:左侧</li><li>ASDBLAS_SIDE_RIGHT:右侧</li></ul></td>
     </tr>
     <tr>
       <td>uplo（asdBlasFillMode_t）</td>
@@ -144,7 +144,7 @@ AspbStatus asdBlasStrmm(
       <td>矩阵B和C的列数。</td>
     </tr>
     <tr>
-      <td>alpha（float *）</td>
+      <td>alpha（float &）</td>
       <td>输入</td>
       <td>公式中的alpha，用于计算矩阵乘法的系数。</td>
     </tr>

@@ -24,7 +24,7 @@ asdBlasCsrot：对输入复向量组（x，y）进行旋转。
   c & s\\-s & c\end{bmatrix}*\begin{bmatrix}
   x\\y\end{bmatrix}
   $$
-  其中，x[i]= c\*x[i]+s\*y[i],y[i]= -s\*x[i]+c\*y[i]\
+  其中，x[i]= c\*x[i]+s\*y[i]，y[i]= -s\*x[i]+c\*y[i]\
   c为旋转角度余弦值，s为旋转角度正弦值，x和y是复数向量。\
   示例：
 输入“x”为：\
@@ -55,8 +55,8 @@ AspbStatus asdBlasCsrot(
   const int64_t     incx, 
   aclTensor *       y,
   const int64_t     incy, 
-  const float *     c, 
-  const float *     s)
+  const float &     c, 
+  const float &     s)
 ```
 
 ## asdBlasMakeRotPlan
@@ -135,12 +135,12 @@ AspbStatus asdBlasCsrot(
       <td>y相邻元素间的内存地址偏移量（当前约束为1）。</td>
     </tr>
     <tr>
-      <td>c（float *）</td>
+      <td>c（float &）</td>
       <td>输入</td>
       <td>旋转矩阵的余弦值指针。</td>
     </tr>
     <tr>
-      <td>s（float *）</td>
+      <td>s（float &）</td>
       <td>输入</td>
       <td>旋转矩阵的正弦值指针。</td>
     </tr>
@@ -152,7 +152,7 @@ AspbStatus asdBlasCsrot(
 
 ## 约束说明
 
-- 输入的元素个数n当前覆盖支持[1，2.50e+06]。
+- 输入的元素个数n当前覆盖支持[1,2.50e+06]。
 - 算子输入shape为[n]，输出shape为[n]。
 - 算子实际计算时，不支持ND高维度运算（不支持维度≥3的运算）。
 

@@ -87,11 +87,6 @@ AspbStatus asdBlasHCmatinvBatched(
       <td>算子的句柄</td>
     </tr>
     <tr>
-      <td>trans（asdBlasOperation_t）</td>
-      <td>输入</td>
-      <td>指定矩阵A是否需要转置。<ul><li>ASDBLAS_OP_N：不转置</li><li>ASDBLAS_OP_T：转置</li><li>ASDBLAS_OP_C：共轭转置</li></ul></td>
-    </tr>
-    <tr>
       <td>n（int64_t）</td>
       <td>输入</td>
       <td>单批次矩阵A的行数。</td>
@@ -137,7 +132,7 @@ AspbStatus asdBlasHCmatinvBatched(
     <tr>
       <td>A（aclTensor *）</td>
       <td>输入</td>
-      <td><ul><li>输入的矩阵，对应公式中的'A'。</li><li>行主序。</li><li>数据类型支持COMPLEX32。</li><li>数据格式支持ND。</li><li>shape为[batchCount ,m, n]。</li></ul></td>
+      <td><ul><li>输入的矩阵，对应公式中的'A'。</li><li>行主序。</li><li>数据类型支持COMPLEX32。</li><li>数据格式支持ND。</li><li>shape为[batch,n,n]。</li></ul></td>
     </tr>
     <tr>
       <td>lda（ int64_t）</td>

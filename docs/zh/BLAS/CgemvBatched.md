@@ -35,7 +35,7 @@ asdBlasCgemvBatched：用于计算批量复数矩阵与向量的乘积。
 输入“lda”为： 2。\
 输入“batchCount”为：1。\
 调用“asdBlasCgemvBatched”算子后，输出“y[i]”为：\
-[0+4i, 0+8i]
+[-1+5i,-5+9i]
  
 ## 函数原型
 
@@ -47,7 +47,7 @@ AspbStatus asdBlasMakeCgemvBatchedPlan(
 ```
 
 ```Cpp
-AspbStatus aasdBlasCgemvBatched(
+AspbStatus asdBlasCgemvBatched(
   asdBlasHandle                    handle, 
   asdBlasOperation_t               trans, 
   const int64_t                    m, 
@@ -59,7 +59,7 @@ AspbStatus aasdBlasCgemvBatched(
   const int64_t                    incx, 
   const std::complex<float> &      beta, 
   aclTensor *                      y, 
-  const int64_t                    incy
+  const int64_t                    incy,
   const int64_t                    batchCount)
 ```
 
@@ -100,7 +100,7 @@ AspbStatus aasdBlasCgemvBatched(
 
   返回状态码，具体参见[SiP返回码](../context/SiP返回码.md)。
 
-## aasdBlasCgemvBatched
+## asdBlasCgemvBatched
 
 - **参数说明：**
 
@@ -139,7 +139,7 @@ AspbStatus aasdBlasCgemvBatched(
     <tr>
       <td>alpha（std::complex&lt;float&gt; &）</td>
       <td>输入</td>
-      <td>对应公式中的alpha，复数标量，用于乘以矩阵和向量乘法的结果，当前版本alpha的取值只能为1+0i。</td>
+      <td>对应公式中的alpha，复数标量，用于乘以矩阵和向量乘法的乘积，当前版本alpha的取值只能为1+0i。</td>
     </tr>
     <tr>
       <td>A（aclTensor *）</td>
@@ -179,7 +179,7 @@ AspbStatus aasdBlasCgemvBatched(
     <tr>
       <td>batchCount（int64_t）</td>
       <td>输入</td>
-      <td>批次数量。取值范围为{12 - 314496}。</td>
+      <td>批次数量。取值范围为[12 - 314496]。</td>
     </tr>
     </tbody>
     </table>

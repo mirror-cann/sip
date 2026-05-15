@@ -44,15 +44,7 @@ rsInterpolationBySinc：实现带batch的一维复数向量插值计算，返回
 
 ```Cpp
 AspbStatus rsInterpolationBySincGetWorkspaceSize(
-  const aclTensor *          inputTensor, 
-  const aclTensor *          sincTab,
-  const aclTensor *          posFloor, 
-  const aclTensor *          posToTabIndex,
-  aclTensor *                outputTensor, 
-  int                        interpNum, 
-  int                        quantNum, 
-  int                        length,
-  size_t *                   workspaceSize)
+  size_t &                   workspaceSize)
 ```
 
 ```Cpp
@@ -87,47 +79,7 @@ AspbStatus rsInterpolationBySinc(
       </tr></thead>
   <tbody>
     <tr>
-      <td>inputTensor（aclTensor *）</td>
-      <td>输入</td>
-      <td><ul><li>表示原始信号。</li><li>支持的数据类型为COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[batch, signalLength]。</li></ul></td>
-    </tr>
-    <tr>
-      <td>sincTab（aclTensor *）</td>
-      <td>输入</td>
-      <td><ul><li>表示插值系数矩阵。</li><li>支持的数据类型为FLOAT32。</li><li>数据格式支持ND。</li><li>shape为[ 4, ((quantNum + 1) * 2) * (interpNum * 2 + 8)]。</li></ul></td>
-    </tr>
-    <tr>
-      <td>posFloor（aclTensor *）</td>
-      <td>输入</td>
-      <td><ul><li>表示插值点坐标向下取整后的值。</li><li>支持的数据类型为INT32。</li><li>数据格式支持ND。</li><li>shape为[batch, length]。</li></ul></td>
-    </tr>
-    <tr>
-      <td>posToTabIndex（aclTensor *）</td>
-      <td>输入</td>
-      <td><ul><li>插值点坐标通过round((Pos -posFloor) *quantNum)计算出对应插值系数矩阵的行号。</li><li>支持的数据类型为INT16_T。</li><li>数据格式支持ND。</li><li>shape为[batch, length]。</li></ul></td>
-    </tr>
-    <tr>
-      <td>outputTensor（aclTensor *）</td>
-      <td>输出</td>
-      <td><ul><li>插值结果。</li><li>支持的数据类型为COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[batch, length]。</li></ul></td>
-    </tr>
-    <tr>
-      <td>interpNum（int）</td>
-      <td>输入</td>
-      <td>插值点数。</td>
-    </tr>
-    <tr>
-      <td>quantNum（int）</td>
-      <td>输入</td>
-      <td>量化点数。</td>
-    </tr>
-    <tr>
-      <td>length（int）</td>
-      <td>输入</td>
-      <td>插值长度。</td>
-    </tr>
-    <tr>
-      <td>workspaceSize（size_t *）</td>
+      <td>workspaceSize（size_t &）</td>
       <td>输出</td>
       <td>workspace的地址。</td>
     </tr>
@@ -199,7 +151,7 @@ AspbStatus rsInterpolationBySinc(
       <td>npu执行流。</td>
     </tr>
     <tr>
-      <td>workspaceSize（void *）</td>
+      <td>workspace（void *）</td>
       <td>输入</td>
       <td>workspace的地址。</td>
     </tr>
@@ -217,7 +169,7 @@ rsInterpolationBySinc：
 - 算子实际计算时，不支持ND高维度运算（不支持维度≥3的运算）。
 - interpNum只支持偶数，通常使用 [8 ，12 ，16] ，当前版本最大支持16。
 - quantNum为2的幂，最大32。
-- inputTensor、posFloor、posToTabIndex第0维是相同的batch数，outputTensors长度和posFloor、posToTabIndex一致。
+- inputTensor、posFloor、posToTabIndex第0维是相同的batch数，outputTensor长度和posFloor、posToTabIndex一致。
 - sincTab：为了将复数点乘转化为实数点乘以及更亲和NPU，需要进行预处理，需要扩充成[ ((quantNum+1) *2) * (interpNum*2+8) * 4] ，具体算法参考“调用示例”中的预处理内容。
 
 ## 调用示例

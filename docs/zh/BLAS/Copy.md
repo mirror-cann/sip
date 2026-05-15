@@ -14,9 +14,9 @@
 ## 功能说明
 
 - 接口功能：\
-asdBlasMakeCopyPlan：初始化该句柄对应的Copy算子配置。\
-asdBlasScopy：将实数向量的值复制到另外一个向量中。\
-asdBlasCcopy：将复数向量的值复制到另外一个向量中。
+  - asdBlasMakeCopyPlan：初始化该句柄对应的Copy算子配置。
+  - asdBlasScopy：将实数向量的值复制到另外一个向量中。
+  - asdBlasCcopy：将复数向量的值复制到另外一个向量中。
 - 计算公式：
   - asdBlasScopy的公式
 
@@ -151,7 +151,7 @@ AspbStatus asdBlasCcopy(
 
 ## 约束说明
 
-- 输入的元素个数当前覆盖支持[1,6.71e+06]。
+- 输入的元素个数当前支持的范围[1,6.71e+06]。
 - 算子输入shape为[n]，输出shape为[n]。
 - 算子实际计算时，不支持ND高维度运算（不支持维度≥3的运算）。
 

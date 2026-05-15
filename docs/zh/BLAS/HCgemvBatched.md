@@ -13,9 +13,9 @@
 
 ## 功能说明
 
-- 接口功能：\
-asdBlasMakeHCgemvBatchedPlan：初始化该句柄对应的算子配置。\
-asdBlasHCgemvBatched：用于计算批量复数矩阵与向量的乘积。
+- 接口功能：
+  - asdBlasMakeHCgemvBatchedPlan：初始化该句柄对应的算子配置。
+  - asdBlasHCgemvBatched：用于计算批量复数矩阵与向量的乘积。
 - 计算公式：
 
   $$
@@ -25,17 +25,17 @@ asdBlasHCgemvBatched：用于计算批量复数矩阵与向量的乘积。
 
   其中，op表示矩阵A做“共轭转置”或者“非转置”的操作。\
   示例：\
-输入“inTensorA[i]”为：\
+输入“A[i]”为：\
 [   [ 1+i, 1+2i ],
     [ 1+3i, 1+4i ]  ]\
 输入“x[i]”为：\
 [ 1+i, 1+i ]\
-输入“trans”为： N，表示矩阵A非转置。\
-输入“m”为：2，输入“n”为： 2，输入“alpha”为：1+0i，“beta”为：0+0i。\
-输入“lda”为： 2。\
+输入“trans”为：N，表示矩阵A非转置。\
+输入“m”为：2，输入“n”为：2，输入“alpha”为：1+0i，“beta”为：0+0i。\
+输入“lda”为：2。\
 输入“batchCount”为：1。\
 调用“asdBlasHCgemvBatched”算子后，输出“y[i]”为：\
-[0+4i, 0+8i]
+[-1+5i, -5+9i]
  
 ## 函数原型
 
@@ -145,10 +145,10 @@ AspbStatus asdBlasHCgemvBatched(
     <tr>
       <td>A（aclTensor *）</td>
       <td>输入</td>
-      <td><ul><li>输入的矩阵，对应公式中的'A'。</li><li>行主序。</li><li>数据类型支持COMPLEX32。</li><li>数据格式支持ND。</li><li>shape为[batchCount ,m, n]。</li></ul></td>
+      <td><ul><li>输入的矩阵，对应公式中的'A'。</li><li>行主序。</li><li>数据类型支持COMPLEX32。</li><li>数据格式支持ND。</li><li>shape为[batchCount,m,n]。</li></ul></td>
     </tr>
     <tr>
-      <td>lda（ int64_t）</td>
+      <td>lda（int64_t）</td>
       <td>输入</td>
       <td>A左右相邻元素间的内存地址偏移量（当前约束为m）。</td>
     </tr>
@@ -170,7 +170,7 @@ AspbStatus asdBlasHCgemvBatched(
     <tr>
       <td>y（aclTensor *）</td>
       <td>输入/输出</td>
-      <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX32。</li><li>数据格式支持ND。</li><li>当“trans”取值为非转置：shape为[batchCount, m]。</li><li>当“trans”取值为共轭转置：shape为[batchCount, n]。</li></ul></td>
+      <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX32。</li><li>数据格式支持ND。</li><li>当“trans”取值为非转置：shape为[batchCount,m]。</li><li>当“trans”取值为共轭转置：shape为[batchCount, n]。</li></ul></td>
     </tr>
     <tr>
       <td>incy（int64_t）</td>

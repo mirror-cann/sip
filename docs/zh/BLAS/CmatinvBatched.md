@@ -147,7 +147,7 @@ AspbStatus asdBlasCmatinvBatched(
     <tr>
       <td>lda_inv（int64_t）</td>
       <td>输入</td>
-      <td>输出的逆矩阵的左右相邻元素间的内存地址偏移量（当前约束为n。</td>
+      <td>输出的逆矩阵的左右相邻元素间的内存地址偏移量（当前约束为n）。</td>
     </tr>
     <tr>
       <td>info（aclTensor *）</td>

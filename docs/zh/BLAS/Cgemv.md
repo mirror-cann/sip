@@ -165,7 +165,7 @@ AspbStatus asdBlasCgemv(
     <tr>
       <td>x（aclTensor *）</td>
       <td>输入</td>
-      <td><ul><li>输入的矩阵，对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
+      <td><ul><li>对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
     </tr><tr>
     <td>y（aclTensor *）</td>
       <td>输入/输出</td>
@@ -182,7 +182,7 @@ AspbStatus asdBlasCgemv(
       <td>对应公式中的alpha，复数标量，用于乘以矩阵和向量乘法的结果。</td>
     </tr>
     <tr>
-      <td>incx（std::complex&ltfloat&gt）</td>
+      <td>incx（int64_t）</td>
       <td>输入</td>
       <td>向量x的步长（当前约束为1）。</td>
     </tr>

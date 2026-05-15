@@ -15,7 +15,7 @@
 
 - 接口功能：\
 asdInterpWithCoeffGetWorkspaceSize：计算asdInterpWithCoeff算子所需的workspace大小。\
-asdInterpWithCoeff：支持向量插值操作能力，主要用于数据符号的信道估计，或者均衡系数插值。
+asdInterpWithCoeff：支持向量插值操作，主要用于数据符号的信道估计，或者均衡系数插值。
 - 计算公式：
 
   $$
@@ -68,7 +68,7 @@ AspbStatus asdInterpWithCoeff(
   <tbody>
     <tr>
       <td>workspaceSize（size_t &）</td>
-      <td>输入</td>
+      <td>输出</td>
       <td>算子所需要的workspace。</td>
     </tr>
   </tbody>
@@ -97,7 +97,7 @@ AspbStatus asdInterpWithCoeff(
       <td>x（aclTensor *）</td>
       <td>输入</td>
       <td><ul><li>对应公式中的'B'。</li><li>数据类型支持COMPLEX32、COMPLEX64</li><li>数据格式支持ND。</li>
-      <li>shape为[batch，nRs, totalSubcarrier]。<ul><li>batch：波束数量，取值范围是1~1024 （6G时最大取值为16(终端的流数)*64(基站接收的波束数)=1024）。</li><li>nRs：参考信号数，取值是2、4。</li><li>totalSubcarrier = nRB*12。</li><li>nRB：资源块数，取值范围是1~2730 （每RB包含12个子载波，5G时取值范围是1~273, 6G时取值是5G的4倍到10倍）。</li>
+      <li>shape为[batch，nRs, totalSubcarrier]。<ul><li>batch：波束数量，取值范围是1~1024 （6G时最大取值为16(终端的流数)*64(基站接收的波束数)=1024）。</li><li>nRs：参考信号数，取值是2、4。</li><li>totalSubcarrier = nRB*12。</li><li>nRB：资源块数，取值范围是1~2730 （每RB包含12个子载波，5G时取值范围是1~273，6G时取值是5G的4倍到10倍）。</li>
       </ul></li></ul></td>
     </tr>
     <tr>

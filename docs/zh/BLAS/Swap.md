@@ -141,7 +141,7 @@ AspbStatus asdBlasCswap(
     <tr>
       <td>y（aclTensor *）</td>
       <td>输入/输出</td>
-      <td><ul><li>对应公式中的'y'。</li><li>asdBlasSswap支持的数据类型支持FLOAT32。</li><li> asdBlasCswap支持的数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
+      <td><ul><li>对应公式中的'y'。</li><li>asdBlasSswap支持的数据类型为FLOAT32。</li><li> asdBlasCswap支持的数据类型为COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
     </tr>
     <tr>
       <td>incy（int64_t）</td>
@@ -157,7 +157,7 @@ AspbStatus asdBlasCswap(
 ## 约束说明
 
   - 输入和输出数据格式、数据类型、shape保持一致。
-  - 输入的元素个数n当前覆盖支持[1，6.71e+07]。
+  - 输入的元素个数n当前覆盖支持[1,6.71e+07]。
   - 算子输入shape为[n]、[n]，输出shape为[n]、[n]。
   - 算子实际计算时，不支持ND高维度运算（不支持维度≥3的运算）。
 

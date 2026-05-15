@@ -15,7 +15,7 @@
 
 - 接口功能：\
 asdBlasMakeComplexMatDotPlan：初始化该句柄对应的ComplexMatDot算子配置。\
-asdBlasComplexMatDot：实现两个复数矩阵对应位置逐点乘，返回一个和输入矩阵同样形状大小的复数矩阵。
+asdBlasComplexMatDot：实现两个复数矩阵对应位置逐点相乘，返回一个和输入矩阵同样形状大小的复数矩阵。
 - 计算公式：
 
   $$
@@ -133,7 +133,7 @@ AspbStatus asdBlasComplexMatDot(
 
 - 非原地更新情况下，输入和输出占用的内存大小应不超过NPU的GM大小。
 - 原地更新情况下，输入占用的内存大小应不超过NPU的GM大小。
-- 算子输入shape为[m，n]、[m，n]，输出shape为[m，n]。
+- 算子输入shape为[m,n]、[m,n]，输出shape为[m,n]。
 - 算子实际计算时，不支持ND高维度运算（不支持维度≥3的运算）。
 
 ## 调用示例

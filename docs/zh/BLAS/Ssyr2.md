@@ -46,7 +46,7 @@ AspbStatus asdBlasSsyr2(
   asdBlasHandle         handle, 
   asdBlasFillMode_t     uplo, 
   const int64_t         n, 
-  const float *         alpha, 
+  const float &         alpha, 
   aclTensor *           x, 
   int64_t               incx, 
   aclTensor *           y, 
@@ -107,7 +107,7 @@ AspbStatus asdBlasSsyr2(
     <tr>
       <td>uplo（asdBlasFillMode_t）</td>
       <td>输入</td>
-      <td>指定矩阵A的存储格式。<ul><li>ASDBLAS_FILL_MODE_LOWER:下三角</li><li>ASDBLAS_FILL_MODE_UPPER:上三角</li></ul></td>
+      <td>指定参与计算的矩阵A的三角区域。<ul><li>ASDBLAS_FILL_MODE_LOWER:下三角</li><li>ASDBLAS_FILL_MODE_UPPER:上三角</li></ul></td>
     </tr>
     <tr>
       <td>n（int64_t）</td>
@@ -115,26 +115,15 @@ AspbStatus asdBlasSsyr2(
       <td>向量x中的元素个数，矩阵A的行列数。</td>
     </tr>
     <tr>
-      <td>alpha（float *）</td>
+      <td>alpha（float &）</td>
       <td>输入</td>
       <td>公式中的alpha，标量，向量乘积缩放因子。</td>
-    </tr>
-    <tr>
-      <td>A（aclTensor *）</td>
-      <td>输入/输出</td>
-      <td><ul><li>对应公式中的'A'。</li><li>数据类型支持FLOAT32。</li><li>数据格式支持ND。</li>
-      <li>shape为[n，n]</li></ul></td>
     </tr>
     <tr>
       <td>x（aclTensor *）</td>
       <td>输入</td>
       <td><ul><li>对应公式中的'x'。</li><li>数据类型支持FLOAT32。</li><li>数据格式支持ND。</li>
       <li>shape为[n]</li></ul></td>
-    </tr>
-    <tr>
-      <td>lda（int64_t）</td>
-      <td>输入</td>
-      <td>矩阵A的每列元素的存储步长（当前约束为n）。</td>
     </tr>
     <tr>
       <td>incx（int64_t）</td>
@@ -152,6 +141,19 @@ AspbStatus asdBlasSsyr2(
       <td>输入</td>
       <td>y相邻元素间的内存地址偏移量（当前约束为1）。</td>
     </tr>
+    <tr>
+      <td>A（aclTensor *）</td>
+      <td>输入/输出</td>
+      <td><ul><li>对应公式中的'A'。</li><li>数据类型支持FLOAT32。</li><li>数据格式支持ND。</li>
+      <li>shape为[n，n]</li></ul></td>
+    </tr>
+    <tr>
+      <td>lda（int64_t）</td>
+      <td>输入</td>
+      <td>矩阵A的每列元素的存储步长（当前约束为n）。</td>
+    </tr>
+    
+    
     </tbody>
     </table>
     
@@ -161,8 +163,8 @@ AspbStatus asdBlasSsyr2(
 
 ## 约束说明
 
-  - 输入的元素个数n当前覆盖支持[1，8192]。
-  - 算子输入shape为[n]、[n]、[n，n]，输出shape为[n，n]。
+  - 输入的元素个数n当前的取值范围[1,8192]。
+  - 算子输入shape为[n]、[n]、[n,n]，输出shape为[n,n]。
   - 算子实际计算时，不支持ND高维度运算（不支持维度≥3的运算）。
 
 ## 调用示例

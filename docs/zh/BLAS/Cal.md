@@ -67,7 +67,7 @@ AspbStatus asdBlasMakeCalPlan(asdBlasHandle handle)
 AspbStatus asdBlasSscal(
   asdBlasHandle   handle, 
   const int64_t   n, 
-  const float *   alpha, 
+  const float &   alpha, 
   aclTensor *     x, 
   const int64_t   incx)
 ```
@@ -76,7 +76,7 @@ AspbStatus asdBlasSscal(
 AspbStatus asdBlasCsscal(
   asdBlasHandle   handle, 
   const int64_t   n, 
-  const float *   alpha, 
+  const float &   alpha, 
   aclTensor *     x, 
   const int64_t   incx)
 ```
@@ -85,7 +85,7 @@ AspbStatus asdBlasCsscal(
 AspbStatus asdBlasCscal(
   asdBlasHandle               handle, 
   const int64_t               n, 
-  const std::complex<float> * alpha, 
+  const std::complex<float> & alpha, 
   aclTensor *                 x,
   const int64_t               incx)
 ```
@@ -146,7 +146,7 @@ AspbStatus asdBlasCscal(
     <tr>
       <td>x（aclTensor *）</td>
       <td>输入/输出</td>
-      <td><ul><li>表示输入/输出的向量，对应公式中的'x'。</li><li>数据类型支持FLOAT32</li><li>数据格式支持ND。</li>
+      <td><ul><li>表示输入/输出的向量，对应公式中的'x'。</li><li>数据类型支持FLOAT32（asdBlasSscal）/数据类型支持COMPLEX64（asdBlasCsscal）</li><li>数据格式支持ND。</li>
       <li>shape为[n]</li></ul></td>
     </tr>
     <tr>
@@ -155,7 +155,7 @@ AspbStatus asdBlasCscal(
       <td>相邻元素间的内存地址偏移量（当前约束为1）。</td>
     </tr>
     <tr>
-      <td>alpha（float *）</td>
+      <td>alpha（float &）</td>
       <td>输入</td>
       <td>向量的缩放因子。</td>
     </tr>
@@ -194,7 +194,7 @@ AspbStatus asdBlasCscal(
     <tr>
       <td>x（aclTensor *）</td>
       <td>输入/输出</td>
-      <td><ul><li>表示输入/输出的向量，对应公式中的'x'。</li><li>数据类型支持FLOAT32</li><li>数据格式支持ND。</li>
+      <td><ul><li>表示输入/输出的向量，对应公式中的'x'。</li><li>数据类型支持COMPLEX64</li><li>数据格式支持ND。</li>
       <li>shape为[n]</li></ul></td>
     </tr>
     <tr>
@@ -203,7 +203,7 @@ AspbStatus asdBlasCscal(
       <td>相邻元素间的内存地址偏移量（当前约束为1）。</td>
     </tr>
     <tr>
-      <td>alpha（const std::complex&ltfloat&gt *）</td>
+      <td>alpha（const std::complex&ltfloat&gt &）</td>
       <td>输入</td>
       <td>向量的缩放因子。</td>
     </tr>
@@ -215,7 +215,7 @@ AspbStatus asdBlasCscal(
 
 ## 约束说明
 
-- 输入的元素个数当前覆盖支持[1，6.71e+06]。
+- 输入的元素个数当前支持[1,6.71e+06]。
 - 算子输入shape为[n]，输出shape为[n]。
 - 算子实际计算时，不支持ND高维度运算（不支持维度≥3的运算）。
 

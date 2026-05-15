@@ -175,7 +175,7 @@ AspbStatus asdBlasHCgemmBatched(
     <tr>
       <td>beta（std::complex&lt;op::fp16_t&gt; &）</td>
       <td>输入</td>
-      <td>对应公式中的beta，复数标量，用于乘以矩阵C。取值必须为 0+0j。。</td>
+      <td>对应公式中的beta，复数标量，用于乘以矩阵C。取值必须为 0+0j。</td>
     </tr>
     <tr>
       <td>batchCount（int64_t）</td>
@@ -191,7 +191,7 @@ AspbStatus asdBlasHCgemmBatched(
 ## 约束说明
 
 - 算子实际计算时，只支持3维ND运算。
-- 算子输入数据为行主序，输入shape为[batchCount, m，k]、[batchCount, k，n]、[batchCount, m，n]，输出shape为[batchCount, m，n]。
+- 算子输入数据为行主序，输入shape为[batchCount,m,k]、[batchCount,k,n]、[batchCount,m,n]，输出shape为[batchCount,m,n]。
 
 ## 调用示例
 

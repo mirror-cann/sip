@@ -161,7 +161,7 @@ AspbStatus asdFftExecC2CSeparated(
       <td>outData（aclTensor *）</td>
       <td>输出</td>
       <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
-      <li>输入的shape为（batchSize，fftSizeX，fftSizeY，fftSizeZ）。</li></ul></td>
+      <li>输出的shape为（batchSize，fftSizeX，fftSizeY，fftSizeZ）。</li></ul></td>
     </tr>
     </tbody>
     </table>
@@ -201,7 +201,7 @@ AspbStatus asdFftExecC2CSeparated(
       <td>outData（aclTensor *）</td>
       <td>输出</td>
       <td><ul><li>对应公式中的'y'。</li><li>数据类型支持FLOAT32。</li><li>数据格式支持ND。</li>
-      <li>输入的shape为（batchSize，fftSizeX，fftSizeY，fftSizeZ）。</li></ul></td>
+      <li>输出的shape为（batchSize，fftSizeX，fftSizeY，fftSizeZ）。</li></ul></td>
     </tr>
     </tbody>
     </table>
@@ -241,7 +241,7 @@ AspbStatus asdFftExecC2CSeparated(
       <td>outData（aclTensor *）</td>
       <td>输出</td>
       <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
-      <li>输入的shape为（batchSize，fftSizeX，fftSizeY，fftSizeZ/2+1）。</li></ul></td>
+      <li>输出的shape为（batchSize，fftSizeX，fftSizeY，fftSizeZ/2+1）。</li></ul></td>
     </tr>
     </tbody>
     </table>
@@ -287,13 +287,13 @@ AspbStatus asdFftExecC2CSeparated(
       <td>outputReal（aclTensor *）</td>
       <td>输出</td>
       <td><ul><li>公式中的'y'的实部。</li><li>数据类型支持FLOAT32。</li><li>数据格式支持ND。</li>
-      <li>输入的shape为（batchSize，fftSize）。</li></ul></td>
+      <li>输出的shape为（batchSize，fftSize）。</li></ul></td>
     </tr>
     <tr>
       <td>outputImag（aclTensor *）</td>
       <td>输出</td>
       <td><ul><li>公式中的'y'的虚部。</li><li>数据类型支持FLOAT32。</li><li>数据格式支持ND。</li>
-      <li>输入的shape为（batchSize，fftSize）。</li></ul></td>
+      <li>输出的shape为（batchSize，fftSize）。</li></ul></td>
     </tr>
     </tbody>
     </table>
@@ -308,7 +308,7 @@ AspbStatus asdFftExecC2CSeparated(
     - fftSizeX、fftSizeY、fftSizeZ需保证不超过$2^{27}$且分解质因数后不包含超过199的质因子。
     - batchSize在存储允许范围内应无额外约束。
     - 输入的元素个数理论支持[1，$2^{30}$]。
-    - 输入的元素不支持inf、-inf和nan，如果输入中包含这些值, 那么结果为未定义。
+    - 输入的元素不支持inf、-inf和nan，如果输入中包含这些值，那么结果为未定义。
 - asdFftExecC2CSeparated
   信号长度范围[2, 256]。
 
@@ -643,7 +643,7 @@ int main()
 }
 ```
 
-- **R2C_2D**
+- **R2C_3D**
 
 ```Cpp
 #include <iostream>

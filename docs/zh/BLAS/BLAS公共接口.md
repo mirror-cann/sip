@@ -2,7 +2,7 @@
 
 ## 算子使用说明
 
-若需使用BLAS算子，需先创建句柄，然后调用对应算子的plan接口，初始化该句柄对应的算子配置并进行绑定，接着调用BLAS公共接口“asdBlasGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，然后调用“asdBlasSetWorkspace”给对应的plan设置需要workspace，最后调用BLAS算子接口执行计算。计算完需要对plan进行销毁，以免造成内存泄漏。
+若需使用BLAS算子，需先创建句柄，然后调用对应算子的plan接口，初始化该句柄对应的算子配置并进行绑定，接着调用BLAS公共接口“asdBlasGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，然后调用“asdBlasSetWorkspace”给对应的plan设置需要的workspace，最后调用BLAS算子接口执行计算。计算完需要对plan进行销毁，以免造成内存泄漏。
 
 ## 公共接口说明
 
@@ -88,7 +88,7 @@
 
 - **asdBlasSetWorkspace**
 
-    功能描述：给对应的plan设置所需要workspace。\
+    功能描述：给对应的plan设置所需要的workspace。\
     函数原型：AspbStatus asdBlasSetWorkspace(asdBlasHandle handle, void *workSpace)\
     **参数说明：**
     <table style="undefined;table-layout: fixed; width: 880px"><colgroup>

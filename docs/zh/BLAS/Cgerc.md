@@ -47,7 +47,7 @@ AspbStatus asdBlasCgerc(
   asdBlasHandle               handle, 
   const int64_t               m, 
   const int64_t               n, 
-  const std::complex<float> * alpha,
+  const std::complex<float> & alpha,
   aclTensor *                 x, 
   const int64_t               incx, 
   aclTensor *                 y, 
@@ -159,7 +159,7 @@ AspbStatus asdBlasCgerc(
 
 ## 约束说明
 
-- 输入的元素个数m，n当前覆盖支持[1，8192]。
+- 输入的元素个数m，n当前覆盖支持[1,8192]。
 - 算子输入shape为[m]、[n]、[m,n]，输出shape为[m,n]。
 - 算子实际计算时，不支持ND高维度运算（不支持维度≥3的运算）。
 

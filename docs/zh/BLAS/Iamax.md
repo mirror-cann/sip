@@ -123,7 +123,7 @@ AspbStatus asdBlasIsamax(
     <tr>
       <td>x（aclTensor *）</td>
       <td>输入</td>
-      <td><ul><li>对应公式中的'x'。</li><li>asdBlasIsamax支持的数据类型支持FLOAT32。</li><li>asdBlasIcamax支持的数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
+      <td><ul><li>对应公式中的'x'。</li><li>asdBlasIsamax支持的数据类型为FLOAT32。</li><li>asdBlasIcamax支持的数据类型为COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[n]。</li></ul></td>
     </tr>
     <tr>
       <td>incx（int64_t）</td>
@@ -143,7 +143,7 @@ AspbStatus asdBlasIsamax(
 
 ## 约束说明
 
-  - 输入的元素个数n，当前支持的范围为[1，6.71e+06]。
+  - 输入的元素个数n，当前支持的范围为[1,6.71e+06]。
   - 算子输入shape为[n]，输出shape为[1]。
   - 算子实际计算时，不支持ND高维度运算（不支持维度≥3的运算）。
 

@@ -97,7 +97,7 @@ AspbStatus asdBlasColwiseMul(
     <tr>
       <td>mat（aclTensor*）</td>
       <td>输入</td>
-      <td><ul><li>输入向量，对应公式中的'A'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m，n]。</li></ul></td>
+      <td><ul><li>输入向量，对应公式中的'A'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m,n]。</li></ul></td>
     </tr>
     <tr>
       <td>m（int64_t）</td>
@@ -117,7 +117,7 @@ AspbStatus asdBlasColwiseMul(
     <tr>
       <td>result（aclTensor*）</td>
       <td>输出</td>
-      <td><ul><li>输入向量，对应公式中的'result'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m, n]。</li></ul></td>
+      <td><ul><li>输出向量，对应公式中的'result'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m, n]。</li></ul></td>
     </tr>
     </tbody>
     </table>

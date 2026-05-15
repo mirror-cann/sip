@@ -4,7 +4,7 @@
 
 出现该标签表示该PR中所包含的commit中，有部分贡献者没有签署CANN社区的贡献者协议CLA，签署地址可以在PR评论区找到；
 
-1）如果是以个人名义贡献者，请选择“签署个人CLA”；
+1）如果是以个人名义贡献，请选择“签署个人CLA”；
 
 2）如果是以一家企业名义贡献，请选择“签署法人CLA”；
 
@@ -31,7 +31,7 @@
 </tr>
 <tr>
 <td>希望使用Gitcode提交邮箱签署</td>
-<td>在git运行的本地通过 git config --global user.name **** 和 git config --global user.email ****修改配置可调整git的commit邮箱信息为Gitcode的提交邮箱，完成后再进入签署地址进行CLA签署</td>
+<td>在git运行的本地通过执行命令git config --global user.name **** 和git config --global user.email ****，可修改git的commit邮箱信息为Gitcode的提交邮箱，完成后再进入签署地址进行CLA签署</td>
 </tr>
 </tbody>
 </table>
@@ -51,9 +51,9 @@
 CANN开发者不允许直接向社区仓库推送代码，只有仓库管理员可以向社区仓库推送代码；
 如果CANN开发者想要贡献代码，只能fork社区仓库到个人账号下，通过提交Pull Request方式贡献代码。
 
-## 5.  **请问直接push代码到仓库和通过评论/lgtm 、/approve合入代码有何区别？**
+## 5.  **请问直接push代码到仓库和通过评论/lgtm、/approve合入代码有何区别？**
 
-通过git命令直接push代码到仓库缺少必要的审核环节，存在一定合入风险；主要应用场景是比如需要上传的文件过大超过个人仓库限制，只能通过直接push到仓库的非保护分支，然后再通过非保护分支往保护分支merge；
+通过git命令直接push代码到仓库缺少必要的审核环节，存在一定合入风险；主要应用场景是比如需要上传的文件过大超过个人仓库限制，只能通过直接push到仓库的非保护分支，然后再通过非保护分支往保护分支merge。
 
 通过评论/lgtm /approve合入代码从流程上增加了评审环节，保证一份代码的合入至少需要提交者以外的一位committer的评审同意，即便提交者本人是committer也需要另一位committer同意。
 

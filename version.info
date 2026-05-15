@@ -1,6 +1,7 @@
-Version=8.5.0
-version_dir=8.5.0
-required_package_compiler_version=">=8.3"
-required_package_hccl_version=">=8.3"
-required_package_runtime_version=">=8.3"
-required_package_toolkit_version=">=8.3"
+Version=9.1.0
+version_dir=9.1.0
+required_ascend-boost-comm_branch="master"
+required_package_compiler_version=">=9.0.0"
+required_package_hccl_version=">=9.0.0"
+required_package_runtime_version=">=9.0.0"
+required_package_toolkit_version=">=9.0.0"

@@ -210,6 +210,8 @@ MulOperation:
         ascend910b: true
     MulC32Kernel:
         ascend910b: true
+    MulArch35Kernel:
+        ascend950: true
 
 ConvolveOperation:
     ConvolveKernel:

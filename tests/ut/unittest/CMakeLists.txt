@@ -35,8 +35,8 @@ add_library(test_src_fft_c2c OBJECT ${TEST_SRC_FFT_C2C})
 aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/fft/1d/r2c TEST_SRC_FFT_R2C)
 add_library(test_src_fft_r2c OBJECT ${TEST_SRC_FFT_R2C})
 
-# aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/base/asd_mul TEST_SRC_ASD_MUL)
-# add_library(test_src_asd_mul OBJECT ${TEST_SRC_ASD_MUL})
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/base/asd_mul TEST_SRC_ASD_MUL)
+add_library(test_src_asd_mul OBJECT ${TEST_SRC_ASD_MUL})
 
 # aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/base/swaplast2axes TEST_SRC_SWAPLAST2AXES)
 # add_library(test_src_swaplast2axes OBJECT ${TEST_SRC_SWAPLAST2AXES})
@@ -164,7 +164,7 @@ add_library(test_src_ssyr OBJECT ${TEST_SRC_SSYR})
 add_executable(ops_unittest
 # ${CMAKE_CURRENT_LIST_DIR}/custom_main.cpp
     $<TARGET_OBJECTS:test_src>
-    # $<TARGET_OBJECTS:test_src_asd_mul>
+    $<TARGET_OBJECTS:test_src_asd_mul>
     # $<TARGET_OBJECTS:test_src_swaplast2axes>
     # $<TARGET_OBJECTS:test_src_function>
     $<TARGET_OBJECTS:test_src_conj>

@@ -13,6 +13,7 @@
 #include "mki/base/operation_base.h"
 #include "mki_loader/op_register.h"
 #include "mki/utils/SVector/SVector.h"
+#include "mki/utils/platform/platform_info.h"
 #include "mul.h"
 
 namespace AsdSip {
@@ -26,15 +27,21 @@ public:
     Kernel *GetBestKernel(const LaunchParam &launchParam) const override
     {
         MKI_CHECK(IsConsistent(launchParam), "Failed to check consistent", return nullptr);
-        OpParam::CMul param = AnyCast<OpParam::CMul>(launchParam.GetParam());
-        if (param.cMulType == OpParam::CMul::CMulType::MUL_C64) {
-            return GetKernelByName("MulC64Kernel");
-        } else if (param.cMulType == OpParam::CMul::CMulType::MUL_C32) {
-            return GetKernelByName("MulC32Kernel");
-        } else {
-            ASDSIP_LOG(ERROR) << "cMulType is "<< static_cast<int>(param.cMulType) << " .No kernel for asdMul";
-            return nullptr;
+        if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
+            return GetKernelByName("MulArch35Kernel");
+        } else if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_910B) {
+            OpParam::CMul param = AnyCast<OpParam::CMul>(launchParam.GetParam());
+            if (param.cMulType == OpParam::CMul::CMulType::MUL_C64) {
+                return GetKernelByName("MulC64Kernel");
+            } else if (param.cMulType == OpParam::CMul::CMulType::MUL_C32) {
+                return GetKernelByName("MulC32Kernel");
+            } else {
+                ASDSIP_LOG(ERROR) << "cMulType is "<< static_cast<int>(param.cMulType) << " .No kernel for asdMul";
+                return nullptr;
+            }
         }
+        ASDSIP_LOG(ERROR) << "Unsupported platform type for asdMul";
+        return nullptr;
     }
 
     int64_t GetInputNum(const Any &specificParam) const override

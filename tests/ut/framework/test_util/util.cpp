@@ -324,6 +324,7 @@ inline size_t GetElementSize(TensorDType dtype) {
         case TENSOR_DTYPE_INT32:   return 4;
         case TENSOR_DTYPE_INT64:   return 8;
         case TENSOR_DTYPE_COMPLEX64:   return 8;
+        case TENSOR_DTYPE_COMPLEX32:   return 4;  // 2 * float16 = 2 * 2 bytes
         case TENSOR_DTYPE_UINT8:   return 1;
         // 添加其他需要的类型
         default: return 0; // 未知类型
@@ -339,9 +340,10 @@ inline std::string GetElementDtype(TensorDType dtype) {
         case TENSOR_DTYPE_INT32:   return "int32";
         case TENSOR_DTYPE_INT64:   return "int64";
         case TENSOR_DTYPE_COMPLEX64:   return "complex64";
+        case TENSOR_DTYPE_COMPLEX32:   return "complex32";
         case TENSOR_DTYPE_UINT8:   return "uint5";
         // 添加其他需要的类型
-        default: return 0; // 未知类型
+        default: return "unknown"; // 未知类型
     }
 }
 

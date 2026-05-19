@@ -12,6 +12,7 @@ set(mul_src
     ${CMAKE_CURRENT_LIST_DIR}/mul_operation.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mul/mul_kernel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mul/tiling/mul_tiling.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/mul/tiling/arch35/mul_tiling_arch35.cpp
 )
 
 add_operation(MulOperation "${mul_src}")
@@ -23,3 +24,7 @@ add_kernel(mul_c64 ascend910b vector
 add_kernel(mul_c32 ascend910b vector
     mul/op_kernel/mul_c32.cpp
     MulC32Kernel)
+
+add_kernel(mul_arch35 ascend950 vector
+    mul/op_kernel/arch35/mul_arch35.cpp
+    MulArch35Kernel)

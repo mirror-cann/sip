@@ -11,9 +11,12 @@
 #include "mki_loader/op_register.h"
 #include "mki/utils/log/log.h"
 #include "mki/utils/assert/assert.h"
+#include "mki/utils/platform/platform_info.h"
 #include "mul.h"
 #include "tiling/mul_tiling.h"
 #include "tiling/mul_tiling_data.h"
+#include "tiling/arch35/mul_tiling_arch35.h"
+#include "tiling/arch35/mul_tiling_data_arch35.h"
 
 static constexpr uint32_t TENSOR_INPUT_NUM = 2;
 static constexpr uint32_t TENSOR_OUTPUT_NUM = 1;
@@ -49,7 +52,6 @@ public:
     }
 };
 
-// MulC64Kernel
 class MulC64Kernel : public MulKernel {
 public:
     explicit MulC64Kernel(const std::string &kernelName, const BinHandle *handle) noexcept
@@ -67,8 +69,6 @@ public:
 };
 REG_KERNEL_BASE(MulC64Kernel);
 
-
-// MulC32Kernel
 class MulC32Kernel : public MulKernel {
 public:
     explicit MulC32Kernel(const std::string &kernelName, const BinHandle *handle) noexcept
@@ -85,5 +85,40 @@ public:
     }
 };
 REG_KERNEL_BASE(MulC32Kernel);
+
+class MulArch35Kernel : public KernelBase {
+public:
+    explicit MulArch35Kernel(const std::string &kernelName, const BinHandle *handle) noexcept
+        : KernelBase(kernelName, handle)
+    {
+    }
+
+    bool CanSupport(const LaunchParam &launchParam) const override
+    {
+        MKI_CHECK(launchParam.GetInTensorCount() == TENSOR_INPUT_NUM, "check inTensor count failed", return false);
+        MKI_CHECK(launchParam.GetOutTensorCount() == TENSOR_OUTPUT_NUM, "check outTensor count failed", return false);
+        MKI_CHECK(launchParam.GetParam().Type() == typeid(OpParam::CMul), "check param type failed!", return false);
+        MKI_CHECK(launchParam.GetInTensor(0).desc.dtype == TENSOR_DTYPE_COMPLEX64 ||
+            launchParam.GetInTensor(0).desc.dtype == TENSOR_DTYPE_COMPLEX32,
+            "tensor dtype unsupported", return false);
+        return true;
+    }
+
+    uint64_t GetTilingSize(const LaunchParam &launchParam) const override
+    {
+        (void)launchParam;
+        return sizeof(CMulArch35TilingData);
+    }
+
+    Status InitImpl(const LaunchParam &launchParam) override
+    {
+        auto status = CMulArch35Tiling(launchParam, kernelInfo_);
+        MKI_CHECK(status == AsdSip::ErrorType::ACL_SUCCESS, "InitRunInfoImpl CMulArch35Tiling failed",
+            return Status::FailStatus(ERROR_INVALID_VALUE));
+        return Status::OkStatus();
+    }
+};
+
+REG_KERNEL_BASE(MulArch35Kernel);
 
 }  // namespace AsdSip

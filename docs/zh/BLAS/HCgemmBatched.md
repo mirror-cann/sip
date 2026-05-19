@@ -31,12 +31,12 @@ asdBlasHCgemmBatched：用于计算复数矩阵的乘积。
 [   [ 3+i, 3+2i ],
     [ 3+3i, 3+4i ]  ]\
 输入“transa”为： ASDBLAS_OP_N，输入“transb”为：ASDBLAS_OP_N。\
-输入“m”为：2，输入“n”为： 2，输入“k”为：2，输入“alpha”为：1+i，“beta”为：2+2i。\
+输入“m”为：2，输入“n”为： 2，输入“k”为：2，输入“alpha”为：1+0i，“beta”为：0+0i。\
 输入“lda”为： 2，输入“ldb”为：2，输入“ldc”为：2。\
-输入“batchCount”为：1。\
+输入“batchCount”为：2。\
 调用“asdBlasHCgemmBatched”算子后，输出“C”为：\
-[   [ -15+19i, -27+19i ],
-    [ -37+21i, -57+13i ]  ]
+[   [ -7+15i, -18+16i ],
+    [ -24+22i, -44+14i ]  ]
  
 ## 函数原型
 
@@ -170,17 +170,17 @@ AspbStatus asdBlasHCgemmBatched(
     <tr>
       <td>alpha (std::complex&lt;op::fp16_t&gt; &)</td>
       <td>输入</td>
-      <td>对应公式中的alpha，复数标量，用于乘以矩阵乘法的结果，取值必须为1+0j。</td>
+      <td>对应公式中的alpha，复数标量，用于乘以矩阵乘法的结果，取值必须为1+0i。</td>
     </tr>
     <tr>
       <td>beta（std::complex&lt;op::fp16_t&gt; &）</td>
       <td>输入</td>
-      <td>对应公式中的beta，复数标量，用于乘以矩阵C。取值必须为 0+0j。</td>
+      <td>对应公式中的beta，复数标量，用于乘以矩阵C。取值必须为 0+0i。</td>
     </tr>
     <tr>
       <td>batchCount（int64_t）</td>
       <td>输入</td>
-      <td>批次数量。取值范围为{12 - 26208}。</td>
+      <td>批次数量。取值范围为[2 - 26208]。</td>
     </tr>
     </tbody>
     </table>

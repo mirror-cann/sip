@@ -33,7 +33,7 @@ asdBlasCgemvBatched：用于计算批量复数矩阵与向量的乘积。
 输入“trans”为： N，表示矩阵A非转置。\
 输入“m”为：2，输入“n”为： 2，输入“alpha”为：1+0i，“beta”为：0+0i。\
 输入“lda”为： 2。\
-输入“batchCount”为：1。\
+输入“batchCount”为：2。\
 调用“asdBlasCgemvBatched”算子后，输出“y[i]”为：\
 [-1+5i,-5+9i]
  
@@ -179,7 +179,7 @@ AspbStatus asdBlasCgemvBatched(
     <tr>
       <td>batchCount（int64_t）</td>
       <td>输入</td>
-      <td>批次数量。取值范围为[12 - 314496]。</td>
+      <td>批次数量。取值范围为[2 - 314496]。</td>
     </tr>
     </tbody>
     </table>

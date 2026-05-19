@@ -33,10 +33,10 @@ asdBlasCgemmBatched：用于计算两批复数矩阵的乘积。
 输入“transa”为： N，输入“transb”为：T。\
 输入“m”为：2，输入“n”为： 2，输入“k”为：2，输入“alpha”为：1+i，“beta”为：2+2i。\
 输入“lda”为： 2，输入“ldb”为：2，输入“ldc”为：2。\
-输入“batchCount”为：1。\
+输入“batchCount”为：2。\
 调用“asdBlasCgemmBatched”算子后，输出“C”为：\
-[   [ -15+19i, -27+19i ],
-    [ -37+21i, -57+13i ]  ]
+[   [ -1+9i, -7+13i ],
+    [ -7+17i, -21+21i ]  ]
  
 ## 函数原型
 
@@ -180,7 +180,7 @@ AspbStatus asdBlasCgemmBatched(
     <tr>
       <td>batchCount（int64_t）</td>
       <td>输入</td>
-      <td>批次数量。取值范围为{12 - 26208}。</td>
+      <td>批次数量。取值范围为[2 - 26208]。</td>
     </tr>
     </tbody>
     </table>

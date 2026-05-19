@@ -97,17 +97,17 @@ AspbStatus asdFftExecC2CSeparated(
     <tr>
       <td>fftSizeX（int64_t）</td>
       <td>输入</td>
-      <td>对应公式中的'M'，FFT信号长度（第一维）。</td>
+      <td>对应公式中的'Nx'，FFT信号长度（第一维）。</td>
     </tr>
     <tr>
       <td>fftSizeY（int64_t）</td>
       <td>输入</td>
-      <td>对应公式中的'N'，FFT信号长度（第二维）。</td>
+      <td>对应公式中的'Ny'，FFT信号长度（第二维）。</td>
     </tr>
     <tr>
       <td>fftSizeZ（int64_t）</td>
       <td>输入</td>
-      <td>对应公式中的'N'，FFT信号长度（第三维）。</td>
+      <td>对应公式中的'Nz'，FFT信号长度（第三维）。</td>
     </tr>
     <tr>
       <td>fftType（asdFftType）</td>

@@ -98,7 +98,6 @@ source /usr/local/Ascend/cann/set_env.sh
 * [CANN依赖列表](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/900/softwareinst/instg/instg_0045.html?OS=Debian&InstallType=netapt)
 * [CANN安装后操作](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/900/softwareinst/instg/instg_0094.html?OS=Debian&InstallType=netapt)
 
-
 ## <a id="learn"></a>4.  快速上手
 
 ### 4.1  SiP编译
@@ -120,7 +119,7 @@ source /usr/local/Ascend/cann/set_env.sh
     ```
 
     特别说明：
-    - `Ascend-cann-SIP_${version}_linux_${arch}.run`是编译后通过makeself打包的包含算子执行所需文件的可执行产物，用户可以通过以下命令执行run包将包含算子信息的文件安装到指定目录；
+    - `Ascend-cann-SIP_${version}_linux_${arch}.run`是编译后通过makeself打包的包含算子执行所需文件的可执行产物，用户可以通过以下命令执行run包将包含算子信息的文件安装到指定目录。
 
         ```bash
         # 确保安装包具有可执行权限

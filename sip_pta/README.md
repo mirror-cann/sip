@@ -32,9 +32,9 @@ sip_pta/
 
 配置环境
 
-   1. 环境变量: ASDSIP_HOME_PATH，asdsip安装目录 如不配置默认为/usr/local/Ascend/asdsip/latest
-   2. 环境变量: BOOST_COMM_PATH，ascend-boost-comm头文件目录, 如不配置默认为 ../3rdparty/ascend-boost-comm/src/include
-   3. 环境变量: USE_NINJA，可选配置, 是否启用ninja构建
+   1. 环境变量: export ASDSIP_HOME_PATH=asdsip安装目录，如不配置默认为/usr/local/Ascend/asdsip/latest
+   2. 环境变量: export BOOST_COMM_PATH=ascend-boost-comm头文件目录, 如不配置默认为 ../3rdparty/ascend-boost-comm/src/include
+   3. 环境变量: export USE_NINJA=ON，可选配置, 是否启用ninja构建
    4. CANN配置: 如 source /opt/xxx/ascend-toolkit/set_env.sh
    5. conda环境激活: conda activate your_env 需要安装torch_npu
 

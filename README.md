@@ -91,7 +91,7 @@ source /usr/local/Ascend/cann/set_env.sh
 # source ${install_path}/cann/set_env.sh
 ```
 
-#### 3.1.4  基础工具版本要求与安装
+#### 3.1.5  基础工具版本要求与安装
 
 安装CANN之后，您可安装一些工具方便后续开发，参见以下内容：
 

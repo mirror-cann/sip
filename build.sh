@@ -246,6 +246,7 @@ function help_info() {
     echo "--help                         Displays help message."
     echo "--dev                          仅编译算子库, 若type为空，默认为dev."
     echo "--clean                        清除缓存和依赖的三方库."
+    echo "--ut                           编译执行单元测试用例."
     echo
     echo "options:"
     echo "--output=<dir>               指定编译输出目录，默认为${repo}/output目录."
@@ -327,6 +328,11 @@ function fn_main()
             fn_build
             fn_build_coverage
             ;;
+        --ut)
+            fn_ut_test_needed
+            fn_build
+            fn_build_coverage
+            ;;
         "smoke_pr")
             fn_build
             bash $CODE_ROOT/scripts/build_test.sh example_test
@@ -367,7 +373,7 @@ export COMPILE_OPTIONS="-DNO_WERROR=ON"
 export USE_VERBOSE=OFF
 export USE_CXX11_ABI="OFF"
 MSSANITIZER_SWITCH=OFF
-BUILD_OPTION_LIST="ops_unit ut st ft smoke_pr smoke_all --dev --clean --help"
+BUILD_OPTION_LIST="ops_unit ut st ft smoke_pr smoke_all --ut --dev --clean --help"
 BUILD_CONFIGURE_LIST=("--output=.*" "--use_cxx11_abi=0" "--use_cxx11_abi=1 --verbose --mssanitizer")
 
 fn_main "$@"

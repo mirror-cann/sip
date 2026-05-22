@@ -10,7 +10,6 @@
 
 include_directories(
     $ENV{CODE_ROOT}/3rdparty/mki/include/mki/utils/platform
-    $ENV{MIK_CODE}/3rdparty/nlohmannJson/include
     $ENV{CODE_ROOT}/core/include
     $ENV{CODE_ROOT}/core/utils/include
     ${PROJECT_SOURCE_DIR}/ops

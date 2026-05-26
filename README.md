@@ -52,7 +52,6 @@ Ascend Signal Processing Boost（昇腾信号处理加速库，下文简称为Si
    - numpy 
    - googletest（仅执行UT时依赖，建议版本 [1.14.0](https://github.com/google/googletest/releases/tag/v1.14.0)）
 
-   > **注意**：当前 ascend-boost-comm 第三方库与 GCC 14 存在兼容性问题（函数声明不匹配），建议使用 **GCC 12** 进行编译。
 
 上述依赖可通过项目脚本一键安装，操作步骤如下：
 ```sh
@@ -65,7 +64,7 @@ pip3 install -r requirements.txt
 
 #### 3.1.2  安装社区版CANN toolkit包
 
-- Atlas A2/A3系列产品：单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run/software/9.0.0-beta.2/)获取软件包
+- Atlas A2/A3系列产品：单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/master/)获取软件包，选择最新时间版本，并根据产品型号和环境架构下载对应包。
 
 ```bash
 # 确保安装包具有可执行权限
@@ -80,7 +79,7 @@ chmod +x Ascend-cann-toolkit_${cann_version}_linux-${arch}.run
 
 #### 3.1.3  安装社区版CANN ops包
 
-- Atlas A2/A3系列产品：单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run/software/9.0.0-beta.2/)获取软件包。
+- Atlas A2/A3系列产品：单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/master/)获取软件包，选择最新时间版本，并根据产品型号和环境架构下载对应包。
 
 ```bash
 # 确保安装包具有可执行权限

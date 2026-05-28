@@ -13,6 +13,7 @@
 #include <cstring>
 #include <vector>
 #include <complex>
+#include <algorithm>
 
 #include <mki/tensor.h>
 #include <mki/types.h>

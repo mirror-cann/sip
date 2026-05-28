@@ -75,36 +75,6 @@ detect_os() {
     fi
 }
 
-install_gawk() {
-    echo -e "\n==== Checking gawk ===="
-
-    if command -v gawk &> /dev/null; then
-        echo "gawk has been installed"
-        return
-    fi
-
-    echo "Installing gawk..."
-    case "$OS" in
-        debian)
-            run_command sudo $PKG_MANAGER update
-            run_command sudo $PKG_MANAGER install -y gawk
-            ;;
-        rhel|euler)
-            run_command sudo $PKG_MANAGER install -y gawk
-            ;;
-        macos)
-            run_command brew install gawk
-            ;;
-    esac
-
-    if command -v gawk &> /dev/null; then
-        echo "gawk installed successfully"
-    else
-        echo "gawk installation failed"
-        exit 1
-    fi
-}
-
 install_python() {
     # Python version >= 3.7.0
     echo -e "\n==== Checking Python ===="
@@ -182,9 +152,17 @@ install_gcc() {
     case "$OS" in
         debian)
             run_command sudo $PKG_MANAGER update
-            run_command sudo $PKG_MANAGER install -y gcc-9 g++-9
-            run_command sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 90 \
-                --slave /usr/bin/g++ g++ /usr/bin/g++-9
+            local debian_ver=0
+            if [[ -f /etc/debian_version ]]; then
+                debian_ver=$(grep -oP '^\d+' /etc/debian_version 2>/dev/null || echo "0")
+            fi
+            if [[ "$debian_ver" -ge 10 ]] 2>/dev/null; then
+                run_command sudo $PKG_MANAGER install -y gcc g++
+            else
+                run_command sudo $PKG_MANAGER install -y gcc-9 g++-9
+                run_command sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 90 \
+                    --slave /usr/bin/g++ g++ /usr/bin/g++-9
+            fi
             ;;
         rhel)
             if grep -q "release 7" /etc/redhat-release; then
@@ -323,6 +301,49 @@ install_pigz() {
     fi
 }
 
+install_patch() {
+    local req_ver="2.7.0"
+    echo -e "\n==== Checking patch ===="
+    local curr_ver=""
+
+    if command -v patch &> /dev/null; then
+        curr_ver=$(patch --version 2>&1 | head -n1 | awk '{print $3}')
+        echo "Current patch version: $curr_ver"
+        if version_ge "$curr_ver" "$req_ver"; then
+            echo "patch version meets requirements"
+            return
+        fi
+    fi
+
+    echo "Installing patch..."
+    case "$OS" in
+        debian)
+            run_command sudo $PKG_MANAGER update
+            run_command sudo $PKG_MANAGER install -y patch
+            ;;
+        rhel)
+            run_command sudo $PKG_MANAGER install -y patch
+            ;;
+        macos)
+            run_command brew install patch
+            ;;
+    esac
+
+    if command -v patch &> /dev/null; then
+        curr_ver=$(patch --version 2>&1 | head -n1 | awk '{print $3}')
+        if version_ge "$curr_ver" "$req_ver"; then
+            echo "patch installed successfully ($curr_ver)"
+            return
+        else
+            echo "patch version still doesn't meet requirements, please install manually"
+            exit 1
+        fi
+    else
+        echo "patch installation failed, please install manually"
+        exit 1
+    fi
+}
+
 install_dos2unix() {
     echo -e "\n==== Checking dos2unix ===="
 
@@ -349,156 +370,79 @@ install_dos2unix() {
     fi
 }
 
-install_patch() {
-    echo -e "\n==== Checking patch ===="
+install_git() {
+    echo -e "\n==== Checking git ===="
 
-    if command -v patch &> /dev/null; then
-        echo "patch has been installed"
+    if command -v git &> /dev/null; then
+        echo "git has been installed"
         return
     fi
 
-    echo "Installing patch..."
+    echo "Installing git..."
     case "$OS" in
-        debian|rhel)
-            run_command sudo $PKG_MANAGER install -y patch
+        debian|rhel|euler)
+            run_command sudo $PKG_MANAGER install -y git
             ;;
         macos)
-            run_command brew install patch
+            run_command brew install git
             ;;
     esac
 
-    if command -v patch &> /dev/null; then
-        echo "patch installed successfully"
+    if command -v git &> /dev/null; then
+        echo "git installed successfully"
     else
-        echo "patch installation failed"
+        echo "git installation failed"
         exit 1
     fi
 }
 
 install_googletest() {
+    local gtest_ver="release-1.11.0"
+    local gtest_install_prefix="/usr/local"
     echo -e "\n==== Checking googletest ===="
-    local req_ver="1.11.0"
 
-    if [[ -f "/usr/local/include/gtest/gtest.h" ]] || [[ -f "/usr/include/gtest/gtest.h" ]] || [[ -n "${HOMEBREW_PREFIX}" && -f "${HOMEBREW_PREFIX}/include/gtest/gtest.h" ]]; then
+    if pkg-config --exists gtest 2>/dev/null; then
         echo "googletest has been installed"
         return
     fi
 
-    echo "Installing googletest (release-${req_ver})..."
-    local gtest_tmp_dir
-    gtest_tmp_dir=$(mktemp -d)
+    if [[ -f "${gtest_install_prefix}/lib/libgtest.a" ]] || [[ -f "${gtest_install_prefix}/lib64/libgtest.a" ]]; then
+        echo "googletest has been installed"
+        return
+    fi
 
-    case "$OS" in
-        debian|rhel|euler)
-            run_command wget -q "https://github.com/google/googletest/archive/refs/tags/release-${req_ver}.tar.gz" -O "${gtest_tmp_dir}/googletest.tar.gz"
-            run_command tar -xzf "${gtest_tmp_dir}/googletest.tar.gz" -C "${gtest_tmp_dir}"
-            run_command cmake -S "${gtest_tmp_dir}/googletest-release-${req_ver}" -B "${gtest_tmp_dir}/build" -DCMAKE_INSTALL_PREFIX=/usr/local
-            run_command cmake --build "${gtest_tmp_dir}/build" -j$(nproc 2>/dev/null || echo 4)
-            run_command sudo cmake --install "${gtest_tmp_dir}/build"
-            run_command sudo ldconfig
-            ;;
-        macos)
-            run_command brew install googletest
-            ;;
-    esac
+    echo "Installing googletest ${gtest_ver}..."
+    local tmp_dir=$(mktemp -d)
+    local orig_dir=$(pwd)
+    trap "rm -rf ${tmp_dir}" EXIT
 
-    rm -rf "${gtest_tmp_dir}"
+    if ! curl -fsSL "https://github.com/google/googletest/archive/refs/tags/${gtest_ver}.tar.gz" -o "${tmp_dir}/googletest.tar.gz"; then
+        echo "Warning: Failed to download googletest, skipping. You can install it manually later."
+        rm -rf "${tmp_dir}"
+        trap - EXIT
+        cd "${orig_dir}"
+        return
+    fi
 
-    if [[ -f "/usr/local/include/gtest/gtest.h" ]] || [[ -f "/usr/include/gtest/gtest.h" ]] || [[ -n "${HOMEBREW_PREFIX}" && -f "${HOMEBREW_PREFIX}/include/gtest/gtest.h" ]]; then
-        echo "googletest installed successfully"
+    tar -xzf "${tmp_dir}/googletest.tar.gz" -C "${tmp_dir}"
+    local src_dir="${tmp_dir}/googletest-${gtest_ver#release-}"
+    if [[ ! -d "$src_dir" ]]; then
+        src_dir=$(find "${tmp_dir}" -maxdepth 1 -type d -name "googletest*" | head -1)
+    fi
+
+    mkdir -p "${src_dir}/build" && cd "${src_dir}/build"
+    cmake .. -DCMAKE_INSTALL_PREFIX="${gtest_install_prefix}" -DBUILD_SHARED_LIBS=OFF
+    make -j$(nproc 2>/dev/null || echo 1)
+    sudo make install
+
+    cd "${orig_dir}"
+    rm -rf "${tmp_dir}"
+    trap - EXIT
+
+    if [[ -f "${gtest_install_prefix}/lib/libgtest.a" ]] || [[ -f "${gtest_install_prefix}/lib64/libgtest.a" ]]; then
+        echo "googletest installed successfully (${gtest_ver})"
     else
-        echo "googletest installation failed"
-        exit 1
-    fi
-}
-
-check_dependencies_silent() {
-    local args=("$@")
-    local check_pkgz="false"
-    local check_dos2unix="false"
-
-    for arg in "${args[@]}"; do
-        case "$arg" in
-            --pkg)
-                check_pkgz="true"
-                check_dos2unix="true"
-                ;;
-            --opkernel)
-                check_dos2unix="true"
-                ;;
-        esac
-    done
-
-    local missing_deps=()
-    declare -A req_versions
-    req_versions["gawk"]=""
-    req_versions["Python"]="3.7.0"
-    req_versions["GCC"]="7.3.0"
-    req_versions["CMake"]="3.16.0"
-    req_versions["pigz"]="2.4"
-    req_versions["dos2unix"]=""
-
-    check_deps() {
-        local name="$1"
-        local cmd="$2"
-        local req_ver="$3"
-
-        if ! command -v "$cmd" &> /dev/null; then
-            missing_deps+=("$name")
-            return
-        fi
-
-        if [[ -n "$req_ver" ]]; then
-            local curr_ver=""
-            case "$cmd" in
-                python3)
-                    curr_ver=$(python3 --version 2>&1 | awk '{print $2}')
-                    ;;
-                gcc|g++)
-                    curr_ver=$(gcc --version | awk '/^gcc/ {print $NF}') 
-                    ;;
-                cmake)
-                    curr_ver=$(cmake --version | awk '/^cmake/ {print $3}') 
-                    ;;
-                pigz)
-                    curr_ver=$(pigz --version 2>&1 | awk '{print $2}') 
-                    ;;
-            esac
-        
-            if [[ -z "$curr_ver" ]] || ! version_ge "$curr_ver" "$req_ver"; then
-                missing_deps+=("$name")
-            fi
-        fi
-    }
-
-    check_deps "gawk" "gawk" "${req_versions["gawk"]}"
-    check_deps "Python" "python3" "${req_versions["Python"]}"
-    check_deps "GCC" "gcc" "${req_versions["GCC"]}"
-    check_deps "CMake" "cmake" "${req_versions["CMake"]}"
-    if [[ "$check_dos2unix" == "true" ]]; then
-        check_deps "dos2unix" "dos2unix" "${req_versions["dos2unix"]}"
-    fi
-    if [[ "$check_pkgz" == "true" ]]; then
-        check_deps "pigz" "pigz" "${req_versions["pigz"]}"
-    fi
-
-    if [[ ${#missing_deps[@]} -eq 0 ]]; then
-        return 0
-    else
-        echo -e "\n Missing dependencies:"
-        for dep in "${missing_deps[@]}"; do
-            local req_ver="${req_versions[$dep]}"
-            if [[ -n "$req_ver" ]]; then
-                echo " - $dep (required: >= $req_ver)"
-            else
-                echo " - $dep"
-            fi
-        done
-        echo -e "\n Please run:"
-        echo -e "\n    bash install_deps.sh\n"
-        echo -e "    to install all missing dependencies."
-        echo -e "    After installation, re-run this script.\n"
-        return 1
+        echo "Warning: googletest installation may have failed. UT tests require googletest."
     fi
 }
 
@@ -508,13 +452,13 @@ main() {
     echo "===================================================="
 
     detect_os
-    install_gawk
     install_python
     install_gcc
     install_cmake
     install_pigz
-    install_dos2unix
     install_patch
+    install_dos2unix
+    install_git
     install_googletest
 
     echo -e "===================================================="
@@ -522,6 +466,4 @@ main() {
     echo "===================================================="
 }
 
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main "$@"
-fi
+main "$@"

@@ -48,9 +48,8 @@ Ascend Signal Processing Boost（昇腾信号处理加速库，下文简称为Si
    - cmake >= 3.16.0
    - pigz（安装后可提升打包速度，建议版本 >= 2.4）
    - dos2unix
-   - gawk
    - numpy 
-   - googletest（仅执行UT时依赖，建议版本 [1.14.0](https://github.com/google/googletest/releases/tag/v1.14.0)）
+   - googletest（仅执行UT时依赖，建议版本 [release-1.11.0](https://github.com/google/googletest/releases/tag/release-1.11.0)）
 
 
 上述依赖可通过项目脚本一键安装，操作步骤如下：

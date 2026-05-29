@@ -276,13 +276,6 @@ install_pigz() {
         fi
     fi
 
-    read -p "Install pigz? [Y/n] " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Skipping pigz installation"
-        return
-    fi
-
     echo "Installing pigz..."
     case "$OS" in
         debian|rhel|euler)
@@ -295,7 +288,11 @@ install_pigz() {
 
     if command -v pigz &> /dev/null; then
         curr_ver=$(pigz --version 2>&1 | awk '{print $2}')
-        echo "pigz installed successfully ($curr_ver)"
+        if version_ge "$curr_ver" "$req_ver"; then
+            echo "pigz installed successfully ($curr_ver)"
+        else
+            echo "pigz version still doesn't meet requirements ($curr_ver), please install manually"
+        fi
     else
         echo "pigz installation failed, can be ignored"
     fi

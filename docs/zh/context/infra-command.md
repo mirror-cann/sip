@@ -4,7 +4,7 @@
 
 CANN社区中所有项目均由Bot维护，这意味着开发人员可以在每个Pull Request或者Issue下面可以通过评论触发Bot命令， 主要交互流程图如下：
 
-![流程](../figures/docs_images_robot.png)
+![流程](../API%20Reference/figures/docs_images_robot.png)
 
 ## 🎯 如需了解详细的命令，可参考下方详细表格
 

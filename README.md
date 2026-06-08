@@ -51,12 +51,14 @@ Ascend Signal Processing Boost（昇腾信号处理加速库，下文简称为Si
    - numpy 
    - googletest（仅执行UT时依赖，建议版本 [release-1.11.0](https://github.com/google/googletest/releases/tag/release-1.11.0)）
 
-
 上述依赖可通过项目脚本一键安装，操作步骤如下：
+
 ```sh
 bash install_deps.sh
 ```
+
 安装完后，再通过项目根目录requirements.txt继续安装python三方库依赖，命令如下:
+
 ```sh
 pip3 install -r requirements.txt
 ```

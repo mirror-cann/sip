@@ -1,22 +1,22 @@
-# 信号处理加速库FFT2DOperation C++ Demo
+# 信号处理加速库FFT3DOperation C++ Demo
 
 ## 介绍
 
-该目录下为信号处理加速库FFT2DOperation C++调用示例。
+该目录下为信号处理加速库FFT3DOperation C++调用示例。
 
 ## 功能说明
 
-- 算子功能：执行批量2D快速傅里叶变换。
+- 算子功能：执行批量3D快速傅里叶变换。
 - 计算公式：
-    $$
-    X[k,l] = \sum_{m=0}^{M-1} \sum_{n=0}^{N-1} x[m,n] \cdot e^{-j2\pi (km/M + ln/N)}
-    $$
-
-    其中：
-    - $x[m,n]$ 为输入二维时域信号（复数矩阵）
-    - $X[k,l]$ 为输出二维频域信号（复数矩阵）
-    - $M \times N$ 为信号尺寸
-    - $k = 0, 1, \dots, M-1$, $l = 0, 1, \dots, N-1$
+    设有一个三维离散信号：
+    
+     ![公式](../../../../docs/zh/API%20Reference/figures/FFT_3D_1.png)
+    
+    它的三维离散傅里叶变换定义为：\
+      ![公式](../../../../docs/zh/API%20Reference/figures/FFT_3D_2.png)
+    
+    其中：\
+     ![公式](../../../../docs/zh/API%20Reference/figures/FFT_3D_3.png)
 
 ## 使用说明
 
@@ -68,7 +68,7 @@
 
 提供示例代码分别对应不同场景，编译运行时需要根据具体场景对应更改build脚本：
 
-- **example_acl_fft_c2c_2d.cpp**
+- **example_acl_fft_c2c_3d.cpp**
 
     【注】：默认编译脚本可编译运行该示例。
 
@@ -77,48 +77,65 @@
     | TensorName |   DataType  | DataFormat |          Shape          |       Value     |
     | :--------: | :---------: | :--------: | :---------------------: | :-------------: |
     |  fftType   |  asdFftType |     nd     |           [1]           |  ASCEND_FFT_C2C |
-    |   input    |  complex64  |     nd     |  [batch, Nfft1, Nfft2]  |       -         |
+    |   input    |  complex64  |     nd     |  [batch, Nfft1, Nfft2, Nfft3]  |       -         |
 
     **输出**
 
     | TensorName |  DataType  | DataFormat |           Shape           |       Value     |
     | :--------: | :--------: | :--------: | :-----------------------: | :-------------: |
-    |     out    |  complex64 |     nd     |   [batch, Nfft1, Nfft2]   |         -       |
+    |     out    |  complex64 |     nd     |   [batch, Nfft1, Nfft2, Nfft3]   |         -       |
 
     ---
 
-- **example_acl_fft_c2r_2d.cpp**
+- **example_acl_fft_c2r_3d.cpp**
 
-    【注】：将编译脚本中的 example_acl_fft_c2c_2d.cpp 替换为 example_acl_fft_c2r_2d.cpp 后，替换后的编译脚本可编译运行。
+    【注】：将编译脚本中的 example_acl_fft_c2c_3d.cpp 替换为 example_acl_fft_c2r_3d.cpp 后，替换后的编译脚本可编译运行。
 
     **输入**
 
     | TensorName |   DataType  | DataFormat |              Shape              |       Value     |
     | :--------: | :---------: | :--------: | :-----------------------------: | :-------------: |
     |  fftType   |  asdFftType |     nd     |                [1]              |  ASCEND_FFT_C2R |
-    |   input    |  complex64  |     nd     |  [batch, Nfft1, Nfft2 / 2 + 1]  |       -         |
+    |   input    |  complex64  |     nd     |  [batch, Nfft1, Nfft2 , Nfft3 / 2 + 1]  |       -         |
 
     **输出**
 
     | TensorName |  DataType  | DataFormat |           Shape           |       Value     |
     | :--------: | :--------: | :--------: | :-----------------------: | :-------------: |
-    |     out    |   float32   |     nd     |   [batch, Nfft1, Nfft2]   |         -       |
+    |     out    |   float32   |     nd     |   [batch, Nfft1, Nfft2, Nfft3]   |         -       |
 
      ---
 
-- **example_acl_fft_r2c_2d.cpp**
+- **example_acl_fft_r2c_3d.cpp**
 
-    【注】：将编译脚本中的 example_acl_fft_c2c_2d.cpp 替换为 example_acl_fft_r2c_2d.cpp 后，替换后的编译脚本可编译运行。
+    【注】：将编译脚本中的 example_acl_fft_c2c_3d.cpp 替换为 example_acl_fft_r2c_3d.cpp 后，替换后的编译脚本可编译运行。
 
     **输入**
 
     | TensorName |   DataType   | DataFormat |           Shape           |       Value     |
     | :--------: | :----------: | :--------: | :-----------------------: | :-------------: |
     |   fftType  |   asdFftType |     nd     |             [1]           |  ASCEND_FFT_R2C |
-    |    input   |    float32    |     nd     |   [batch, Nfft1, Nfft2]   |         -       |
+    |    input   |    float32    |     nd     |   [batch, Nfft1, Nfft2, Nfft3]   |         -       |
 
     **输出**
 
     | TensorName |   DataType  | DataFormat |              Shape              |       Value     |
     | :--------: | :---------: | :--------: | :-----------------------------: | :-------------: |
-    |    out     |  complex64  |     nd     |  [batch, Nfft1, Nfft2 / 2 + 1]  |       -         |
+    |    out     |  complex64  |     nd     |  [batch, Nfft1, Nfft2, Nfft3 / 2 + 1]  |       -         |
+
+- **example_acl_fft_c2c_3d_sep.cpp**
+
+    【注】：将编译脚本中的“example_acl_fft_c2c_3d.cpp” 替换为“example_acl_fft_c2c_3d_sep.cpp”后，替换后的编译脚本可编译运行。
+
+    **输入**
+
+    | TensorName |   DataType   | DataFormat |           Shape           |       Value     |
+    | :--------: | :----------: | :--------: | :-----------------------: | :-------------: |
+    |   fftType  |   asdFftType |     nd     |             [1]           |  ASCEND_FFT_C2C_SEP |
+    |    input   |    float32    |     nd     |   [batch, Nfft1, Nfft2, Nfft3]   |         -       |
+
+    **输出**
+
+    | TensorName |   DataType  | DataFormat |              Shape              |       Value     |
+    | :--------: | :---------: | :--------: | :-----------------------------: | :-------------: |
+    |    out     |  complex64  |     nd     |  [batch, Nfft1, Nfft2, Nfft3]  |       -         |

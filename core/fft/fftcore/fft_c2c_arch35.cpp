@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <cmath>
 #include <mki/utils/rt/rt.h>
 #include <mki/utils/platform/platform_info.h>
 #include "utils/assert.h"
@@ -16,11 +17,32 @@
 #include "utils/ops_base.h"
 #include "fft_c2c_arch35.h"
 #include "fftcore/fft_c2c_arch35_core.h"
+#include "params/fft_c2c_arch35.h"
 
 constexpr double K_PI = 3.14159265358979323846;
 constexpr double K_2PI = 2 * K_PI;
 
 using namespace AsdSip;
+
+namespace {
+constexpr int64_t MIXED_RADIX_THRESHOLD = 1 << 14;
+constexpr int64_t MULTI_CORE_BATCH_THRESHOLD = 32;
+
+int32_t Log2PowerOfTwo(int64_t value)
+{
+    int32_t log = 0;
+    while (value > 1) {
+        value >>= 1;
+        ++log;
+    }
+    return log;
+}
+
+bool ShouldUseMixedRadixKernel(bool radix2Only, int64_t fftN, int64_t batchSize)
+{
+    return !radix2Only || fftN < MIXED_RADIX_THRESHOLD || batchSize <= MULTI_CORE_BATCH_THRESHOLD;
+}
+}
 
 size_t FftC2CCoreArch35::EstimateWorkspaceSize()
 {
@@ -37,13 +59,126 @@ size_t FftC2CCoreArch35::EstimateWorkspaceSize()
 void FftC2CCoreArch35::Run(void *input, void *output, void *stream, workspace::Workspace &workspace)
 {
     if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
-        FftOperation::Run(input, output, stream, workspace);
+        if (isMixedRadix) {
+            int64_t batch = static_cast<int64_t>(problemDesc.batch);
+            int64_t n = static_cast<int64_t>(problemDesc.nDoing);
+            int64_t fullComplexFloats = batch * n * 2;
+            int64_t workspaceBytes = 2 * fullComplexFloats * static_cast<int64_t>(sizeof(float));
+            void *scratch = workspace.allocate(static_cast<size_t>(workspaceBytes));
+
+            runInfo.SetScratchDeviceAddr(reinterpret_cast<uint8_t *>(scratch));
+            runInfo.SetStream(stream);
+            launchParam.GetInTensor(0).data = input;
+            launchParam.GetOutTensor(0).data = output;
+
+            if (kernel == nullptr) {
+                ASDSIP_LOG(ERROR) << "FftC2CCoreArch35 mixed-radix kernel pointer is null before Run.";
+                workspace.recycleLast();
+                return;
+            }
+
+            auto status = kernel->Run(launchParam, runInfo);
+            if (!status.Ok()) {
+                ASDSIP_LOG(ERROR) << "FftC2CCoreArch35 mixed-radix kernel Run failed.";
+                workspace.recycleLast();
+                return;
+            }
+            workspace.recycleLast();
+            ASDSIP_LOG(INFO) << "ASCEND_950 FftC2CCoreArch35 mixed-radix run success.";
+            return;
+        }
+
+        int64_t batch = static_cast<int64_t>(problemDesc.batch);
+        int64_t n = static_cast<int64_t>(problemDesc.nDoing);
+        int64_t nHalf = n >> 1;
+        int32_t cntStages = Log2PowerOfTwo(n);
+        int32_t logNhalf = Log2PowerOfTwo(nHalf);
+        int32_t isInverse = 1 - int(problemDesc.forward);
+
+        int64_t fullComplexFloats = batch * n * 2;
+        int64_t workspaceBytes = 2 * fullComplexFloats * static_cast<int64_t>(sizeof(float));
+        float *tmp0 = static_cast<float *>(workspace.allocate(static_cast<size_t>(workspaceBytes)));
+        float *tmp1 = tmp0 + fullComplexFloats;
+
+        runInfo.SetScratchDeviceAddr(reinterpret_cast<uint8_t *>(tmp0));
+        runInfo.SetStream(stream);
+
+        if (stageTilingDeviceAddrs.size() < static_cast<size_t>(cntStages)) {
+            ASDSIP_LOG(ERROR) << "FftC2CCoreArch35 radix-2 stage tiling buffers are not initialized.";
+            workspace.recycleLast();
+            return;
+        }
+
+        for (int32_t stage = 0; stage < cntStages; ++stage) {
+            bool isLast = (stage == cntStages - 1);
+            int32_t len = 1 << (stage + 1);
+            int32_t half = len >> 1;
+
+            void *stageSrc = nullptr;
+            void *stageDst = nullptr;
+            if (stage == 0) {
+                stageSrc = input;
+            } else {
+                stageSrc = (stage & 1) ? static_cast<void *>(tmp0) : static_cast<void *>(tmp1);
+            }
+            if (isLast) {
+                stageDst = output;
+            } else {
+                stageDst = (stage & 1) ? static_cast<void *>(tmp1) : static_cast<void *>(tmp0);
+            }
+
+            FftC2CArch35StageTilingData stageTiling = {};
+            stageTiling.batch = batch;
+            stageTiling.n = n;
+            stageTiling.totalButterflies = batch * nHalf;
+            stageTiling.nHalf = static_cast<int32_t>(nHalf);
+            stageTiling.len = len;
+            stageTiling.half = half;
+            stageTiling.logNhalf = logNhalf;
+            stageTiling.logHalf = stage;
+            stageTiling.twOffset = half - 1;
+            stageTiling.outer = 1;
+            stageTiling.isInverse = isInverse;
+            stageTiling.scaleOut = 0;
+            stageTiling.transpose = 0;
+
+            uint8_t *stageTilingDeviceAddr = stageTilingDeviceAddrs[stage];
+            int st = MkiRtMemCopy(stageTilingDeviceAddr, sizeof(stageTiling), &stageTiling, sizeof(stageTiling),
+                                  MKIRT_MEMCOPY_HOST_TO_DEVICE);
+            if (st != MKIRT_SUCCESS) {
+                ASDSIP_LOG(ERROR) << "FftC2CCoreArch35 copy stage tiling failed.";
+                workspace.recycleLast();
+                return;
+            }
+            runInfo.SetTilingDeviceAddr(stageTilingDeviceAddr);
+
+            launchParam.GetInTensor(0).data = stageSrc;
+            launchParam.GetOutTensor(0).data = stageDst;
+
+            auto status = kernel->Run(launchParam, runInfo);
+            if (!status.Ok()) {
+                ASDSIP_LOG(ERROR) << "FftC2CCoreArch35 radix-2 stage launch failed at stage " << stage;
+                workspace.recycleLast();
+                return;
+            }
+        }
+
+        workspace.recycleLast();
         ASDSIP_LOG(INFO) << "ASCEND_950 FftC2CCoreArch35 run success.";
     }
 }
 
 void FftC2CCoreArch35::DestroyInDevice() const
 {
+    if (!stageTilingDeviceAddrs.empty()) {
+        for (uint8_t *deviceLaunchBuffer : stageTilingDeviceAddrs) {
+            if (deviceLaunchBuffer != nullptr) {
+                MkiRtMemFreeDevice(deviceLaunchBuffer);
+            }
+        }
+        return;
+    }
+
     uint8_t *deviceLaunchBuffer = runInfo.GetTilingDeviceAddr();
     if (deviceLaunchBuffer != nullptr) {
         MkiRtMemFreeDevice(deviceLaunchBuffer);
@@ -55,40 +190,37 @@ void FftC2CCoreArch35::InitRadix()
     plan.clear();
     int64_t tempN = static_cast<int64_t>(problemDesc.nDoing);
 
-    if (tempN <= 0) {
-        ASDSIP_LOG(ERROR) << "FftC2CCoreArch35 nDoing must be positive, got " << tempN;
-        throw std::runtime_error("FftC2CCoreArch35 nDoing must be positive.");
+    if (tempN <= 1) {
+        ASDSIP_LOG(ERROR) << "FftC2CCoreArch35 nDoing must be greater than 1, got " << tempN;
+        throw std::runtime_error("FftC2CCoreArch35 nDoing must be greater than 1.");
     }
 
     constexpr size_t numRadices = std::size(ALLOWED_RADICES);
-
-    while (tempN > 1) {
-        int64_t radix = 0;
-        for (size_t i = 0; i < numRadices; i++) {
-            if (tempN % ALLOWED_RADICES[i] == 0) {
-                radix = ALLOWED_RADICES[i];
-                break;
-            }
+    for (size_t i = 0; i < numRadices; i++) {
+        int64_t radix = ALLOWED_RADICES[i];
+        while (tempN % radix == 0) {
+            tempN /= radix;
+            plan.push_back({radix, tempN});
         }
-
-        if (radix == 0) {
-            std::string allowedStr;
-            for (size_t i = 0; i < numRadices; i++) {
-                if (i > 0) allowedStr += ", ";
-                allowedStr += std::to_string(ALLOWED_RADICES[i]);
-            }
-            ASDSIP_LOG(ERROR) << "FftC2CCoreArch35 nDoing contains prime factors other than "
-                              << allowedStr << ". Remaining: " << tempN;
-            throw std::runtime_error("FftC2CCoreArch35: unsupported signal length. "
-                                     "Only prime factors " + allowedStr + " are allowed.");
-        }
-
-        int64_t M = tempN / radix;
-        plan.push_back({radix, M});
-        tempN = M;
     }
 
-    ASDSIP_LOG(INFO) << "FftC2CCoreArch35 init radix success. plan size: " << plan.size();
+    if (tempN != 1) {
+        ASDSIP_LOG(ERROR) << "FftC2CCoreArch35 unsupported factor remains: " << tempN;
+        throw std::runtime_error("FftC2CCoreArch35 unsupported factorization.");
+    }
+
+    bool radix2Only = true;
+    for (const auto &stage : plan) {
+        if (stage.radix != 2) {
+            radix2Only = false;
+            break;
+        }
+    }
+    isMixedRadix = ShouldUseMixedRadixKernel(radix2Only, static_cast<int64_t>(problemDesc.nDoing),
+        static_cast<int64_t>(problemDesc.batch));
+
+    ASDSIP_LOG(INFO) << "FftC2CCoreArch35 init success. plan size: " << plan.size()
+                     << ", isMixedRadix=" << isMixedRadix;
 }
 
 AspbStatus FftC2CCoreArch35::BuildFftPlan()
@@ -101,6 +233,8 @@ AspbStatus FftC2CCoreArch35::BuildFftPlan()
     double sign = problemDesc.forward ? (-1.0) : (1.0);
     size_t planLen = plan.size();
     size_t radixListSize = planLen * sizeof(int32_t);
+    bool mixedRadixMode = isMixedRadix;
+    unsigned coeffKeyBase = mixedRadixMode ? 110U : 100U;
 
     auto radixListFunc = [=]() -> AsdSip::FFTensor* {
         AsdSip::FFTensor *t = new AsdSip::FFTensor;
@@ -114,42 +248,50 @@ AspbStatus FftC2CCoreArch35::BuildFftPlan()
         t->dataSize = radixListSize;
         return t;
     };
-    AsdSip::CoeffKey radixKey = {coreType, 100, {static_cast<int64_t>(problemDesc.nDoing)}, problemDesc.forward};
+    AsdSip::CoeffKey radixKey = {coreType, coeffKeyBase, {static_cast<int64_t>(problemDesc.nDoing)}, problemDesc.forward};
     radixListTensor = FFTensorCache::getCoeff(radixKey, radixListFunc);
 
-    size_t totalDftFloats = 0;
-    size_t totalTwFloats = 0;
-    for (size_t s = 0; s < planLen; s++) {
-        int64_t radix = plan[s].radix;
-        int64_t M = plan[s].M;
-        totalDftFloats += 2 * radix * radix;
-        totalTwFloats += 2 * radix * M;
+    size_t totalDftComplex = 0;
+    if (mixedRadixMode) {
+        for (const auto &stage : plan) {
+            totalDftComplex += static_cast<size_t>(stage.radix * stage.radix);
+        }
     }
+    size_t totalDftFloats = mixedRadixMode ? totalDftComplex * 2 : 1;
+
+    size_t totalTwComplex = 0;
+    if (mixedRadixMode) {
+        int64_t prev = 1;
+        for (const auto &stage : plan) {
+            totalTwComplex += static_cast<size_t>(stage.radix * prev);
+            prev *= stage.radix;
+        }
+    } else {
+        for (int64_t len = 2; len <= static_cast<int64_t>(problemDesc.nDoing); len <<= 1) {
+            totalTwComplex += static_cast<size_t>(len >> 1);
+        }
+    }
+    size_t totalTwFloats = totalTwComplex * 2;
 
     size_t dftDataSize = totalDftFloats * sizeof(float);
 
     auto dftFunc = [=]() -> AsdSip::FFTensor* {
         AsdSip::FFTensor *t = new AsdSip::FFTensor;
-        float *host = nullptr;
-        try {
-            host = new float[totalDftFloats]();
-        } catch (std::bad_alloc& e) {
-            delete t;
-            ASDSIP_LOG(ERROR) << "dftMatrixArray host malloc failed";
-            throw std::runtime_error("dftMatrixArray host malloc failed.");
-        }
+        float *host = new float[totalDftFloats]();
 
-        size_t offset = 0;
-        for (size_t s = 0; s < planLen; s++) {
-            int64_t radix = plan[s].radix;
-            for (int64_t u = 0; u < radix; u++) {
-                for (int64_t v = 0; v < radix; v++) {
-                    double angle = sign * K_2PI * u * v / radix;
-                    host[offset + (2 * u) * radix + v] = static_cast<float>(cos(angle));
-                    host[offset + (2 * u + 1) * radix + v] = static_cast<float>(sin(angle));
+        if (mixedRadixMode) {
+            size_t offset = 0;
+            for (const auto &stage : plan) {
+                int64_t radix = stage.radix;
+                for (int64_t q = 0; q < radix; q++) {
+                    for (int64_t p = 0; p < radix; p++) {
+                        double angle = sign * K_2PI * p * q / radix;
+                        host[(offset + q * radix + p) * 2] = static_cast<float>(std::cos(angle));
+                        host[(offset + q * radix + p) * 2 + 1] = static_cast<float>(std::sin(angle));
+                    }
                 }
+                offset += static_cast<size_t>(radix * radix);
             }
-            offset += 2 * radix * radix;
         }
 
         t->desc = {Mki::TensorDType::TENSOR_DTYPE_FLOAT, Mki::TensorFormat::TENSOR_FORMAT_ND,
@@ -173,21 +315,32 @@ AspbStatus FftC2CCoreArch35::BuildFftPlan()
         }
 
         size_t offset = 0;
-        int64_t tempN = static_cast<int64_t>(problemDesc.nDoing);
-
-        for (size_t s = 0; s < planLen; s++) {
-            int64_t radix = plan[s].radix;
-            int64_t M = plan[s].M;
-
-            for (int64_t k1 = 0; k1 < radix; k1++) {
-                for (int64_t n2 = 0; n2 < M; n2++) {
-                    double angle = sign * K_2PI * k1 * n2 / tempN;
-                    host[offset + (2 * k1) * M + n2] = static_cast<float>(cos(angle));
-                    host[offset + (2 * k1 + 1) * M + n2] = static_cast<float>(sin(angle));
+        if (mixedRadixMode) {
+            int64_t prev = 1;
+            int64_t len = 1;
+            for (const auto &stage : plan) {
+                int64_t radix = stage.radix;
+                len *= radix;
+                for (int64_t p = 0; p < radix; p++) {
+                    for (int64_t j = 0; j < prev; j++) {
+                        double angle = sign * K_2PI * p * j / len;
+                        host[(offset + p * prev + j) * 2] = static_cast<float>(std::cos(angle));
+                        host[(offset + p * prev + j) * 2 + 1] = static_cast<float>(std::sin(angle));
+                    }
                 }
+                offset += static_cast<size_t>(radix * prev);
+                prev = len;
             }
-            offset += 2 * radix * M;
-            tempN = M;
+        } else {
+            for (int64_t len = 2; len <= static_cast<int64_t>(problemDesc.nDoing); len <<= 1) {
+                int64_t half = len >> 1;
+                for (int64_t j = 0; j < half; j++) {
+                    double angle = sign * K_2PI * j / len;
+                    host[(offset + j) * 2] = static_cast<float>(std::cos(angle));
+                    host[(offset + j) * 2 + 1] = static_cast<float>(std::sin(angle));
+                }
+                offset += static_cast<size_t>(half);
+            }
         }
 
         t->desc = {Mki::TensorDType::TENSOR_DTYPE_FLOAT, Mki::TensorFormat::TENSOR_FORMAT_ND,
@@ -197,16 +350,17 @@ AspbStatus FftC2CCoreArch35::BuildFftPlan()
         return t;
     };
 
-    AsdSip::CoeffKey dftKey = {coreType, 101, {static_cast<int64_t>(problemDesc.nDoing)}, problemDesc.forward};
+    AsdSip::CoeffKey dftKey = {coreType, coeffKeyBase + 1, {static_cast<int64_t>(problemDesc.nDoing)}, problemDesc.forward};
     dftMatrixArray = FFTensorCache::getCoeff(dftKey, dftFunc);
 
-    AsdSip::CoeffKey twKey = {coreType, 102, {static_cast<int64_t>(problemDesc.nDoing)}, problemDesc.forward};
+    AsdSip::CoeffKey twKey = {coreType, coeffKeyBase + 2, {static_cast<int64_t>(problemDesc.nDoing)}, problemDesc.forward};
     twMatrixArray = FFTensorCache::getCoeff(twKey, twFunc);
 
     ASDSIP_LOG(INFO) << "FftC2CCoreArch35 BuildFftPlan success. "
                      << "planLen=" << planLen
-                     << ", dftFloats=" << totalDftFloats
-                     << ", twFloats=" << totalTwFloats;
+                     << ", dftComplex=" << totalDftComplex
+                     << ", twiddleComplex=" << totalTwComplex
+                     << ", isMixedRadix=" << mixedRadixMode;
 
     return AsdSip::ErrorType::ACL_SUCCESS;
 }
@@ -233,9 +387,9 @@ AspbStatus FftC2CCoreArch35::InitTactic()
     OpParam::FftC2CArch35 param = {problemDesc.nDoing,
                                     problemDesc.batch,
                                     static_cast<int64_t>(plan.size()),
-                                    1 - int(problemDesc.forward)};
+                                    1 - int(problemDesc.forward),
+                                    isMixedRadix};
     ASDSIP_LOG(DEBUG) << "OpDesc info: " << param.ToString();
-
     Tensor tensorIn;
     Tensor tensorOut;
     int64_t inputN = problemDesc.nDoing;
@@ -271,20 +425,52 @@ AspbStatus FftC2CCoreArch35::InitTactic()
     kernel->SetTilingHostAddr(hostLaunchBuffer, launchBufferSize);
     kernel->Init(launchParam);
 
-    void* tempDevicePtr = nullptr;
-    int st = MkiRtMemMallocDevice(&tempDevicePtr, launchBufferSize, MKIRT_MEM_DEFAULT);
-    ASDSIP_ECHECK(st == MKIRT_SUCCESS, "malloc device memory fail", AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR);
+    if (!isMixedRadix) {
+        stageTilingDeviceAddrs.clear();
+        stageTilingDeviceAddrs.reserve(plan.size());
+        for (size_t stage = 0; stage < plan.size(); ++stage) {
+            void *tempDevicePtr = nullptr;
+            int st = MkiRtMemMallocDevice(&tempDevicePtr, launchBufferSize, MKIRT_MEM_DEFAULT);
+            if (st != MKIRT_SUCCESS) {
+                for (uint8_t *stageTilingAddr : stageTilingDeviceAddrs) {
+                    MkiRtMemFreeDevice(stageTilingAddr);
+                }
+                stageTilingDeviceAddrs.clear();
+                ASDSIP_ELOG(AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR) << "malloc stage tiling device memory fail";
+                return AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR;
+            }
 
-    deviceLaunchBuffer = static_cast<uint8_t *>(tempDevicePtr);
-    st = MkiRtMemCopy(deviceLaunchBuffer, launchBufferSize, hostLaunchBuffer, launchBufferSize,
-                      MKIRT_MEMCOPY_HOST_TO_DEVICE);
-    if (st != MKIRT_SUCCESS) {
-        MkiRtMemFreeDevice(deviceLaunchBuffer);
-        deviceLaunchBuffer = nullptr;
-        ASDSIP_ELOG(AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR) << "copy host memory to device fail";
-        return AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR;
+            deviceLaunchBuffer = static_cast<uint8_t *>(tempDevicePtr);
+            st = MkiRtMemCopy(deviceLaunchBuffer, launchBufferSize, hostLaunchBuffer, launchBufferSize,
+                              MKIRT_MEMCOPY_HOST_TO_DEVICE);
+            if (st != MKIRT_SUCCESS) {
+                MkiRtMemFreeDevice(deviceLaunchBuffer);
+                for (uint8_t *stageTilingAddr : stageTilingDeviceAddrs) {
+                    MkiRtMemFreeDevice(stageTilingAddr);
+                }
+                stageTilingDeviceAddrs.clear();
+                ASDSIP_ELOG(AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR) << "copy stage tiling to device fail";
+                return AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR;
+            }
+            stageTilingDeviceAddrs.push_back(deviceLaunchBuffer);
+        }
+        runInfo.SetTilingDeviceAddr(stageTilingDeviceAddrs[0]);
+    } else {
+        void* tempDevicePtr = nullptr;
+        int st = MkiRtMemMallocDevice(&tempDevicePtr, launchBufferSize, MKIRT_MEM_DEFAULT);
+        ASDSIP_ECHECK(st == MKIRT_SUCCESS, "malloc device memory fail", AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR);
+
+        deviceLaunchBuffer = static_cast<uint8_t *>(tempDevicePtr);
+        st = MkiRtMemCopy(deviceLaunchBuffer, launchBufferSize, hostLaunchBuffer, launchBufferSize,
+                          MKIRT_MEMCOPY_HOST_TO_DEVICE);
+        if (st != MKIRT_SUCCESS) {
+            MkiRtMemFreeDevice(deviceLaunchBuffer);
+            deviceLaunchBuffer = nullptr;
+            ASDSIP_ELOG(AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR) << "copy host memory to device fail";
+            return AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR;
+        }
+        runInfo.SetTilingDeviceAddr(deviceLaunchBuffer);
     }
-    runInfo.SetTilingDeviceAddr(deviceLaunchBuffer);
 
     ASDSIP_LOG(INFO) << "FftC2CCoreArch35 init tactic success.";
     return AsdSip::ErrorType::ACL_SUCCESS;

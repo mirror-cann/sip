@@ -11,10 +11,28 @@
 #ifndef ASDSIP_PARAMS_FFT_C2C_ARCH35_H
 #define ASDSIP_PARAMS_FFT_C2C_ARCH35_H
 
+#include <cstdint>
 #include <string>
 #include <sstream>
 
 namespace AsdSip {
+
+struct FftC2CArch35StageTilingData {
+    int64_t batch;
+    int64_t n;
+    int64_t totalButterflies;
+    int32_t nHalf;
+    int32_t len;
+    int32_t half;
+    int32_t logNhalf;
+    int32_t logHalf;
+    int32_t twOffset;
+    int32_t outer;
+    int32_t isInverse;
+    int32_t scaleOut;
+    int32_t transpose;
+};
+
 namespace OpParam {
 
 /**
@@ -25,17 +43,20 @@ namespace OpParam {
  *   batchSize    - Number of batched FFTs
  *   radixListLen - Number of radix decomposition stages (length of plan)
  *   isInverse    - 0 for forward FFT, 1 for inverse FFT
+ *   isMixedRadix - false for radix-2 kernel path, true for mixed-radix kernel path
  */
 struct FftC2CArch35 {
     int64_t fftN;
     int64_t batchSize;
     int64_t radixListLen;
     int32_t isInverse;
+    bool isMixedRadix;
 
     bool operator==(const FftC2CArch35 &other) const
     {
         return this->fftN == other.fftN && this->batchSize == other.batchSize &&
-               this->radixListLen == other.radixListLen && this->isInverse == other.isInverse;
+               this->radixListLen == other.radixListLen && this->isInverse == other.isInverse &&
+               this->isMixedRadix == other.isMixedRadix;
     }
 
     std::string ToString() const
@@ -43,7 +64,8 @@ struct FftC2CArch35 {
         std::stringstream ss;
         ss << "OpName: FftC2CArch35"
            << ", fftN:" << fftN << ", batchSize:" << batchSize
-           << ", radixListLen:" << radixListLen << ", isInverse:" << isInverse;
+           << ", radixListLen:" << radixListLen << ", isInverse:" << isInverse
+           << ", isMixedRadix:" << isMixedRadix;
         return ss.str();
     }
 };

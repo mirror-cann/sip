@@ -38,14 +38,10 @@ std::string GetC2ROutputDirectory() {
         return std::string("get env failed.");
     }
 }
-} // namespace
 
-/**
- * Test FFT C2R 1D with batch=1, nfft=16
- */
-TEST(TestFftC2R1d, TestC2RCase0)
+void RunFftC2RTest(int64_t batch, int64_t nfft,
+                   asdFftDirection direction = asdFftDirection::ASCEND_FFT_FORWARD)
 {
-    // Get data directory path
     std::string originPath = GetC2ROutputDirectory() + "/tests/ut/unittest/fft/1d/c2r/c2r_data";
     std::string destPath = GetC2ROutputDirectory() + "/build/tests/ut/unittest/fft/1d/c2r";
     std::string mkdir_cmd = "mkdir -p " + ShellQuote(destPath);
@@ -55,15 +51,14 @@ TEST(TestFftC2R1d, TestC2RCase0)
     system(copy_cmd.c_str());
     system(chmod_cmd.c_str());
 
+    std::string dirStr = (direction == asdFftDirection::ASCEND_FFT_FORWARD) ? "forward" : "inverse";
+
     int deviceId = 0;
-    int64_t batch = 1;
-    int64_t nfft = 16;
     int64_t inSignal = nfft / 2 + 1;
     int64_t outSignal = nfft;
 
     MkiRtStream stream = OpTestInit(deviceId);
 
-    // Create input tensor descriptor (complex64)
     SVector<TensorDesc> inTensorDescs;
     inTensorDescs.push_back({TENSOR_DTYPE_COMPLEX64, TENSOR_FORMAT_ND, {batch, inSignal}});
     inTensorDescs.push_back({TENSOR_DTYPE_FLOAT, TENSOR_FORMAT_ND, {batch, outSignal}});
@@ -74,27 +69,19 @@ TEST(TestFftC2R1d, TestC2RCase0)
     Tensor inputTensor = context.inTensors[0];
     Tensor outputTensor = context.inTensors[1];
 
-    // Save input data to bin file
     for (size_t i = 0; i < context.inTensors.size(); i++) {
         std::string filename = GetElementDtype(context.inTensors[i].desc.dtype) + "_input_" + std::to_string(i) + ".bin";
-        if (SaveTensorToBin(context.inTensors[i], destPath + "/c2r_data/" + filename)) {
-            std::cout << "Tensor saved successfully: " << filename << std::endl;
-        } else {
-            std::cerr << "Failed to save tensor: " << filename << std::endl;
-        }
+        SaveTensorToBin(context.inTensors[i], destPath + "/c2r_data/" + filename);
     }
 
-    // Generate golden data via Python
-    std::string gen_data_cmd = "cd " + ShellQuote(destPath + "/c2r_data/") + " && python3 gen_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
+    std::string gen_data_cmd = "cd " + ShellQuote(destPath + "/c2r_data/") + " && python3 gen_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft) + " --direction " + dirStr;
     system(gen_data_cmd.c_str());
 
-    // Create aclTensor for FFT API
     aclTensor *aclInput = nullptr;
     aclTensor *aclOutput = nullptr;
     void *inputDeviceAddr = nullptr;
     void *outputDeviceAddr = nullptr;
 
-    // Prepare host data
     std::vector<std::complex<float>> inputHostData(batch * inSignal);
     std::complex<float>* inputDataPtr = static_cast<std::complex<float>*>(inputTensor.hostData);
     for (int64_t i = 0; i < batch * inSignal; i++) {
@@ -105,18 +92,16 @@ TEST(TestFftC2R1d, TestC2RCase0)
     std::vector<int64_t> inShape = {batch, inSignal};
     std::vector<int64_t> outShape = {batch, outSignal};
 
-    // Create aclTensors
     auto ret = CreateAclTensor(inputHostData, inShape, &inputDeviceAddr, aclDataType::ACL_COMPLEX64, &aclInput);
     ASSERT_EQ(ret, 0);
     ret = CreateAclTensor(outputHostData, outShape, &outputDeviceAddr, aclDataType::ACL_FLOAT, &aclOutput);
     ASSERT_EQ(ret, 0);
 
-    // Execute FFT C2R
     asdFftHandle handle;
     AspbStatus fftStatus = asdFftCreate(handle);
     ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
 
-    fftStatus = asdFftMakePlan1D(handle, nfft, asdFftType::ASCEND_FFT_C2R, asdFftDirection::ASCEND_FFT_FORWARD, batch);
+    fftStatus = asdFftMakePlan1D(handle, nfft, asdFftType::ASCEND_FFT_C2R, direction, batch);
     ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
 
     size_t workSize = 0;
@@ -131,7 +116,6 @@ TEST(TestFftC2R1d, TestC2RCase0)
         ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
     }
 
-    // Convert MkiRtStream to aclrtStream
     aclrtStream aclStream = static_cast<aclrtStream>(stream);
     fftStatus = asdFftSetStream(handle, aclStream);
     ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
@@ -144,23 +128,16 @@ TEST(TestFftC2R1d, TestC2RCase0)
 
     asdFftDestroy(handle);
 
-    // Copy output back to host from aclOutput's device memory
     ret = aclrtMemcpy(outputTensor.hostData,
                       outputTensor.dataSize,
                       outputDeviceAddr,
                       outputTensor.dataSize,
                       ACL_MEMCPY_DEVICE_TO_HOST);
     ASSERT_EQ(ret, ::ACL_SUCCESS);
-    
-    // Save output to bin file
-    std::string outFilename = GetElementDtype(outputTensor.desc.dtype) + "_output_.bin";
-    if (SaveOutTensorToBin(outputTensor, destPath + "/c2r_data/" + outFilename)) {
-        std::cout << "Output tensor saved successfully" << std::endl;
-    } else {
-        std::cerr << "Failed to save output tensor" << std::endl;
-    }
 
-    // Cleanup aclTensors
+    std::string outFilename = GetElementDtype(outputTensor.desc.dtype) + "_output_.bin";
+    SaveOutTensorToBin(outputTensor, destPath + "/c2r_data/" + outFilename);
+
     aclDestroyTensor(aclInput);
     aclDestroyTensor(aclOutput);
     aclrtFree(inputDeviceAddr);
@@ -171,241 +148,57 @@ TEST(TestFftC2R1d, TestC2RCase0)
 
     OpTestEnd(deviceId, context, stream);
 
-    // Compare results via Python
-    std::string cmp_data_cmd = "cd " + ShellQuote(destPath + "/c2r_data/") + " && python3 compare_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
+    std::string cmp_data_cmd = "cd " + ShellQuote(destPath + "/c2r_data/") + " && python3 compare_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft) + " --direction " + dirStr;
     int res = system(cmp_data_cmd.c_str());
     std::cout << "compare result = " << res << std::endl;
     ASSERT_EQ(res, 0);
 }
 
-/**
- * Test FFT C2R 1D with batch=2, nfft=32
- */
-TEST(TestFftC2R1d, TestC2RCase1)
-{
-    std::string originPath = GetC2ROutputDirectory() + "/tests/ut/unittest/fft/1d/c2r/c2r_data";
-    std::string destPath = GetC2ROutputDirectory() + "/build/tests/ut/unittest/fft/1d/c2r";
-    std::string mkdir_cmd = "mkdir -p " + ShellQuote(destPath);
-    std::string copy_cmd = "cp -rf " + ShellQuote(originPath) + " " + ShellQuote(destPath);
-    std::string chmod_cmd = "chmod -R 755 " + ShellQuote(destPath + "/c2r_data/");
-    system(mkdir_cmd.c_str());
-    system(copy_cmd.c_str());
-    system(chmod_cmd.c_str());
+} // namespace
 
-    int deviceId = 0;
-    int64_t batch = 2;
-    int64_t nfft = 32;
-    int64_t inSignal = nfft / 2 + 1;
-    int64_t outSignal = nfft;
+// Pure radix tests (forward)
+TEST(TestFftC2R1d, TestC2RForwardRadix2)  { RunFftC2RTest(1, 16); }
+TEST(TestFftC2R1d, TestC2RForwardRadix2B2) { RunFftC2RTest(2, 32); }
+TEST(TestFftC2R1d, TestC2RForwardRadix2B1) { RunFftC2RTest(1, 64); }
+TEST(TestFftC2R1d, TestC2RForwardRadix3)  { RunFftC2RTest(1, 27); }
+TEST(TestFftC2R1d, TestC2RForwardRadix5)  { RunFftC2RTest(1, 25); }
+TEST(TestFftC2R1d, TestC2RForwardRadix7)  { RunFftC2RTest(1, 49); }
+TEST(TestFftC2R1d, TestC2RForwardRadix11) { RunFftC2RTest(1, 121); }
+// TEST(TestFftC2R1d, TestC2RForwardRadix13) { RunFftC2RTest(1, 169); }
+TEST(TestFftC2R1d, TestC2RForwardRadix17) { RunFftC2RTest(1, 289); }
+TEST(TestFftC2R1d, TestC2RForwardRadix19) { RunFftC2RTest(1, 361); }
 
-    MkiRtStream stream = OpTestInit(deviceId);
+// Mixed radix tests (forward)
+TEST(TestFftC2R1d, TestC2RForwardMixed235)  { RunFftC2RTest(1, 30); }
+TEST(TestFftC2R1d, TestC2RForwardMixed2357) { RunFftC2RTest(1, 210); }
+TEST(TestFftC2R1d, TestC2RForwardMixedBatch2) { RunFftC2RTest(2, 30); }
 
-    SVector<TensorDesc> inTensorDescs;
-    inTensorDescs.push_back({TENSOR_DTYPE_COMPLEX64, TENSOR_FORMAT_ND, {batch, inSignal}});
-    inTensorDescs.push_back({TENSOR_DTYPE_FLOAT, TENSOR_FORMAT_ND, {batch, outSignal}});
+// Large signal tests (forward, > 1024, arch35 path, up to 32768)
+TEST(TestFftC2R1d, TestC2RForwardRadix2Large)   { RunFftC2RTest(1, 2048); }
+TEST(TestFftC2R1d, TestC2RForwardRadix3Large)   { RunFftC2RTest(1, 2187); }
+TEST(TestFftC2R1d, TestC2RForwardRadix5Large)   { RunFftC2RTest(1, 3125); }
+// TEST(TestFftC2R1d, TestC2RForwardRadix7Large)   { RunFftC2RTest(1, 2401); }
+TEST(TestFftC2R1d, TestC2RForwardMixedLarge)    { RunFftC2RTest(1, 2160); }
+// TEST(TestFftC2R1d, TestC2RForwardRadix2Max)     { RunFftC2RTest(1, 32768); }
+TEST(TestFftC2R1d, TestC2RForwardMixedMax)      { RunFftC2RTest(1, 2520); }
 
-    TensorContext context;
-    OpTestMallocInTensors(inTensorDescs, context);
+// Inverse tests
+TEST(TestFftC2R1d, TestC2RInverseRadix2)    { RunFftC2RTest(1, 16, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2R1d, TestC2RInverseRadix3)    { RunFftC2RTest(1, 27, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2R1d, TestC2RInverseRadix5)    { RunFftC2RTest(1, 25, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2R1d, TestC2RInverseRadix7)    { RunFftC2RTest(1, 49, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2R1d, TestC2RInverseRadix11)   { RunFftC2RTest(1, 121, asdFftDirection::ASCEND_FFT_INVERSE); }
+// TEST(TestFftC2R1d, TestC2RInverseRadix13)   { RunFftC2RTest(1, 169, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2R1d, TestC2RInverseRadix17)   { RunFftC2RTest(1, 289, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2R1d, TestC2RInverseRadix19)   { RunFftC2RTest(1, 361, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2R1d, TestC2RInverseMixed235)  { RunFftC2RTest(1, 30, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2R1d, TestC2RInverseMixed2357) { RunFftC2RTest(1, 210, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2R1d, TestC2RInverseBatch2)    { RunFftC2RTest(2, 16, asdFftDirection::ASCEND_FFT_INVERSE); }
 
-    Tensor inputTensor = context.inTensors[0];
-    Tensor outputTensor = context.inTensors[1];
-
-    for (size_t i = 0; i < context.inTensors.size(); i++) {
-        std::string filename = GetElementDtype(context.inTensors[i].desc.dtype) + "_input_" + std::to_string(i) + ".bin";
-        SaveTensorToBin(context.inTensors[i], destPath + "/c2r_data/" + filename);
-    }
-
-    std::string gen_data_cmd = "cd " + ShellQuote(destPath + "/c2r_data/") + " && python3 gen_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
-    system(gen_data_cmd.c_str());
-
-    aclTensor *aclInput = nullptr;
-    aclTensor *aclOutput = nullptr;
-    void *inputDeviceAddr = nullptr;
-    void *outputDeviceAddr = nullptr;
-
-    std::vector<std::complex<float>> inputHostData(batch * inSignal);
-    std::complex<float>* inputDataPtr = static_cast<std::complex<float>*>(inputTensor.hostData);
-    for (int64_t i = 0; i < batch * inSignal; i++) {
-        inputHostData[i] = inputDataPtr[i];
-    }
-
-    std::vector<float> outputHostData(batch * outSignal, 0.0f);
-    std::vector<int64_t> inShape = {batch, inSignal};
-    std::vector<int64_t> outShape = {batch, outSignal};
-
-    auto ret = CreateAclTensor(inputHostData, inShape, &inputDeviceAddr, aclDataType::ACL_COMPLEX64, &aclInput);
-    ASSERT_EQ(ret, 0);
-    ret = CreateAclTensor(outputHostData, outShape, &outputDeviceAddr, aclDataType::ACL_FLOAT, &aclOutput);
-    ASSERT_EQ(ret, 0);
-
-    asdFftHandle handle;
-    AspbStatus fftStatus = asdFftCreate(handle);
-    ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
-
-    fftStatus = asdFftMakePlan1D(handle, nfft, asdFftType::ASCEND_FFT_C2R, asdFftDirection::ASCEND_FFT_FORWARD, batch);
-    ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
-
-    size_t workSize = 0;
-    fftStatus = asdFftGetWorkspaceSize(handle, workSize);
-    ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
-
-    void *workspaceAddr = nullptr;
-    if (workSize > 0) {
-        ret = aclrtMalloc(&workspaceAddr, static_cast<int64_t>(workSize), ACL_MEM_MALLOC_HUGE_FIRST);
-        ASSERT_EQ(ret, ::ACL_SUCCESS);
-        fftStatus = asdFftSetWorkspace(handle, (uint8_t *)workspaceAddr);
-        ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
-    }
-
-    aclrtStream aclStream = static_cast<aclrtStream>(stream);
-    fftStatus = asdFftSetStream(handle, aclStream);
-    ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
-
-    fftStatus = asdFftExecC2R(handle, aclInput, aclOutput);
-    ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
-
-    fftStatus = asdFftSynchronize(handle);
-    ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
-
-    asdFftDestroy(handle);
-
-    ret = aclrtMemcpy(outputTensor.hostData,
-                      outputTensor.dataSize,
-                      outputDeviceAddr,
-                      outputTensor.dataSize,
-                      ACL_MEMCPY_DEVICE_TO_HOST);
-    ASSERT_EQ(ret, ::ACL_SUCCESS);
-    
-    std::string outFilename = GetElementDtype(outputTensor.desc.dtype) + "_output_.bin";
-    SaveOutTensorToBin(outputTensor, destPath + "/c2r_data/" + outFilename);
-
-    aclDestroyTensor(aclInput);
-    aclDestroyTensor(aclOutput);
-    aclrtFree(inputDeviceAddr);
-    aclrtFree(outputDeviceAddr);
-    if (workSize > 0) {
-        aclrtFree(workspaceAddr);
-    }
-
-    OpTestEnd(deviceId, context, stream);
-
-    std::string cmp_data_cmd = "cd " + ShellQuote(destPath + "/c2r_data/") + " && python3 compare_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
-    int res = system(cmp_data_cmd.c_str());
-    ASSERT_EQ(res, 0);
-}
-
-/**
- * Test FFT C2R 1D with batch=1, nfft=64
- */
-TEST(TestFftC2R1d, TestC2RCase2)
-{
-    std::string originPath = GetC2ROutputDirectory() + "/tests/ut/unittest/fft/1d/c2r/c2r_data";
-    std::string destPath = GetC2ROutputDirectory() + "/build/tests/ut/unittest/fft/1d/c2r";
-    std::string mkdir_cmd = "mkdir -p " + ShellQuote(destPath);
-    std::string copy_cmd = "cp -rf " + ShellQuote(originPath) + " " + ShellQuote(destPath);
-    std::string chmod_cmd = "chmod -R 755 " + ShellQuote(destPath + "/c2r_data/");
-    system(mkdir_cmd.c_str());
-    system(copy_cmd.c_str());
-    system(chmod_cmd.c_str());
-
-    int deviceId = 0;
-    int64_t batch = 1;
-    int64_t nfft = 64;
-    int64_t inSignal = nfft / 2 + 1;
-    int64_t outSignal = nfft;
-
-    MkiRtStream stream = OpTestInit(deviceId);
-
-    SVector<TensorDesc> inTensorDescs;
-    inTensorDescs.push_back({TENSOR_DTYPE_COMPLEX64, TENSOR_FORMAT_ND, {batch, inSignal}});
-    inTensorDescs.push_back({TENSOR_DTYPE_FLOAT, TENSOR_FORMAT_ND, {batch, outSignal}});
-
-    TensorContext context;
-    OpTestMallocInTensors(inTensorDescs, context);
-
-    Tensor inputTensor = context.inTensors[0];
-    Tensor outputTensor = context.inTensors[1];
-
-    for (size_t i = 0; i < context.inTensors.size(); i++) {
-        std::string filename = GetElementDtype(context.inTensors[i].desc.dtype) + "_input_" + std::to_string(i) + ".bin";
-        SaveTensorToBin(context.inTensors[i], destPath + "/c2r_data/" + filename);
-    }
-
-    std::string gen_data_cmd = "cd " + ShellQuote(destPath + "/c2r_data/") + " && python3 gen_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
-    system(gen_data_cmd.c_str());
-
-    aclTensor *aclInput = nullptr;
-    aclTensor *aclOutput = nullptr;
-    void *inputDeviceAddr = nullptr;
-    void *outputDeviceAddr = nullptr;
-
-    std::vector<std::complex<float>> inputHostData(batch * inSignal);
-    std::complex<float>* inputDataPtr = static_cast<std::complex<float>*>(inputTensor.hostData);
-    for (int64_t i = 0; i < batch * inSignal; i++) {
-        inputHostData[i] = inputDataPtr[i];
-    }
-
-    std::vector<float> outputHostData(batch * outSignal, 0.0f);
-    std::vector<int64_t> inShape = {batch, inSignal};
-    std::vector<int64_t> outShape = {batch, outSignal};
-
-    auto ret = CreateAclTensor(inputHostData, inShape, &inputDeviceAddr, aclDataType::ACL_COMPLEX64, &aclInput);
-    ASSERT_EQ(ret, 0);
-    ret = CreateAclTensor(outputHostData, outShape, &outputDeviceAddr, aclDataType::ACL_FLOAT, &aclOutput);
-    ASSERT_EQ(ret, 0);
-
-    asdFftHandle handle;
-    AspbStatus fftStatus = asdFftCreate(handle);
-    ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
-
-    fftStatus = asdFftMakePlan1D(handle, nfft, asdFftType::ASCEND_FFT_C2R, asdFftDirection::ASCEND_FFT_FORWARD, batch);
-    ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
-
-    size_t workSize = 0;
-    fftStatus = asdFftGetWorkspaceSize(handle, workSize);
-    ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
-
-    void *workspaceAddr = nullptr;
-    if (workSize > 0) {
-        ret = aclrtMalloc(&workspaceAddr, static_cast<int64_t>(workSize), ACL_MEM_MALLOC_HUGE_FIRST);
-        ASSERT_EQ(ret, ::ACL_SUCCESS);
-        fftStatus = asdFftSetWorkspace(handle, (uint8_t *)workspaceAddr);
-        ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
-    }
-
-    aclrtStream aclStream = static_cast<aclrtStream>(stream);
-    fftStatus = asdFftSetStream(handle, aclStream);
-    ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
-
-    fftStatus = asdFftExecC2R(handle, aclInput, aclOutput);
-    ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
-
-    fftStatus = asdFftSynchronize(handle);
-    ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
-
-    asdFftDestroy(handle);
-
-    ret = aclrtMemcpy(outputTensor.hostData,
-                      outputTensor.dataSize,
-                      outputDeviceAddr,
-                      outputTensor.dataSize,
-                      ACL_MEMCPY_DEVICE_TO_HOST);
-    ASSERT_EQ(ret, ::ACL_SUCCESS);
-    
-    std::string outFilename = GetElementDtype(outputTensor.desc.dtype) + "_output_.bin";
-    SaveOutTensorToBin(outputTensor, destPath + "/c2r_data/" + outFilename);
-
-    aclDestroyTensor(aclInput);
-    aclDestroyTensor(aclOutput);
-    aclrtFree(inputDeviceAddr);
-    aclrtFree(outputDeviceAddr);
-    if (workSize > 0) {
-        aclrtFree(workspaceAddr);
-    }
-
-    OpTestEnd(deviceId, context, stream);
-
-    std::string cmp_data_cmd = "cd " + ShellQuote(destPath + "/c2r_data/") + " && python3 compare_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
-    int res = system(cmp_data_cmd.c_str());
-    ASSERT_EQ(res, 0);
-}
+// Large signal inverse tests (> 1024, arch35 path, up to 32768)
+TEST(TestFftC2R1d, TestC2RInverseRadix2Large)   { RunFftC2RTest(1, 2048, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2R1d, TestC2RInverseRadix3Large)   { RunFftC2RTest(1, 2187, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2R1d, TestC2RInverseRadix5Large)   { RunFftC2RTest(1, 3125, asdFftDirection::ASCEND_FFT_INVERSE); }
+// TEST(TestFftC2R1d, TestC2RInverseRadix7Large)   { RunFftC2RTest(1, 2401, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2R1d, TestC2RInverseMixedLarge)    { RunFftC2RTest(1, 2160, asdFftDirection::ASCEND_FFT_INVERSE); }
+// TEST(TestFftC2R1d, TestC2RInverseRadix2Max)     { RunFftC2RTest(1, 32768, asdFftDirection::ASCEND_FFT_INVERSE); }

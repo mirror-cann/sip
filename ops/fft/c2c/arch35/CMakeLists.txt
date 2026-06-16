@@ -12,6 +12,7 @@ set(fft_c2c_arch35_src
     ${CMAKE_CURRENT_LIST_DIR}/fft_c2c_arch35_operation.cpp
     ${CMAKE_CURRENT_LIST_DIR}/fft_c2c_arch35/fft_c2c_arch35_kernel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/fft_c2c_arch35/tiling/fft_c2c_arch35_tiling.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/fft_c2c_arch35/tiling/fft_c2c_arch35_mix_tiling.cpp
 )
 
 set(CATLASS_INCLUDES
@@ -25,4 +26,9 @@ add_operation(FftC2CArch35Operation "${fft_c2c_arch35_src}")
 add_kernel(fft_c2c_arch35_multi_core ascend950 vector
     fft_c2c_arch35/kernel/arch35/fft_c2c_multi_core.cpp
     FftC2CArch35C64Kernel
+    INCLUDE_DIRECTORIES ${CATLASS_INCLUDES})
+
+add_kernel(fft_c2c_arch35_mix_multi_core ascend950 vector
+    fft_c2c_arch35/kernel/arch35/fft_c2c_mix_multi_core.cpp
+    FftC2CArch35MixC64Kernel
     INCLUDE_DIRECTORIES ${CATLASS_INCLUDES})

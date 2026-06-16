@@ -22,6 +22,27 @@
 namespace AsdSip {
 constexpr uint64_t TENSOR_PERM_IDX = 1;
 
+namespace {
+bool IsPowerOfTwo(int64_t n)
+{
+    return n > 1 && (n & (n - 1)) == 0;
+}
+
+bool HasSupportedFactors(int64_t n)
+{
+    if (n <= 1) {
+        return false;
+    }
+    constexpr int64_t allowedRadices[] = {2, 3, 5, 7, 11, 13, 17, 19};
+    for (int64_t radix : allowedRadices) {
+        while (n % radix == 0) {
+            n /= radix;
+        }
+    }
+    return n == 1;
+}
+}
+
 class FftC2CArch35Kernel : public KernelBase {
 public:
     explicit FftC2CArch35Kernel(const std::string &kernelName, const BinHandle *handle) noexcept
@@ -63,14 +84,60 @@ public:
     {
     }
 
+    uint64_t GetTilingSize(const LaunchParam &launchParam) const override
+    {
+        (void)launchParam;
+        return static_cast<uint64_t>(sizeof(FftC2CArch35StageTilingData));
+    }
+
     bool CanSupport(const LaunchParam &launchParam) const override
     {
         ASDSIP_CHECK(FftC2CArch35Kernel::CanSupport(launchParam), "FftC2CArch35C64Kernel failed to check support", return false);
         ASDSIP_CHECK(launchParam.GetInTensor(0).desc.dtype == TENSOR_DTYPE_COMPLEX64, "tensor dtype unsupported",
+                  return false);
+        const auto &param = AnyCast<OpParam::FftC2CArch35>(launchParam.GetParam());
+        ASDSIP_CHECK(!param.isMixedRadix, "FftC2CArch35C64Kernel requires radix-2 mode", return false);
+        ASDSIP_CHECK(IsPowerOfTwo(param.fftN), "FftC2CArch35 radix-2 kernel requires power-of-two fftN",
                   return false);
         return true;
     }
 };
 
 REG_KERNEL_BASE(FftC2CArch35C64Kernel);
+
+class FftC2CArch35MixC64Kernel : public FftC2CArch35Kernel {
+public:
+    explicit FftC2CArch35MixC64Kernel(const std::string &kernelName, const BinHandle *handle) noexcept
+        : FftC2CArch35Kernel(kernelName, handle)
+    {
+    }
+
+    bool CanSupport(const LaunchParam &launchParam) const override
+    {
+        ASDSIP_CHECK(FftC2CArch35Kernel::CanSupport(launchParam), "FftC2CArch35MixC64Kernel failed to check support", return false);
+        ASDSIP_CHECK(launchParam.GetInTensor(0).desc.dtype == TENSOR_DTYPE_COMPLEX64, "tensor dtype unsupported",
+                  return false);
+        ASDSIP_CHECK(launchParam.GetInTensor(1).desc.dtype == TENSOR_DTYPE_FLOAT, "dft matrix dtype unsupported",
+                  return false);
+        ASDSIP_CHECK(launchParam.GetInTensor(2).desc.dtype == TENSOR_DTYPE_FLOAT, "twiddle matrix dtype unsupported",
+                  return false);
+        ASDSIP_CHECK(launchParam.GetInTensor(3).desc.dtype == TENSOR_DTYPE_INT32, "radix list dtype unsupported",
+                  return false);
+        const auto &param = AnyCast<OpParam::FftC2CArch35>(launchParam.GetParam());
+        ASDSIP_CHECK(param.isMixedRadix, "FftC2CArch35MixC64Kernel requires mixed-radix mode", return false);
+        ASDSIP_CHECK(HasSupportedFactors(param.fftN), "FftC2CArch35 mixed kernel requires supported factors",
+                  return false);
+        return true;
+    }
+
+    Status InitImpl(const LaunchParam &launchParam) override
+    {
+        auto status = FftC2CArch35MixTiling(launchParam, kernelInfo_);
+        ASDSIP_CHECK(status == AsdSip::ErrorType::ACL_SUCCESS, "InitRunInfoImpl FftC2CArch35MixTiling failed",
+                  return Status::FailStatus(ERROR_INVALID_VALUE));
+        return Status::OkStatus();
+    }
+};
+
+REG_KERNEL_BASE(FftC2CArch35MixC64Kernel);
 }  // namespace AsdSip

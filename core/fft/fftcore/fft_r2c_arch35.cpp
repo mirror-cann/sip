@@ -113,7 +113,7 @@ AspbStatus FftR2CCoreArch35::BuildFftPlan()
         return AsdSip::ErrorType::ACL_ERROR_INTERNAL_ERROR;
     }
 
-    double sign = -1.0;
+    double sign = problemDesc.forward ? (-1.0) : (1.0);
 
     size_t planLen = plan.size();
     size_t radixListSize = planLen * sizeof(int32_t);
@@ -292,7 +292,7 @@ AspbStatus FftR2CCoreArch35::InitTactic()
     OpParam::FftR2CArch35 param = {problemDesc.nDoing,
                                     problemDesc.batch,
                                     static_cast<int64_t>(plan.size()),
-                                    0,
+                                    1 - int(problemDesc.forward),
                                     static_cast<int32_t>(isOdd)};
     ASDSIP_LOG(DEBUG) << "OpDesc info: " << param.ToString();
 

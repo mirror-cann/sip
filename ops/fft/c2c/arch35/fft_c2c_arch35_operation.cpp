@@ -27,7 +27,8 @@ public:
     Kernel *GetBestKernel(const LaunchParam &launchParam) const override
     {
         if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
-            return GetKernelByName("FftC2CArch35C64Kernel");
+            const auto &param = AnyCast<OpParam::FftC2CArch35>(launchParam.GetParam());
+            return GetKernelByName(param.isMixedRadix ? "FftC2CArch35MixC64Kernel" : "FftC2CArch35C64Kernel");
         }
         return nullptr;
     }

@@ -155,15 +155,29 @@ void RunFftC2CTest(int64_t batch, int64_t nfft, asdFftDirection direction)
 
 } // namespace
 
-// Pure radix tests (forward)
+// Pure radix forward tests (<= 256, DFT path)
+TEST(TestFftC2C1d, TestC2CForwardRadix2Dft)   { RunFftC2CTest(1, 64, asdFftDirection::ASCEND_FFT_FORWARD); }
+TEST(TestFftC2C1d, TestC2CForwardRadix3Dft)   { RunFftC2CTest(1, 81, asdFftDirection::ASCEND_FFT_FORWARD); }
+TEST(TestFftC2C1d, TestC2CForwardRadix5Dft)   { RunFftC2CTest(1, 125, asdFftDirection::ASCEND_FFT_FORWARD); }
+TEST(TestFftC2C1d, TestC2CForwardRadix7Dft)   { RunFftC2CTest(1, 49, asdFftDirection::ASCEND_FFT_FORWARD); }
+TEST(TestFftC2C1d, TestC2CForwardRadix11)     { RunFftC2CTest(1, 121, asdFftDirection::ASCEND_FFT_FORWARD); }
+TEST(TestFftC2C1d, TestC2CForwardRadix13)     { RunFftC2CTest(1, 169, asdFftDirection::ASCEND_FFT_FORWARD); }
+TEST(TestFftC2C1d, TestC2CForwardRadix17Dft)  { RunFftC2CTest(1, 17, asdFftDirection::ASCEND_FFT_FORWARD); }
+TEST(TestFftC2C1d, TestC2CForwardRadix19Dft)  { RunFftC2CTest(1, 19, asdFftDirection::ASCEND_FFT_FORWARD); }
+
+// Pure radix forward tests (> 256, arch35 path)
 TEST(TestFftC2C1d, TestC2CForwardRadix2) { RunFftC2CTest(1, 1024, asdFftDirection::ASCEND_FFT_FORWARD); }
 TEST(TestFftC2C1d, TestC2CForwardRadix3) { RunFftC2CTest(1, 729, asdFftDirection::ASCEND_FFT_FORWARD); }
 TEST(TestFftC2C1d, TestC2CForwardRadix5) { RunFftC2CTest(1, 625, asdFftDirection::ASCEND_FFT_FORWARD); }
 TEST(TestFftC2C1d, TestC2CForwardRadix7) { RunFftC2CTest(1, 343, asdFftDirection::ASCEND_FFT_FORWARD); }
-TEST(TestFftC2C1d, TestC2CForwardRadix11) { RunFftC2CTest(1, 121, asdFftDirection::ASCEND_FFT_FORWARD); }
-TEST(TestFftC2C1d, TestC2CForwardRadix13) { RunFftC2CTest(1, 169, asdFftDirection::ASCEND_FFT_FORWARD); }
 TEST(TestFftC2C1d, TestC2CForwardRadix17) { RunFftC2CTest(1, 289, asdFftDirection::ASCEND_FFT_FORWARD); }
 TEST(TestFftC2C1d, TestC2CForwardRadix19) { RunFftC2CTest(1, 361, asdFftDirection::ASCEND_FFT_FORWARD); }
+
+// Large signal tests (forward, up to 32768)
+TEST(TestFftC2C1d, TestC2CForwardRadix2Large)  { RunFftC2CTest(1, 4096, asdFftDirection::ASCEND_FFT_FORWARD); }
+TEST(TestFftC2C1d, TestC2CForwardRadix3Large)  { RunFftC2CTest(1, 6561, asdFftDirection::ASCEND_FFT_FORWARD); }
+TEST(TestFftC2C1d, TestC2CForwardRadix2Max)    { RunFftC2CTest(1, 32768, asdFftDirection::ASCEND_FFT_FORWARD); }
+TEST(TestFftC2C1d, TestC2CForwardMixedLarge)   { RunFftC2CTest(1, 4620, asdFftDirection::ASCEND_FFT_FORWARD); }
 
 // Mixed radix tests (forward)
 TEST(TestFftC2C1d, TestC2CForwardMixed2357) { RunFftC2CTest(1, 210, asdFftDirection::ASCEND_FFT_FORWARD); }
@@ -176,15 +190,30 @@ TEST(TestFftC2C1d, TestC2CForwardMixed360) { RunFftC2CTest(1, 360, asdFftDirecti
 TEST(TestFftC2C1d, TestC2CForwardBatch2) { RunFftC2CTest(2, 1024, asdFftDirection::ASCEND_FFT_FORWARD); }
 TEST(TestFftC2C1d, TestC2CForwardBatch2Mixed) { RunFftC2CTest(2, 210, asdFftDirection::ASCEND_FFT_FORWARD); }
 
-// Inverse tests
+// Pure radix inverse tests (<= 256, DFT path)
+TEST(TestFftC2C1d, TestC2CInverseRadix2Dft)   { RunFftC2CTest(1, 64, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2C1d, TestC2CInverseRadix3Dft)   { RunFftC2CTest(1, 81, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2C1d, TestC2CInverseRadix5Dft)   { RunFftC2CTest(1, 125, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2C1d, TestC2CInverseRadix7Dft)   { RunFftC2CTest(1, 49, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2C1d, TestC2CInverseRadix11)     { RunFftC2CTest(1, 121, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2C1d, TestC2CInverseRadix13)     { RunFftC2CTest(1, 169, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2C1d, TestC2CInverseRadix17Dft)  { RunFftC2CTest(1, 17, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2C1d, TestC2CInverseRadix19Dft)  { RunFftC2CTest(1, 19, asdFftDirection::ASCEND_FFT_INVERSE); }
+
+// Pure radix inverse tests (> 256, arch35 path)
 TEST(TestFftC2C1d, TestC2CInverseRadix2) { RunFftC2CTest(1, 1024, asdFftDirection::ASCEND_FFT_INVERSE); }
 TEST(TestFftC2C1d, TestC2CInverseRadix3) { RunFftC2CTest(1, 729, asdFftDirection::ASCEND_FFT_INVERSE); }
 TEST(TestFftC2C1d, TestC2CInverseRadix5) { RunFftC2CTest(1, 625, asdFftDirection::ASCEND_FFT_INVERSE); }
 TEST(TestFftC2C1d, TestC2CInverseRadix7) { RunFftC2CTest(1, 343, asdFftDirection::ASCEND_FFT_INVERSE); }
-TEST(TestFftC2C1d, TestC2CInverseRadix11) { RunFftC2CTest(1, 121, asdFftDirection::ASCEND_FFT_INVERSE); }
-TEST(TestFftC2C1d, TestC2CInverseRadix13) { RunFftC2CTest(1, 169, asdFftDirection::ASCEND_FFT_INVERSE); }
 TEST(TestFftC2C1d, TestC2CInverseRadix17) { RunFftC2CTest(1, 289, asdFftDirection::ASCEND_FFT_INVERSE); }
 TEST(TestFftC2C1d, TestC2CInverseRadix19) { RunFftC2CTest(1, 361, asdFftDirection::ASCEND_FFT_INVERSE); }
+
+// Large signal inverse tests (up to 32768)
+TEST(TestFftC2C1d, TestC2CInverseRadix2Large)  { RunFftC2CTest(1, 4096, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2C1d, TestC2CInverseRadix2Max)    { RunFftC2CTest(1, 32768, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftC2C1d, TestC2CInverseMixedLarge)   { RunFftC2CTest(1, 4620, asdFftDirection::ASCEND_FFT_INVERSE); }
+
+// Mixed radix inverse tests
 TEST(TestFftC2C1d, TestC2CInverseMixed2357) { RunFftC2CTest(1, 210, asdFftDirection::ASCEND_FFT_INVERSE); }
 TEST(TestFftC2C1d, TestC2CInverseMixed235711) { RunFftC2CTest(1, 2310, asdFftDirection::ASCEND_FFT_INVERSE); }
 TEST(TestFftC2C1d, TestC2CInverseBatch2) { RunFftC2CTest(2, 1024, asdFftDirection::ASCEND_FFT_INVERSE); }

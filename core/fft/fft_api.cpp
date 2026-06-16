@@ -33,6 +33,8 @@
 #include "fftcore/fft_c2r_arch35_core.h"
 #include "fftcore/fft_r2c_arch35_core.h"
 #include "fftcore/fft_c2c_arch35_core.h"
+#include "fftcore/fft_c2c2d_arch35_core.h"
+#include "params/fft_c2c2d_arch35.h"
 
 #include "fftplan/fft_plan_cache.h"
 #include "fftcore/select_core.h"
@@ -68,6 +70,7 @@ constexpr int MAX_FFT_SIZE = 1 << 27;
 
 std::vector<int64_t> RADIX_2 = {2};
 std::vector<int64_t> RADIX_MIX = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47};
+std::vector<int64_t> RADIX_ARCH35_C2C_MIX = {2, 3, 5, 7, 11, 13, 17, 19};
 
 std::vector<int64_t> deDuplicates(const std::vector<int64_t> &duplicates)
 {
@@ -117,6 +120,10 @@ int ChooseRadix(AsdSip::asdFftType fftType, int64_t fftSize)
 
 bool Fft2dSupportVertical(int64_t batchSize, int64_t fftSizeX, int64_t fftSizeY, asdFftType fftType)
 {
+    if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
+        return false;
+    }
+
     if (batchSize != 1) {
         return false;
     }
@@ -158,6 +165,10 @@ bool Fft2dSupportVertical(int64_t batchSize, int64_t fftSizeX, int64_t fftSizeY,
 bool Fft2dSupportFusing(int64_t fftSizeX, int64_t fftSizeY, int radixX, int radixY,
                         AsdSip::asdFftType fftType)
 {
+    if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
+        return false;
+    }
+
     switch (fftType) {
         case asdFftType::ASCEND_FFT_C2C:
             if (radixX == K_RADIX_2 && radixY == K_RADIX_2 && fftSizeX >= K_N_FFT_32 && fftSizeY >= K_N_FFT_32 &&
@@ -237,12 +248,15 @@ void getC2CCore(std::optional<FFTCoreType> &coreTypeOpt, int radix, unsigned nDo
     }
 
     if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
-        if (nDoing <= K_N_FFT_256) {
+        bool arch35Supported = nDoing > 1 && (radix == K_RADIX_2 ||
+            (radix == K_RADIX_MIX && Support(deDuplicates(orderedFactorize(nDoing)), RADIX_ARCH35_C2C_MIX)));
+        if (arch35Supported) {
+            coreTypeOpt = FFTCoreType::kFftC2CArch35;
+        } else if (nDoing <= K_N_FFT_256) {
             coreTypeOpt = FFTCoreType::kDft;
         } else {
-            if (radix == K_RADIX_2 || radix == K_RADIX_MIX) {
-                coreTypeOpt = FFTCoreType::kFftC2CArch35;
-            }
+            ASDSIP_LOG(ERROR) << "ASCEND_950 C2C arch35 unsupported factorization for nDoing=" << nDoing;
+            throw std::runtime_error("ASCEND_950 C2C arch35 unsupported factorization.");
         }
         return;
     }
@@ -358,7 +372,8 @@ std::unique_ptr<FftOperation> InitFftOpPtr(std::optional<FFTCoreType> coreTypeOp
 }
 
 std::unique_ptr<FftOperation> InitFft2DOpPtr(std::optional<FFTCoreType> coreTypeOpt, int64_t fftSizeX, int64_t fftSizeY,
-                                             int64_t batchSize, AsdSip::asdFftType fftType, bool forward, FFTPlan &plan)
+                                             int64_t batchSize, AsdSip::asdFftType fftType, bool forward, FFTPlan &plan,
+                                             int32_t arch35Mode = static_cast<int32_t>(OpParam::FftC2C2DArch35Mode::RADIX2))
 {
     std::unique_ptr<FftOperation> unique(nullptr);
 
@@ -366,6 +381,9 @@ std::unique_ptr<FftOperation> InitFft2DOpPtr(std::optional<FFTCoreType> coreType
         switch (coreTypeOpt.value()) {
             case FFTCoreType::kDd:
                 unique.reset(new DdCore(fftSizeX, fftSizeY, batchSize, fftType, forward));
+                break;
+            case FFTCoreType::kFftC2C2DArch35:
+                unique.reset(new FftC2C2DCoreArch35(fftSizeX, fftSizeY, batchSize, fftType, forward, arch35Mode));
                 break;
             default:
                 break;
@@ -472,6 +490,25 @@ std::unique_ptr<FftOperation> getCore(const std::vector<int64_t> &uniques, unsig
 std::unique_ptr<FftOperation> GetCore2D(int64_t fftSizeX, int64_t fftSizeY, int radixX, int radixY, int64_t batchSize,
                                         AsdSip::asdFftType fftType, bool forward, FFTPlan &plan)
 {
+    if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
+        if (fftType == asdFftType::ASCEND_FFT_C2C && radixX == K_RADIX_2 && radixY == K_RADIX_2) {
+            return InitFft2DOpPtr(FFTCoreType::kFftC2C2DArch35, fftSizeX, fftSizeY, batchSize, fftType, forward, plan,
+                static_cast<int32_t>(OpParam::FftC2C2DArch35Mode::RADIX2));
+        }
+        if (fftType == asdFftType::ASCEND_FFT_C2C &&
+            Support(deDuplicates(orderedFactorize(fftSizeX)), RADIX_ARCH35_C2C_MIX) &&
+            Support(deDuplicates(orderedFactorize(fftSizeY)), RADIX_ARCH35_C2C_MIX)) {
+            return InitFft2DOpPtr(FFTCoreType::kFftC2C2DArch35, fftSizeX, fftSizeY, batchSize, fftType, forward, plan,
+                static_cast<int32_t>(OpParam::FftC2C2DArch35Mode::MIXED_RADIX));
+        }
+        if (fftType == asdFftType::ASCEND_FFT_C2C) {
+            ASDSIP_LOG(ERROR) << "ASCEND_950 2D C2C arch35 unsupported factorization: fftSizeX=" << fftSizeX
+                              << ", fftSizeY=" << fftSizeY;
+            throw std::runtime_error("ASCEND_950 2D C2C arch35 unsupported factorization.");
+        }
+        return nullptr;
+    }
+
     std::optional<FFTCoreType> coreTypeOpt = std::nullopt;
 
     if (fftType == asdFftType::ASCEND_FFT_C2C) {
@@ -487,6 +524,10 @@ std::unique_ptr<FftOperation> GetCore2D(int64_t fftSizeX, int64_t fftSizeY, int 
 
 std::unique_ptr<FftOperation> GetCore3D(int64_t fftSizeX, int64_t fftSizeY, int64_t fftSizeZ, int64_t batchSize, AsdSip::asdFftType fftType, bool forward, FFTPlan &plan)
 {
+    if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
+        return nullptr;
+    }
+
     std::optional<FFTCoreType> coreTypeOpt = std::nullopt;
     // currently only supports DFT 3D kernel.
     if (fftType == asdFftType::ASCEND_FFT_C2C_SEP) {
@@ -611,6 +652,17 @@ void init2DSteps(FFTPlan &plan)
             addFFTTransposeStep(plan, K_LAST_DIM, K_PENULTIMATE_DIM, dimsStepTwo);
             break;
         case asdFftType::ASCEND_FFT_C2C:
+            if (Mki::PlatformInfo::Instance().GetPlatformType() == Mki::PlatformType::ASCEND_950) {
+                if ((radixX == K_RADIX_2 && radixY == K_RADIX_2) ||
+                    (Support(deDuplicates(orderedFactorize(fftSizeX)), RADIX_ARCH35_C2C_MIX) &&
+                        Support(deDuplicates(orderedFactorize(fftSizeY)), RADIX_ARCH35_C2C_MIX))) {
+                    addFFT2DStep(plan, radixX, radixY);
+                    break;
+                }
+                ASDSIP_LOG(ERROR) << "ASCEND_950 2D C2C arch35 unsupported factorization: fftSizeX=" << fftSizeX
+                                  << ", fftSizeY=" << fftSizeY;
+                throw std::runtime_error("ASCEND_950 2D C2C arch35 unsupported factorization.");
+            }
             if (Fft2dSupportFusing(fftSizeX, fftSizeY, radixX, radixY, plan.fftType)) {
                 addFFT2DStep(plan, radixX, radixY);
                 break;

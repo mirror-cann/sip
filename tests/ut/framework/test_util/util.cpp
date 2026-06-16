@@ -234,8 +234,7 @@ static Tensor OpTestCreateHostRandTensor(const TensorDesc &tensorDesc)
     Tensor tensor;
     tensor.desc = tensorDesc;
 
-    std::random_device rd;
-    std::default_random_engine eng(rd());
+    std::default_random_engine eng(42);  // 使用固定种子保证测试可复现
     if (tensorDesc.dtype == TENSOR_DTYPE_FLOAT) {
         tensor.dataSize = tensor.Numel() * sizeof(float);
         tensor.hostData = malloc(tensor.dataSize);

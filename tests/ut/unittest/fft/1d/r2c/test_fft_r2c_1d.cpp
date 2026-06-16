@@ -39,7 +39,8 @@ std::string GetR2COutputDirectory() {
     }
 }
 
-void RunFftR2CTest(int64_t batch, int64_t nfft)
+void RunFftR2CTest(int64_t batch, int64_t nfft,
+                   asdFftDirection direction = asdFftDirection::ASCEND_FFT_FORWARD)
 {
     std::string originPath = GetR2COutputDirectory() + "/tests/ut/unittest/fft/1d/r2c/r2c_data";
     std::string destPath = GetR2COutputDirectory() + "/build/tests/ut/unittest/fft/1d/r2c";
@@ -49,6 +50,8 @@ void RunFftR2CTest(int64_t batch, int64_t nfft)
     system(mkdir_cmd.c_str());
     system(copy_cmd.c_str());
     system(chmod_cmd.c_str());
+
+    std::string dirStr = (direction == asdFftDirection::ASCEND_FFT_FORWARD) ? "forward" : "inverse";
 
     int deviceId = 0;
     int64_t inSignal = nfft;
@@ -71,7 +74,7 @@ void RunFftR2CTest(int64_t batch, int64_t nfft)
         SaveTensorToBin(context.inTensors[i], destPath + "/r2c_data/" + filename);
     }
 
-    std::string gen_data_cmd = "cd " + destPath + "/r2c_data/" + " && python3 gen_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
+    std::string gen_data_cmd = "cd " + destPath + "/r2c_data/" + " && python3 gen_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft) + " --direction " + dirStr;
     system(gen_data_cmd.c_str());
 
     aclTensor *aclInput = nullptr;
@@ -98,7 +101,7 @@ void RunFftR2CTest(int64_t batch, int64_t nfft)
     AspbStatus fftStatus = asdFftCreate(handle);
     ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
 
-    fftStatus = asdFftMakePlan1D(handle, nfft, asdFftType::ASCEND_FFT_R2C, asdFftDirection::ASCEND_FFT_FORWARD, batch);
+    fftStatus = asdFftMakePlan1D(handle, nfft, asdFftType::ASCEND_FFT_R2C, direction, batch);
     ASSERT_EQ(fftStatus, AsdSip::ErrorType::ACL_SUCCESS);
 
     size_t workSize = 0;
@@ -145,7 +148,7 @@ void RunFftR2CTest(int64_t batch, int64_t nfft)
 
     OpTestEnd(deviceId, context, stream);
 
-    std::string cmp_data_cmd = "cd " + destPath + "/r2c_data/" + " && python3 compare_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft);
+    std::string cmp_data_cmd = "cd " + destPath + "/r2c_data/" + " && python3 compare_data.py --batch " + std::to_string(batch) + " --nfft " + std::to_string(nfft) + " --direction " + dirStr;
     int res = system(cmp_data_cmd.c_str());
     std::cout << "compare result = " << res << std::endl;
     ASSERT_EQ(res, 0);
@@ -153,14 +156,49 @@ void RunFftR2CTest(int64_t batch, int64_t nfft)
 
 } // namespace
 
-// Pure radix tests
-TEST(TestFftR2C1d, TestR2CRadix2Batch1)  { RunFftR2CTest(1, 16); }
-TEST(TestFftR2C1d, TestR2CRadix3Batch1)  { RunFftR2CTest(1, 27); }
-TEST(TestFftR2C1d, TestR2CRadix5Batch1)  { RunFftR2CTest(1, 25); }
-TEST(TestFftR2C1d, TestR2CRadix7Batch1)  { RunFftR2CTest(1, 49); }
-TEST(TestFftR2C1d, TestR2CMixedBatch1)   { RunFftR2CTest(1, 210); }
+// Pure radix tests (forward)
+TEST(TestFftR2C1d, TestR2CForwardRadix2)  { RunFftR2CTest(1, 16); }
+TEST(TestFftR2C1d, TestR2CForwardRadix3)  { RunFftR2CTest(1, 27); }
+TEST(TestFftR2C1d, TestR2CForwardRadix5)  { RunFftR2CTest(1, 25); }
+TEST(TestFftR2C1d, TestR2CForwardRadix7)  { RunFftR2CTest(1, 49); }
+TEST(TestFftR2C1d, TestR2CForwardRadix11) { RunFftR2CTest(1, 121); }
+TEST(TestFftR2C1d, TestR2CForwardRadix13) { RunFftR2CTest(1, 169); }
+TEST(TestFftR2C1d, TestR2CForwardRadix17) { RunFftR2CTest(1, 289); }
+TEST(TestFftR2C1d, TestR2CForwardRadix19) { RunFftR2CTest(1, 361); }
 
-// Batch tests
-TEST(TestFftR2C1d, TestR2CRadix2Batch2)  { RunFftR2CTest(2, 16); }
-TEST(TestFftR2C1d, TestR2CRadix3Batch4)  { RunFftR2CTest(4, 27); }
-TEST(TestFftR2C1d, TestR2CMixedBatch8)   { RunFftR2CTest(8, 210); }
+// Mixed radix tests (forward)
+TEST(TestFftR2C1d, TestR2CForwardMixed2357) { RunFftR2CTest(1, 210); }
+
+// Batch tests (forward)
+TEST(TestFftR2C1d, TestR2CForwardBatch2)      { RunFftR2CTest(2, 16); }
+TEST(TestFftR2C1d, TestR2CForwardBatch4Radix3) { RunFftR2CTest(4, 27); }
+TEST(TestFftR2C1d, TestR2CForwardBatch8Mixed) { RunFftR2CTest(8, 210); }
+
+// Large signal tests (forward, > 1024, arch35 path, up to 32768)
+TEST(TestFftR2C1d, TestR2CForwardRadix2Large)  { RunFftR2CTest(1, 2048); }
+TEST(TestFftR2C1d, TestR2CForwardRadix3Large)  { RunFftR2CTest(1, 2187); }
+TEST(TestFftR2C1d, TestR2CForwardRadix5Large)  { RunFftR2CTest(1, 3125); }
+TEST(TestFftR2C1d, TestR2CForwardRadix7Large)  { RunFftR2CTest(1, 2401); }
+TEST(TestFftR2C1d, TestR2CForwardMixedLarge)   { RunFftR2CTest(1, 2160); }
+TEST(TestFftR2C1d, TestR2CForwardRadix2Max)    { RunFftR2CTest(1, 32768); }
+TEST(TestFftR2C1d, TestR2CForwardMixedMax)     { RunFftR2CTest(1, 2520); }
+
+// Inverse tests
+TEST(TestFftR2C1d, TestR2CInverseRadix2)    { RunFftR2CTest(1, 16, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftR2C1d, TestR2CInverseRadix3)    { RunFftR2CTest(1, 27, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftR2C1d, TestR2CInverseRadix5)    { RunFftR2CTest(1, 25, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftR2C1d, TestR2CInverseRadix7)    { RunFftR2CTest(1, 49, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftR2C1d, TestR2CInverseRadix11)   { RunFftR2CTest(1, 121, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftR2C1d, TestR2CInverseRadix13)   { RunFftR2CTest(1, 169, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftR2C1d, TestR2CInverseRadix17)   { RunFftR2CTest(1, 289, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftR2C1d, TestR2CInverseRadix19)   { RunFftR2CTest(1, 361, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftR2C1d, TestR2CInverseMixed2357) { RunFftR2CTest(1, 210, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftR2C1d, TestR2CInverseBatch2)    { RunFftR2CTest(2, 16, asdFftDirection::ASCEND_FFT_INVERSE); }
+
+// Large signal inverse tests (> 1024, arch35 path, up to 32768)
+TEST(TestFftR2C1d, TestR2CInverseRadix2Large)  { RunFftR2CTest(1, 2048, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftR2C1d, TestR2CInverseRadix3Large)  { RunFftR2CTest(1, 2187, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftR2C1d, TestR2CInverseRadix5Large)  { RunFftR2CTest(1, 3125, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftR2C1d, TestR2CInverseRadix7Large)  { RunFftR2CTest(1, 2401, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftR2C1d, TestR2CInverseMixedLarge)   { RunFftR2CTest(1, 2160, asdFftDirection::ASCEND_FFT_INVERSE); }
+TEST(TestFftR2C1d, TestR2CInverseRadix2Max)    { RunFftR2CTest(1, 32768, asdFftDirection::ASCEND_FFT_INVERSE); }

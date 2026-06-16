@@ -32,6 +32,9 @@ struct FftAllMixTilingData {
     int64_t currentBatch_arr[MAX_FFT_STAGES_TILING];
 
     int32_t isOddN;  // 新增：1 if N is odd, 0 if N is even
+    int32_t outer;
+    int32_t scaleOut;
+    int32_t transpose;
 };
 }
 

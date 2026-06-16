@@ -32,6 +32,7 @@ enum FFTCoreType : unsigned {
     kFftC2RArch35,
     kFftR2CArch35,
     kFftC2CArch35,
+    kFftC2C2DArch35,
 
 };
 

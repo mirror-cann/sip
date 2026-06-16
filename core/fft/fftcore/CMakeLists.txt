@@ -33,6 +33,7 @@ add_library(fft_core STATIC
     fft_r2c_core.cpp
     fft_r2c_arch35.cpp
     fft_c2c_arch35.cpp
+    fft_c2c2d_arch35.cpp
 
     fft_core_any.cpp
 

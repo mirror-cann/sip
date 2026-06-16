@@ -11,6 +11,7 @@
 #ifndef __FFT_C2C_ARCH35_CORE__
 #define __FFT_C2C_ARCH35_CORE__
 
+#include <cstdint>
 #include <vector>
 #include "ops.h"
 #include "fftcore/fft_core_base.h"
@@ -43,9 +44,11 @@ private:
     AsdSip::AspbStatus InitTactic();
 
     std::vector<FftC2CPlanStage> plan;
+    bool isMixedRadix{false};
     std::shared_ptr<AsdSip::FFTensor> radixListTensor;
     std::shared_ptr<AsdSip::FFTensor> dftMatrixArray;
     std::shared_ptr<AsdSip::FFTensor> twMatrixArray;
+    std::vector<uint8_t *> stageTilingDeviceAddrs;
 
     std::string opName{"FftC2CArch35Operation"};
 };

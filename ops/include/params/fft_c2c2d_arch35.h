@@ -8,18 +8,19 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef OPS_BUILT_IN_OP_TILING_RUNTIME_FFTC2CARCH35_H_
-#define OPS_BUILT_IN_OP_TILING_RUNTIME_FFTC2CARCH35_H_
+#ifndef ASDSIP_PARAMS_FFT_C2C2D_ARCH35_H
+#define ASDSIP_PARAMS_FFT_C2C2D_ARCH35_H
 
-#include <mki/launch_param.h>
-#include <mki/kernel_info.h>
-#include "params/fft_c2c_arch35.h"
-#include "utils/aspb_status.h"
-
+#include <cstdint>
 namespace AsdSip {
-using namespace Mki;
-AspbStatus FftC2CArch35Tiling(const LaunchParam &launchParam, KernelInfo &kernelInfo);
-AspbStatus FftC2CArch35MixTiling(const LaunchParam &launchParam, KernelInfo &kernelInfo);
-} // namespace AsdSip
+namespace OpParam {
+
+enum class FftC2C2DArch35Mode : int32_t {
+    RADIX2 = 0,
+    MIXED_RADIX = 1,
+};
+
+}  // namespace OpParam
+}  // namespace AsdSip
 
 #endif

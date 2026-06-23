@@ -34,6 +34,9 @@ extern "C" __global__ __aicore__ void dft_r2c(
     __gm__ uint8_t * __restrict__ workspace,
     __gm__ uint8_t * __restrict__ tiling_para_gm)
 {
+    AscendC::GlobalTensor<uint64_t> global;
+    AscendC::DataCacheCleanAndInvalid<uint64_t, AscendC::CacheLine::ENTIRE_DATA_CACHE, AscendC::DcciDst::CACHELINE_OUT>(global);
+
     int32_t batchSize, trans_a, trans_b;
     uint32_t m, n, k;
     

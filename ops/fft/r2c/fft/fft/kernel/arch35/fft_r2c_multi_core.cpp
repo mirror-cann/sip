@@ -505,6 +505,9 @@ extern "C" __global__ __aicore__ void fft_r2c_multi_core(
     __gm__ float * __restrict__ gm_workspace,
     __gm__ uint8_t * __restrict__ gm_tiling_para)
 {
+    AscendC::GlobalTensor<uint64_t> global;
+    AscendC::DataCacheCleanAndInvalid<uint64_t, AscendC::CacheLine::ENTIRE_DATA_CACHE, AscendC::DcciDst::CACHELINE_OUT>(global);
+
     FftR2CKernelMultiCore kernel;
     kernel.Init(gm_input, gm_dft_matrix_array, gm_tw_matrix_array, gm_tw_post_process, radix_list,
                 gm_output, gm_workspace, gm_tiling_para);

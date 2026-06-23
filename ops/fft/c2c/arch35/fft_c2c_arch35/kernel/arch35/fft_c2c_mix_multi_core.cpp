@@ -1208,6 +1208,8 @@ extern "C" __global__ __vector__ void fft_c2c_arch35_mix_multi_core(
     __gm__ float *workspace,
     __gm__ uint8_t *tiling)
 {
+    AscendC::GlobalTensor<uint64_t> global;
+    AscendC::DataCacheCleanAndInvalid<uint64_t, AscendC::CacheLine::ENTIRE_DATA_CACHE, AscendC::DcciDst::CACHELINE_OUT>(global);
     auto tilingData = reinterpret_cast<__gm__ FftAllMixTilingData *>(tiling);
 
     int32_t batchSize = static_cast<int32_t>(tilingData->batchSize);

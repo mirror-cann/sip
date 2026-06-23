@@ -148,6 +148,9 @@ extern "C" __global__ __vector__ void fft_c2c_arch35_multi_core(
     __gm__ float *workspace,
     __gm__ uint8_t *gmTilingPara)
 {
+    AscendC::GlobalTensor<uint64_t> global;
+    AscendC::DataCacheCleanAndInvalid<uint64_t, AscendC::CacheLine::ENTIRE_DATA_CACHE, AscendC::DcciDst::CACHELINE_OUT>(global);
+
     (void)gmDftMatrixArray;
     (void)radixList;
     (void)workspace;

@@ -120,12 +120,11 @@ source /usr/local/Ascend/cann/set_env.sh
 
    您可自行选择需要的分支。
  - SiP库编译<br>
-    编译加速库，设置加速库环境变量：
+    编译加速库：
 
     ```sh
     cd ${sip_root_path}
     bash build.sh
-    source output/set_env.sh
     ```
 
     特别说明：
@@ -136,6 +135,8 @@ source /usr/local/Ascend/cann/set_env.sh
         chmod +x Ascend-cann-SIP_${version}_linux_${arch}.run
         # 安装命令
         ./Ascend-cann-SIP_${version}_linux_${arch}.run --install --install-path=${install_path}
+        # 设置加速库环境变量
+        source ${install_path}/asdsip/set_env.sh
         ```
 
     - 上述编译方式仅支持编译通过git下载的加速库，以zip压缩包方式下载的加速库不支持该编译方式；

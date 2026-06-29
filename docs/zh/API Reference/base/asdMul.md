@@ -36,12 +36,12 @@
 
 ```Cpp
 AspbStatus asdMul(
-  int            n, 
-  const void *   x, 
-  const void *   y, 
-  const void *   z, 
-  void *         stream, 
-  void *         workspace = nullptr)
+  int                 n, 
+  const aclTensor *   x, 
+  const aclTensor *   y, 
+  aclTensor *         z, 
+  void *              stream, 
+  void *              workspace = nullptr)
 ```
 
 ## asdMul
@@ -66,19 +66,19 @@ AspbStatus asdMul(
       <td>表示输入的元素个数。</td>
     </tr>
     <tr>
-      <td>x（void *）</td>
+      <td>x（const aclTensor *）</td>
       <td>输入</td>
       <td><ul><li>表示输入的矩阵，对应公式中的'A'。</li><li>数据类型支持COMPLEX32、COMPLEX64</li><li>数据格式支持ND。</li>
       <li>shape为[n]</li></ul></td>
     </tr>
     <tr>
-      <td>y（void *）</td>
+      <td>y（const aclTensor *）</td>
       <td>输入</td>
       <td><ul><li>表示输入的矩阵，对应公式中的'B'。</li><li>数据类型支持COMPLEX32、COMPLEX64</li><li>数据格式支持ND。</li>
       <li>shape为[n]</li></ul></td>
     </tr>
     <tr>
-      <td>z（void *）</td>
+      <td>z（aclTensor *）</td>
       <td>输出</td>
       <td><ul><li>表示输出的矩阵，对应公式中的'result'。</li><li>数据类型支持COMPLEX32、COMPLEX64</li><li>数据格式支持ND。</li>
       <li>shape为[n]</li></ul></td>

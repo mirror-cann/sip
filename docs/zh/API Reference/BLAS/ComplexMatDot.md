@@ -109,17 +109,17 @@ AspbStatus asdBlasComplexMatDot(
       <td>矩阵列数。</td>
     </tr>
     <tr>
-      <td>matx（Tensor &）</td>
+      <td>matx（aclTensor *）</td>
       <td>输入/输出</td>
       <td><ul><li>对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m,n]。</li></ul></td>
     </tr>
     <tr>
-      <td>maty（Tensor &）</td>
+      <td>maty（aclTensor *）</td>
       <td>输入</td>
       <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m,n]。</li></ul></td>
     </tr>
     <tr>
-      <td>result（Tensor &）</td>
+      <td>result（aclTensor *）</td>
       <td>输出</td>
       <td><ul><li>对应公式中的'result'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li><li>shape为[m,n]。</li></ul></td>
     </tr>

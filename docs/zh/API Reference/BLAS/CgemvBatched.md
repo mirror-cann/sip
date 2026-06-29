@@ -139,7 +139,7 @@ AspbStatus asdBlasCgemvBatched(
     <tr>
       <td>alpha（std::complex&lt;float&gt; &）</td>
       <td>输入</td>
-      <td>对应公式中的alpha，复数标量，用于乘以矩阵和向量乘法的乘积，当前版本alpha的取值只能为1+0i。</td>
+      <td>对应公式中的alpha，复数标量，用于乘以矩阵与向量乘法的乘积，当前版本alpha的取值只能为1+0i。</td>
     </tr>
     <tr>
       <td>A（aclTensor *）</td>

@@ -113,7 +113,7 @@ AspbStatus asdFftExecC2CSeparated(
     <tr>
       <td>dimType（asdFft1dDimType）</td>
       <td>输入</td>
-      <td>指定Fft_1D变换的维度“方向”（是按行做FFT还是按列做FFT）<ul><li>ASCEND_FFT_HORIZONTAL：横向FFT。</li><li>ASCEND_FFT_VERTICAL：纵向FFT。</li></ul></td>
+      <td>指定FFT_1D变换的维度“方向”（是按行做FFT还是按列做FFT）<ul><li>ASCEND_FFT_HORIZONTAL：横向FFT。</li><li>ASCEND_FFT_VERTICAL：纵向FFT。</li></ul></td>
     </tr>
     </tbody>
     </table>
@@ -143,16 +143,16 @@ AspbStatus asdFftExecC2CSeparated(
       <td>算子的句柄，需要手动申请创建asdFftHandle对象。</td>
     </tr>
     <tr>
-      <td>inData（ aclTensor *）</td>
+      <td>input（ aclTensor *）</td>
       <td>输入</td>
       <td><ul><li>对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
       <li>对横向FFT，输入的shape为（ batchSize，fftSize）。</li><li>对纵向FFT，输入的shape为（ fftSize，batchSize）。</li></ul></td>
     </tr>
     <tr>
-      <td>outData（aclTensor *）</td>
+      <td>output（aclTensor *）</td>
       <td>输出</td>
       <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
-      <li>对横向FFT，输入的shape为（ batchSize，fftSize）。</li><li>对纵向FFT，输入的shape为（ fftSize，batchSize）。</li></ul></td>
+      <li>对横向FFT，输出的shape为（ batchSize，fftSize）。</li><li>对纵向FFT，输出的shape为（ fftSize，batchSize）。</li></ul></td>
     </tr>
     </tbody>
     </table>
@@ -182,16 +182,16 @@ AspbStatus asdFftExecC2CSeparated(
       <td>算子的句柄，需要手动申请创建asdFftHandle对象。</td>
     </tr>
     <tr>
-      <td>inData（ aclTensor *）</td>
+      <td>input（ aclTensor *）</td>
       <td>输入</td>
       <td><ul><li>对应公式中的'x'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
       <li>对横向FFT，输入的shape为（batchSize ，fftSize / 2 + 1）。</li><li>对纵向FFT，输入的shape为（fftSize / 2 + 1，batchSize）。</li></ul></td>
     </tr>
     <tr>
-      <td>outData（aclTensor *）</td>
+      <td>output（aclTensor *）</td>
       <td>输出</td>
       <td><ul><li>对应公式中的'y'。</li><li>数据类型支持FLOAT32。</li><li>数据格式支持ND。</li>
-      <li>对横向FFT，输入的shape为（batchSize，fftSize）。</li><li>对纵向FFT，输入的shape为（fftSize，batchSize）。</li></ul></td>
+      <li>对横向FFT，输出的shape为（batchSize，fftSize）。</li><li>对纵向FFT，输出的shape为（fftSize，batchSize）。</li></ul></td>
     </tr>
     </tbody>
     </table>
@@ -222,16 +222,16 @@ AspbStatus asdFftExecC2CSeparated(
       <td>算子的句柄，需要手动申请创建asdFftHandle对象。</td>
     </tr>
     <tr>
-      <td>inData（ aclTensor *）</td>
+      <td>input（aclTensor *）</td>
       <td>输入</td>
       <td><ul><li>对应公式中的'x'。</li><li>数据类型支持FLOAT32。</li><li>数据格式支持ND。</li>
       <li>对横向FFT，输入的shape为（batchSize，fftSize）。</li><li>对纵向FFT，输入的shape为（fftSize，batchSize ）。</li></ul></td>
     </tr>
     <tr>
-      <td>outData（aclTensor *）</td>
+      <td>output（aclTensor *）</td>
       <td>输出</td>
       <td><ul><li>对应公式中的'y'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
-      <li>对横向FFT，输入的shape为（batchSize ，fftSize / 2 + 1）。</li><li>对纵向FFT，输入的shape为（fftSize / 2 + 1，batchSize）。</li></ul></td>
+      <li>对横向FFT，输出的shape为（batchSize ，fftSize / 2 + 1）。</li><li>对纵向FFT，输出的shape为（fftSize / 2 + 1，batchSize）。</li></ul></td>
     </tr>
     </tbody>
     </table>
@@ -277,13 +277,13 @@ AspbStatus asdFftExecC2CSeparated(
       <td>outputReal（aclTensor *）</td>
       <td>输出</td>
       <td><ul><li>公式中的'y'的实部。</li><li>数据类型支持FLOAT32。</li><li>数据格式支持ND。</li>
-      <li>输入的shape为（batchSize，fftSize）。</li></ul></td>
+      <li>输出的shape为（batchSize，fftSize）。</li></ul></td>
     </tr>
     <tr>
       <td>outputImag（aclTensor *）</td>
       <td>输出</td>
       <td><ul><li>公式中的'y'的虚部。</li><li>数据类型支持FLOAT32。</li><li>数据格式支持ND。</li>
-      <li>输入的shape为（batchSize，fftSize）。</li></ul></td>
+      <li>输出的shape为（batchSize，fftSize）。</li></ul></td>
     </tr>
     </tbody>
     </table>

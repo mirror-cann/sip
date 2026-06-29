@@ -307,10 +307,10 @@ AspbStatus asdFftExecC2CSeparated(
 - asdFftMakePlan3D
     - fftSizeX、fftSizeY、fftSizeZ需保证不超过$2^{27}$且分解质因数后不包含超过199的质因子。
     - batchSize在存储允许范围内应无额外约束。
-    - 输入的元素个数理论支持[1，$2^{30}$]。
+    - 输入的元素个数理论支持[1,$2^{30}$]。
     - 输入的元素不支持inf、-inf和nan，如果输入中包含这些值，那么结果为未定义。
 - asdFftExecC2CSeparated
-  信号长度范围[2, 256]。
+  信号长度范围[2,256]。
 
 ## 调用示例
 

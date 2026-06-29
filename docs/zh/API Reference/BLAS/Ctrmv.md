@@ -126,7 +126,7 @@ AspbStatus asdBlasCtrmv(
       <td>指定矩阵A的存储格式。<ul><li>ASDBLAS_FILL_MODE_LOWER:下三角</li><li>ASDBLAS_FILL_MODE_UPPER:上三角</li></ul></td>
     </tr>
     <tr>
-      <td>trans（asdBlasDiagType_t）</td>
+      <td>trans（asdBlasOperation_t）</td>
       <td>输入</td>
       <td>指定矩阵A是否需要转置。<ul><li>ASDBLAS_OP_N :不转置</li><li>ASDBLAS_OP_T :转置</li><li>ASDBLAS_OP_C:上共轭转置</li></ul></td>
     </tr>
@@ -144,7 +144,7 @@ AspbStatus asdBlasCtrmv(
       <td>A（aclTensor *）</td>
       <td>输入</td>
       <td><ul><li>对应公式中的'A'。</li><li>数据类型支持COMPLEX64。</li><li>数据格式支持ND。</li>
-      <li>shape为[n，n]</li></ul></td>
+      <li>shape为[n,n]</li></ul></td>
     </tr>
     <tr>
       <td>x（aclTensor *）</td>
@@ -170,8 +170,8 @@ AspbStatus asdBlasCtrmv(
 
 ## 约束说明
 
-- 输入的元素个数n当前覆盖支持[1，8192]。
-- 算子输入shape为[n，n]、[n]，输出shape为[n]。
+- 输入的元素个数n当前覆盖支持[1,8192]。
+- 算子输入shape为[n,n]、[n]，输出shape为[n]。
 - 算子实际计算时，不支持ND高维度运算（不支持维度≥3的运算）。
 
 ## 调用示例

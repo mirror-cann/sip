@@ -24,13 +24,13 @@ rsInterpolationBySinc：实现带batch的一维复数向量插值计算，返回
   示例：\
 输入“inputTensor”为：\
  [ 1 + i , 2 + i ]\
-输入“sincTab”为：（intp_num = 2， quant_num = 2）\
+输入“sincTab”为：（interpNum = 2， quantNum = 2）\
   [   [ 1 , 0 ],  [ 0.5 , 0.5 ],   [ 0 , 1 ]  ]\
 原始“pos”为：\
   [ 0.2 , 1.6 ] \
 转为输入“posFloor”为： floor(Pos)\
   [ 0 , 1 ] \
-转为输入“posToTabIndex”为：round((Pos -posFloor) *quant_num)\
+转为输入“posToTabIndex”为：round((Pos -posFloor) *quantNum)\
   [ 0 , 1 ] \
 其中，tab大小为2*3。由于pos[0] = 0.2，取inputTensor[0]及后面一个元素inputTensor[1]共2个元素，与sincTab[posToTabIndex[0]]进行向量点乘，得到outputTensor[0]，依次计算后续元素。\
   pos[0] = 0.2 → outputTensor[0] = [1 + i , 2 + i] · [ 1 , 0 ] = 1 + i \
@@ -148,7 +148,7 @@ AspbStatus rsInterpolationBySinc(
     <tr>
       <td>stream（void *）</td>
       <td>输入</td>
-      <td>npu执行流。</td>
+      <td>NPU执行流。</td>
     </tr>
     <tr>
       <td>workspace（void *）</td>

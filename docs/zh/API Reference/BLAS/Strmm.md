@@ -190,9 +190,9 @@ AspbStatus asdBlasStrmm(
 
 ## 约束说明
 
-  - 输入的元素个数m，n当前覆盖支持[1，8193]。
-  - 当side = ASDBLAS_SIDE_LEFT时，算子输入shape为[m，m]、[m，n]，输出shape为[m，n]。
-  - 当side = ASDBLAS_SIDE_RIGHT时，算子输入shape为[n，n]、[m，n]，输出shape为[m，n]。
+  - 输入的元素个数m，n当前覆盖支持[1,8193]。
+  - 当side = ASDBLAS_SIDE_LEFT时，算子输入shape为[m,m]、[m,n]，输出shape为[m,n]。
+  - 当side = ASDBLAS_SIDE_RIGHT时，算子输入shape为[n,n]、[m,n]，输出shape为[m，n]。
   - 算子实际计算时，不支持ND高维度运算（不支持维度≥3的运算）。
 
 ## 调用示例

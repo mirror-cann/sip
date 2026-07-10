@@ -27,3 +27,7 @@ coverage_result/
 
 output/
 3rdparty/
+
+oat_reports/
+
+log/

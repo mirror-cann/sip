@@ -31,6 +31,7 @@
 #include <securec.h>
 #include <sstream>
 #include <iostream>
+#include <stdexcept>
 
 #include "ops.h"
 #include "mki/utils/rt/rt.h"
@@ -61,6 +62,12 @@ namespace AsdSip {
 constexpr float FLOAT_MIN = -300;
 constexpr float FLOAT_MAX = 300;
 
+static std::runtime_error MakeRuntimeError(const std::string& message)
+{
+    ASDSIP_LOG(ERROR) << message;
+    return std::runtime_error(message);
+}
+
 struct TensorContext {
     OpDesc opDesc;
     SVector<Tensor> inTensors;
@@ -71,22 +78,23 @@ struct aclTensorContext {
     OpDesc opDesc;
     SVector<Tensor> inTensors;
     SVector<Tensor> outTensors;
-    SVector<aclTensor *> aclInTensors;
-    SVector<aclTensor *> aclOutTensors;
+    SVector<aclTensor*> aclInTensors;
+    SVector<aclTensor*> aclOutTensors;
 };
 
-static int64_t GetShapeSize(const std::vector<int64_t>& shape) {
-  int64_t shapeSize = 1;
-  for (auto i : shape) {
-    shapeSize *= i;
-  }
-  return shapeSize;
+static int64_t GetShapeSize(const std::vector<int64_t>& shape)
+{
+    int64_t shapeSize = 1;
+    for (auto i : shape) {
+        shapeSize *= i;
+    }
+    return shapeSize;
 }
-
 
 template <typename T>
 static int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
-                    aclDataType dataType, aclTensor** tensor) {
+                           aclDataType dataType, aclTensor** tensor)
+{
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -103,31 +111,38 @@ static int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int
 
     // 调用aclCreateTensor接口创建aclTensor
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
-                                shape.data(), shape.size(), *deviceAddr);
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
-
 /**
  * @brief 设置deviceid并创造stream.
-*/
+ */
 static MkiRtStream OpTestInit(int deviceId)
 {
     ASDSIP_LOG(INFO) << "MkiRtDeviceSetCurrent " << deviceId;
     int ret = MkiRtDeviceSetCurrent(deviceId);
-    ASDSIP_LOG_IF(ret != 0, ERROR) << "MkiRtDeviceSetCurrent fail";
+    if (ret != 0) {
+        std::stringstream ss;
+        ss << "MkiRtDeviceSetCurrent failed, deviceId: " << deviceId << ", ret: " << ret;
+        throw MakeRuntimeError(ss.str());
+    }
 
     MkiRtStream stream = nullptr;
     ASDSIP_LOG(INFO) << "MkiRtStreamCreate call";
     ret = MkiRtStreamCreate(&stream, 0);
-    ASDSIP_LOG_IF(ret != 0, ERROR) << "MkiRtStreamCreate fail";
+    if (ret != 0 || stream == nullptr) {
+        std::stringstream ss;
+        ss << "MkiRtStreamCreate failed, ret: " << ret << ", stream: " << stream;
+        throw MakeRuntimeError(ss.str());
+    }
     return stream;
 }
 
 /**
  * @brief 设置deviceid并创造stream.
-*/
-static int OpTestAclInit(int deviceId, aclrtStream *stream)
+ */
+static int OpTestAclInit(int deviceId, aclrtStream* stream)
 {
     // auto ret = aclInit(nullptr);
     // CHECK_RET(ret == ::ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
@@ -140,8 +155,8 @@ static int OpTestAclInit(int deviceId, aclrtStream *stream)
 
 /**
  * @brief 清空释放goldenContext_的tensor数据，并重置launchParam和runInfo。
-*/
-static void OpTestCleanup(TensorContext &tensorContext, MkiRtStream &stream)
+ */
+static void OpTestCleanup(TensorContext& tensorContext, MkiRtStream& stream)
 {
     for (auto tensor : tensorContext.inTensors) {
         if (tensor.data) {
@@ -168,8 +183,7 @@ static void OpTestCleanup(TensorContext &tensorContext, MkiRtStream &stream)
     }
 }
 
-
-static void OpTestCleanup(aclTensorContext &tensorContext)
+static void OpTestCleanup(aclTensorContext& tensorContext)
 {
     for (auto tensor : tensorContext.inTensors) {
         if (tensor.data) {
@@ -192,14 +206,14 @@ static void OpTestCleanup(aclTensorContext &tensorContext)
     tensorContext.outTensors.clear();
 }
 
-static void OpTestEnd(int deviceId, TensorContext &tensorContext, MkiRtStream &stream)
+static void OpTestEnd(int deviceId, TensorContext& tensorContext, MkiRtStream& stream)
 {
     OpTestCleanup(tensorContext, stream);
     int ret = MkiRtDeviceResetCurrent(deviceId);
     ASDSIP_LOG_IF(ret != 0, ERROR) << "MkiRtDeviceResetCurrent fail";
 }
 
-static void OpTestEnd(int deviceId, aclTensorContext &tensorContext, MkiRtStream &stream)
+static void OpTestEnd(int deviceId, aclTensorContext& tensorContext, MkiRtStream& stream)
 {
     OpTestCleanup(tensorContext);
     int ret = aclrtDestroyStream(stream);
@@ -209,18 +223,24 @@ static void OpTestEnd(int deviceId, aclTensorContext &tensorContext, MkiRtStream
 }
 
 // hostdata copy to device data
-static Status OpTestHostTensor2DeviceTensor(Tensor &tensor)
+static Status OpTestHostTensor2DeviceTensor(Tensor& tensor)
 {
     int st = MkiRtMemMallocDevice(&tensor.data, tensor.dataSize, MKIRT_MEM_DEFAULT);
     if (st != MKIRT_SUCCESS) {
-        ASDSIP_LOG(ERROR) << "Device malloc intensor failed.";
-        return Status::FailStatus(-1, "Device malloc intensor failed.");
+        std::stringstream ss;
+        ss << "Device malloc intensor failed, ret: " << st << ", dataSize: " << tensor.dataSize
+           << ", dtype: " << tensor.desc.dtype << ", dims: " << tensor.desc.dims;
+        ASDSIP_LOG(ERROR) << ss.str();
+        return Status::FailStatus(-1, ss.str());
     }
 
     st = MkiRtMemCopy(tensor.data, tensor.dataSize, tensor.hostData, tensor.dataSize, MKIRT_MEMCOPY_HOST_TO_DEVICE);
     if (st != MKIRT_SUCCESS) {
-        ASDSIP_LOG(ERROR) << "Memcpy host to device failed.";
-        return Status::FailStatus(-1, "Memcpy host to device failed.");
+        std::stringstream ss;
+        ss << "Memcpy host to device failed, ret: " << st << ", dataSize: " << tensor.dataSize
+           << ", dtype: " << tensor.desc.dtype << ", dims: " << tensor.desc.dims;
+        ASDSIP_LOG(ERROR) << ss.str();
+        return Status::FailStatus(-1, ss.str());
     }
     return Status::OkStatus();
 }
@@ -228,18 +248,18 @@ static Status OpTestHostTensor2DeviceTensor(Tensor &tensor)
 /**
  * @brief 随机生成tensor的hostdata值
  * @param tensorDesc tensor描述信息
-*/
-static Tensor OpTestCreateHostRandTensor(const TensorDesc &tensorDesc)
+ */
+static Tensor OpTestCreateHostRandTensor(const TensorDesc& tensorDesc)
 {
     Tensor tensor;
     tensor.desc = tensorDesc;
 
-    std::default_random_engine eng(42);  // 使用固定种子保证测试可复现
+    std::default_random_engine eng(42); // 使用固定种子保证测试可复现
     if (tensorDesc.dtype == TENSOR_DTYPE_FLOAT) {
         tensor.dataSize = tensor.Numel() * sizeof(float);
         tensor.hostData = malloc(tensor.dataSize);
         std::uniform_real_distribution<float> distr(FLOAT_MIN, FLOAT_MAX);
-        float *tensorData = static_cast<float *>(tensor.hostData);
+        float* tensorData = static_cast<float*>(tensor.hostData);
         for (int64_t i = 0; i < tensor.Numel(); i++) {
             tensorData[i] = static_cast<float>(distr(eng));
         }
@@ -247,7 +267,7 @@ static Tensor OpTestCreateHostRandTensor(const TensorDesc &tensorDesc)
         tensor.dataSize = tensor.Numel() * sizeof(float) * 2;
         tensor.hostData = malloc(tensor.dataSize);
         std::uniform_real_distribution<float> distr(FLOAT_MIN, FLOAT_MAX);
-        std::complex<float> *tensorData = static_cast<std::complex<float> *>(tensor.hostData);
+        std::complex<float>* tensorData = static_cast<std::complex<float>*>(tensor.hostData);
         for (int64_t i = 0; i < tensor.Numel(); i++) {
             tensorData[i] = {static_cast<float>(distr(eng)), static_cast<float>(distr(eng))};
         }
@@ -255,7 +275,7 @@ static Tensor OpTestCreateHostRandTensor(const TensorDesc &tensorDesc)
         tensor.dataSize = tensor.Numel() * sizeof(fp16_t);
         tensor.hostData = malloc(tensor.dataSize);
         std::uniform_real_distribution<float> distr(FLOAT_MIN, FLOAT_MAX);
-        fp16_t *tensorData = static_cast<fp16_t *>(tensor.hostData);
+        fp16_t* tensorData = static_cast<fp16_t*>(tensor.hostData);
         for (int64_t i = 0; i < tensor.Numel(); i++) {
             tensorData[i] = static_cast<fp16_t>(distr(eng));
         }
@@ -264,7 +284,7 @@ static Tensor OpTestCreateHostRandTensor(const TensorDesc &tensorDesc)
         tensor.dataSize = tensor.Numel() * sizeof(int32_t);
         tensor.hostData = malloc(tensor.dataSize);
         std::uniform_real_distribution<float> distr(FLOAT_MIN, FLOAT_MAX);
-        int32_t *tensorData = static_cast<int32_t *>(tensor.hostData);
+        int32_t* tensorData = static_cast<int32_t*>(tensor.hostData);
         for (int64_t i = 0; i < tensor.Numel(); i++) {
             tensorData[i] = static_cast<int32_t>(distr(eng));
         }
@@ -273,7 +293,7 @@ static Tensor OpTestCreateHostRandTensor(const TensorDesc &tensorDesc)
         tensor.dataSize = tensor.Numel() * sizeof(int16_t);
         tensor.hostData = malloc(tensor.dataSize);
         std::uniform_real_distribution<float> distr(FLOAT_MIN, FLOAT_MAX);
-        int16_t *tensorData = static_cast<int16_t *>(tensor.hostData);
+        int16_t* tensorData = static_cast<int16_t*>(tensor.hostData);
         for (int64_t i = 0; i < tensor.Numel(); i++) {
             tensorData[i] = static_cast<int16_t>(distr(eng));
         }
@@ -282,12 +302,21 @@ static Tensor OpTestCreateHostRandTensor(const TensorDesc &tensorDesc)
         tensor.dataSize = tensor.Numel() * sizeof(fp16_t) * 2;
         tensor.hostData = malloc(tensor.dataSize);
         std::uniform_real_distribution<float> distr(0, 1);
-        fp16_t *tensorData = static_cast<fp16_t *>(tensor.hostData);
+        fp16_t* tensorData = static_cast<fp16_t*>(tensor.hostData);
         for (int64_t i = 0; i < tensor.Numel() * 2; i++) {
             tensorData[i] = static_cast<fp16_t>(distr(eng));
         }
-    }else {
-        ASDSIP_LOG(ERROR) << "dtype not support in CreateHostRandTensor!";
+    } else {
+        std::stringstream ss;
+        ss << "dtype not support in CreateHostRandTensor, dtype: " << tensorDesc.dtype << ", dims: " << tensorDesc.dims;
+        throw MakeRuntimeError(ss.str());
+    }
+
+    if (tensor.dataSize > 0 && tensor.hostData == nullptr) {
+        std::stringstream ss;
+        ss << "Host malloc intensor failed, dataSize: " << tensor.dataSize << ", dtype: " << tensorDesc.dtype
+           << ", dims: " << tensorDesc.dims;
+        throw MakeRuntimeError(ss.str());
     }
     return tensor;
 }
@@ -295,8 +324,8 @@ static Tensor OpTestCreateHostRandTensor(const TensorDesc &tensorDesc)
 /**
  * @brief tesor的device侧值复制到host侧
  * @param tensor tensor
-*/
-static Status CopyDeviceTensorToHostTensor(Tensor &tensor)
+ */
+static Status CopyDeviceTensorToHostTensor(Tensor& tensor)
 {
     if (tensor.hostData == nullptr) {
         tensor.hostData = malloc(tensor.dataSize);
@@ -315,40 +344,62 @@ static Status CopyDeviceTensorToHostTensor(Tensor &tensor)
 }
 
 // 辅助函数：根据dtype返回元素大小（字节）
-inline size_t GetElementSize(TensorDType dtype) {
+inline size_t GetElementSize(TensorDType dtype)
+{
     switch (dtype) {
-        case TENSOR_DTYPE_FLOAT: return 4;
-        case TENSOR_DTYPE_FLOAT16: return 2;
-        case TENSOR_DTYPE_INT16:   return 2;
-        case TENSOR_DTYPE_INT32:   return 4;
-        case TENSOR_DTYPE_INT64:   return 8;
-        case TENSOR_DTYPE_COMPLEX64:   return 8;
-        case TENSOR_DTYPE_COMPLEX32:   return 4;  // 2 * float16 = 2 * 2 bytes
-        case TENSOR_DTYPE_UINT8:   return 1;
+        case TENSOR_DTYPE_FLOAT:
+            return 4;
+        case TENSOR_DTYPE_FLOAT16:
+            return 2;
+        case TENSOR_DTYPE_INT16:
+            return 2;
+        case TENSOR_DTYPE_INT32:
+            return 4;
+        case TENSOR_DTYPE_INT64:
+            return 8;
+        case TENSOR_DTYPE_COMPLEX64:
+            return 8;
+        case TENSOR_DTYPE_COMPLEX32:
+            return 4; // 2 * float16 = 2 * 2 bytes
+        case TENSOR_DTYPE_UINT8:
+            return 1;
         // 添加其他需要的类型
-        default: return 0; // 未知类型
+        default:
+            return 0; // 未知类型
     }
 }
 
 // 辅助函数：根据dtype返回元素类型字符串
-inline std::string GetElementDtype(TensorDType dtype) {
+inline std::string GetElementDtype(TensorDType dtype)
+{
     switch (dtype) {
-        case TENSOR_DTYPE_FLOAT: return "float";
-        case TENSOR_DTYPE_FLOAT16: return "half";
-        case TENSOR_DTYPE_INT16:   return "int16";
-        case TENSOR_DTYPE_INT32:   return "int32";
-        case TENSOR_DTYPE_INT64:   return "int64";
-        case TENSOR_DTYPE_COMPLEX64:   return "complex64";
-        case TENSOR_DTYPE_COMPLEX32:   return "complex32";
-        case TENSOR_DTYPE_UINT8:   return "uint5";
+        case TENSOR_DTYPE_FLOAT:
+            return "float";
+        case TENSOR_DTYPE_FLOAT16:
+            return "half";
+        case TENSOR_DTYPE_INT16:
+            return "int16";
+        case TENSOR_DTYPE_INT32:
+            return "int32";
+        case TENSOR_DTYPE_INT64:
+            return "int64";
+        case TENSOR_DTYPE_COMPLEX64:
+            return "complex64";
+        case TENSOR_DTYPE_COMPLEX32:
+            return "complex32";
+        case TENSOR_DTYPE_UINT8:
+            return "uint5";
         // 添加其他需要的类型
-        default: return "unknown"; // 未知类型
+        default:
+            return "unknown"; // 未知类型
     }
 }
 
-inline bool SaveTensorToBin(const Tensor& tensor, const std::string& filename) {
+inline bool SaveTensorToBin(const Tensor& tensor, const std::string& filename)
+{
     std::ofstream file(filename, std::ios::binary);
-    if (!file.is_open()) return false;
+    if (!file.is_open())
+        return false;
 
     // 1. 写入dtype (int32_t)
     int32_t dtype = static_cast<int32_t>(tensor.desc.dtype);
@@ -375,9 +426,11 @@ inline bool SaveTensorToBin(const Tensor& tensor, const std::string& filename) {
     return !file.fail();
 }
 
-inline bool SaveOutTensorToBin(const Tensor& tensor, const std::string& filename) {
+inline bool SaveOutTensorToBin(const Tensor& tensor, const std::string& filename)
+{
     std::ofstream file(filename, std::ios::binary);
-    if (!file.is_open()) return false;
+    if (!file.is_open())
+        return false;
 
     // 4. 写入原始数据
     size_t elemSize = GetElementSize(tensor.desc.dtype);
@@ -395,23 +448,41 @@ inline bool SaveOutTensorToBin(const Tensor& tensor, const std::string& filename
  * @brief 根据tensor描述信息生成tensor
  * @param inTensorDescs tensors描述信息集
  * @param TensorContext 记录input和output的tensor的数据结构
-*/
-static Status OpTestMallocInTensors(const SVector<TensorDesc> &inTensorDescs, TensorContext &tensorContext)
+ */
+static Status OpTestMallocInTensors(const SVector<TensorDesc>& inTensorDescs, TensorContext& tensorContext)
 {
+    size_t tensorIdx = 0;
     for (auto tensorDesc : inTensorDescs) {
         Tensor tensor;
         tensor = OpTestCreateHostRandTensor(tensorDesc);
         Status status = OpTestHostTensor2DeviceTensor(tensor);
         if (!status.Ok()) {
-            ASDSIP_LOG(ERROR) << status.Message();
-            return Status::FailStatus(-1, status.Message());
+            std::stringstream ss;
+            ss << "OpTestMallocInTensors failed at input index " << tensorIdx << ": " << status.Message();
+            if (tensor.data) {
+                MkiRtMemFreeDevice(tensor.data);
+            }
+            if (tensor.hostData) {
+                free(tensor.hostData);
+            }
+            for (auto createdTensor : tensorContext.inTensors) {
+                if (createdTensor.data) {
+                    MkiRtMemFreeDevice(createdTensor.data);
+                }
+                if (createdTensor.hostData) {
+                    free(createdTensor.hostData);
+                }
+            }
+            tensorContext.inTensors.clear();
+            throw MakeRuntimeError(ss.str());
         }
         tensorContext.inTensors.push_back(tensor);
+        ++tensorIdx;
     }
     return Status::OkStatus();
 }
 
-static Status toAclTensorForUT(const Tensor &inTensor, aclTensor **outTensor, TensorDesc desc)
+static Status toAclTensorForUT(const Tensor& inTensor, aclTensor** outTensor, TensorDesc desc)
 {
     SVector<int64_t> shape = desc.dims;
 
@@ -425,8 +496,7 @@ static Status toAclTensorForUT(const Tensor &inTensor, aclTensor **outTensor, Te
     return Status::OkStatus();
 }
 
-
-static Status OpTestMallocInAclTensors(const SVector<TensorDesc> &inTensorDescs, aclTensorContext &tensorContext)
+static Status OpTestMallocInAclTensors(const SVector<TensorDesc>& inTensorDescs, aclTensorContext& tensorContext)
 {
     for (auto tensorDesc : inTensorDescs) {
         Tensor tensor;
@@ -437,7 +507,7 @@ static Status OpTestMallocInAclTensors(const SVector<TensorDesc> &inTensorDescs,
             return Status::FailStatus(-1, status.Message());
         }
 
-        aclTensor *curr = nullptr;
+        aclTensor* curr = nullptr;
         toAclTensorForUT(tensor, &curr, tensorDesc);
 
         tensorContext.inTensors.push_back(tensor);
@@ -446,6 +516,6 @@ static Status OpTestMallocInAclTensors(const SVector<TensorDesc> &inTensorDescs,
     return Status::OkStatus();
 }
 
-}  // namespace Asdsip
+} // namespace AsdSip
 
 #endif

@@ -9,7 +9,7 @@
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×  |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √  |
 
 ## 功能说明
 
@@ -30,32 +30,32 @@ asdFftExecR2C：执行实数到复数的FFT变换。
 
 ```Cpp
 AspbStatus asdFftMakePlan2D(
-  asdFftHandle          handle, 
-  int64_t               fftSizeX, 
-  int64_t               fftSizeY, 
-  asdFftType            fftType, 
-  asdFftDirection       direction, 
+  asdFftHandle          handle,
+  int64_t               fftSizeX,
+  int64_t               fftSizeY,
+  asdFftType            fftType,
+  asdFftDirection       direction,
   int32_t               batchSize)
 ```
 
 ```Cpp
 AspbStatus asdFftExecC2C(
-  asdFftHandle           handle, 
-  const aclTensor *      input, 
+  asdFftHandle           handle,
+  const aclTensor *      input,
   const aclTensor *      output)
 ```
 
 ```Cpp
 AspbStatus asdFftExecC2R(
-  asdFftHandle           handle, 
-  const aclTensor *      input, 
+  asdFftHandle           handle,
+  const aclTensor *      input,
   const aclTensor *      output)
 ```
 
 ```Cpp
 AspbStatus asdFftExecR2C(
-  asdFftHandle           handle, 
-  const aclTensor *      input, 
+  asdFftHandle           handle,
+  const aclTensor *      input,
   const aclTensor *      output)
 ```
 
@@ -110,7 +110,7 @@ AspbStatus asdFftExecR2C(
 - **返回值**：
 
   返回状态码，具体参见[SiP返回码](../../context/SiP返回码.md)。
-  
+
 ## asdFftExecC2C
 
 - **参数说明：**

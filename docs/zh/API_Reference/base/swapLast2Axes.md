@@ -127,7 +127,7 @@ AsdSip::AspbStatus swapLast2Axes(
     <tr>
       <td>stream(void *)</td>
       <td>输入</td>
-      <td>npu执行流。</td>
+      <td>NPU执行流。</td>
     </tr>
   </tbody>
   </table>
